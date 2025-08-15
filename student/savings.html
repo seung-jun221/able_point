@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>저축 계좌 - 포인트 뱅크</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/savings.css" />
+
+    <!-- Toastr CSS (알림용) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+    />
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="profile-header">
+      <div class="profile-left">
+        <button
+          onclick="history.back()"
+          style="
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+          "
+        >
+          ‹
+        </button>
+        <h2 style="margin: 0 0 0 15px">💎 저축 계좌</h2>
+      </div>
+      <div class="daily-points">
+        <button
+          onclick="location.reload()"
+          style="
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+          "
+          title="새로고침"
+        >
+          🔄
+        </button>
+      </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="savings-container">
+      <!-- COFIX 실시간 금리 카드 -->
+      <div class="rate-card">
+        <div class="rate-header">
+          <div class="rate-title">
+            📊 실시간 금리
+            <span class="live-badge">LIVE</span>
+          </div>
+          <span id="lastUpdate" style="font-size: 11px; opacity: 0.9">-</span>
+        </div>
+
+        <div class="rate-display">
+          <div class="rate-item">
+            <div class="rate-label">COFIX 기준</div>
+            <div class="rate-value" id="cofixRate">-</div>
+          </div>
+          <div class="rate-item">
+            <div class="rate-label">등급 우대</div>
+            <div class="rate-value" id="bonusRate">-</div>
+          </div>
+          <div class="rate-item">
+            <div class="rate-label">최종 금리</div>
+            <div class="rate-value total" id="totalRate">-</div>
+          </div>
+        </div>
+
+        <div class="cofix-info">
+          💡 실제 COFIX(코픽스) 금리가 실시간 반영됩니다
+        </div>
+      </div>
+
+      <!-- 저축 계좌 메인 카드 -->
+      <div class="savings-main-card">
+        <div class="balance-section">
+          <div class="balance-label">💰 저축 잔액</div>
+          <div class="balance-amount" id="savingsBalance">0P</div>
+          <span class="deposit-period" id="depositPeriod" style="display: none"
+            >예치 0일차</span
+          >
+
+          <div class="limit-info">
+            <span class="limit-text">저축 한도</span>
+            <span class="limit-value" id="savingsLimit">-</span>
+          </div>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="action-btn deposit-btn" onclick="showDepositModal()">
+            💰 입금하기
+          </button>
+          <button class="action-btn withdraw-btn" onclick="showWithdrawModal()">
+            💸 출금하기
+          </button>
+        </div>
+
+        <!-- 보너스 뱃지 -->
+        <div class="bonus-badges" id="bonusBadges">
+          <span class="bonus-badge">7일 달성</span>
+          <span class="bonus-badge">14일 +20%</span>
+          <span class="bonus-badge">28일 +50%</span>
+        </div>
+      </div>
+
+      <!-- 이자 지급 일정 -->
+      <div class="interest-schedule">
+        <div class="schedule-header">
+          <span class="schedule-title">💎 주간 이자 지급</span>
+          <span style="font-size: 12px; color: #64748b"
+            >매주 월요일 오전 9시</span
+          >
+        </div>
+
+        <div class="next-payment">
+          <div class="payment-label">다음 이자 지급일</div>
+          <div class="payment-date" id="nextInterestDate">-</div>
+          <div class="payment-amount" id="expectedInterest">+0P</div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 5px">
+            예상 이자 (변동 가능)
+          </div>
+        </div>
+      </div>
+
+      <!-- 거래 내역 -->
+      <div class="history-section">
+        <div class="history-header">
+          <span class="history-title">📜 최근 거래 내역</span>
+          <a
+            href="#"
+            style="font-size: 12px; color: #6366f1; text-decoration: none"
+            >전체보기 ›</a
+          >
+        </div>
+
+        <div class="history-list" id="historyList">
+          <!-- 동적 생성 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 입금 모달 -->
+    <div id="depositModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>💰 포인트 입금</h2>
+          <button class="modal-close" onclick="closeModal('depositModal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 20px">
+            <div style="font-size: 14px; color: #64748b">보유 포인트</div>
+            <div
+              style="font-size: 24px; font-weight: bold; color: #1a1a1a"
+              id="availablePoints"
+            >
+              -
+            </div>
+          </div>
+
+          <input
+            type="number"
+            class="modal-input"
+            id="depositAmount"
+            placeholder="입금할 금액"
+          />
+
+          <div class="amount-buttons">
+            <button class="amount-btn" onclick="setAmount('deposit', 100)">
+              100P
+            </button>
+            <button class="amount-btn" onclick="setAmount('deposit', 500)">
+              500P
+            </button>
+            <button class="amount-btn" onclick="setAmount('deposit', 1000)">
+              1,000P
+            </button>
+            <button class="amount-btn" onclick="setAmount('deposit', 2000)">
+              2,000P
+            </button>
+            <button class="amount-btn" onclick="setAmount('deposit', 5000)">
+              5,000P
+            </button>
+            <button class="amount-btn" onclick="setMaxDeposit()">최대</button>
+          </div>
+
+          <div
+            style="
+              font-size: 12px;
+              color: #64748b;
+              text-align: center;
+              margin-bottom: 15px;
+            "
+          >
+            <span id="maxDepositAmount">-</span>
+          </div>
+
+          <div class="info-box primary">
+            <div class="info-title">📌 적용 금리</div>
+            <div class="info-value primary modal-rate">-</div>
+          </div>
+
+          <div
+            style="
+              background: #f0f9ff;
+              border-radius: 12px;
+              padding: 12px;
+              font-size: 12px;
+              color: #0369a1;
+            "
+          >
+            <div>✅ 7일 이상 예치 시 이자 지급</div>
+            <div>✅ 14일 이상: 이자 20% 추가</div>
+            <div>✅ 28일 이상: 이자 50% 추가</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('depositModal')"
+          >
+            취소
+          </button>
+          <button class="btn btn-primary" onclick="confirmDeposit()">
+            입금하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 출금 모달 -->
+    <div id="withdrawModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>💸 포인트 출금</h2>
+          <button class="modal-close" onclick="closeModal('withdrawModal')">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 20px">
+            <div style="font-size: 14px; color: #64748b">저축 잔액</div>
+            <div
+              style="font-size: 24px; font-weight: bold; color: #1a1a1a"
+              id="withdrawAvailable"
+            >
+              -
+            </div>
+          </div>
+
+          <input
+            type="number"
+            class="modal-input"
+            id="withdrawAmount"
+            placeholder="출금할 금액"
+          />
+
+          <div class="amount-buttons">
+            <button class="amount-btn" onclick="setAmount('withdraw', 100)">
+              100P
+            </button>
+            <button class="amount-btn" onclick="setAmount('withdraw', 500)">
+              500P
+            </button>
+            <button class="amount-btn" onclick="setAmount('withdraw', 1000)">
+              1,000P
+            </button>
+            <button class="amount-btn" onclick="setAmount('withdraw', 2000)">
+              2,000P
+            </button>
+            <button class="amount-btn" onclick="setAmount('withdraw', 5000)">
+              5,000P
+            </button>
+            <button class="amount-btn" onclick="setMaxWithdraw()">전액</button>
+          </div>
+
+          <div
+            class="info-box warning"
+            id="earlyWithdrawWarning"
+            style="display: none"
+          >
+            <div class="info-title">⚠️ 조기 출금 안내</div>
+            <div style="font-size: 13px; color: #dc2626">
+              <span id="earlyWithdrawDays">-</span>일 후 출금 시 이자를 받을 수
+              있습니다
+            </div>
+          </div>
+
+          <div
+            style="
+              background: #fef2f2;
+              border-radius: 12px;
+              padding: 12px;
+              font-size: 12px;
+              color: #dc2626;
+            "
+          >
+            <div>⚠️ 7일 미만 출금 시 이자 없음</div>
+            <div>⚠️ 출금 후 3일간 재예치 불가</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('withdrawModal')"
+          >
+            취소
+          </button>
+          <button class="btn btn-primary" onclick="confirmWithdraw()">
+            출금하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 네비게이션 -->
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="location.href='index.html'">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">홈</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">저축</span>
+      </div>
+      <div class="nav-item" onclick="location.href='shop.html'">
+        <span class="nav-icon">🛍️</span>
+        <span class="nav-label">상점</span>
+      </div>
+      <div class="nav-item" onclick="location.href='ranking.html'">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">랭킹</span>
+      </div>
+      <div class="nav-item" onclick="location.href='profile.html'">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">내정보</span>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/savings.js"></script>
+
+    <script>
+      // Toastr 설정
+      toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-center',
+        timeOut: 3000,
+        showEasing: 'swing',
+        hideEasing: 'linear',
+      };
+    </script>
+  </body>
+</html>

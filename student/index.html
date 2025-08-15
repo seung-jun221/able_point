@@ -25,14 +25,18 @@
 
     <!-- 메인 컨테이너 -->
     <div class="main-container">
-      <!-- 포인트 카드 섹션 -->
-      <div class="points-section">
+      <!-- 포인트 카드 섹션 (클릭 가능) -->
+      <div
+        class="points-section"
+        style="cursor: pointer"
+        onclick="location.href='history.html'"
+      >
         <div class="points-header">
           <div class="points-title">
             <span class="point-icon">P</span>
             <span>포인트 지갑</span>
           </div>
-          <a href="#" class="points-link" onclick="showHistory()">›</a>
+          <a href="history.html" class="points-link">›</a>
         </div>
         <div class="total-points" id="totalPoints">0P</div>
         <div class="points-breakdown">
@@ -49,14 +53,30 @@
 
       <!-- 탭 메뉴 -->
       <div class="tab-menu">
-        <button class="tab-btn active" data-tab="overview">전체</button>
-        <button class="tab-btn" data-tab="earn">획득</button>
-        <button class="tab-btn" data-tab="spend">사용</button>
-        <button class="tab-btn" data-tab="save">저축</button>
+        <button
+          class="tab-btn active"
+          data-tab="overview"
+          onclick="goToHistory('all')"
+        >
+          전체
+        </button>
+        <button class="tab-btn" data-tab="earn" onclick="goToHistory('earn')">
+          획득
+        </button>
+        <button class="tab-btn" data-tab="spend" onclick="goToHistory('spend')">
+          사용
+        </button>
+        <button class="tab-btn" data-tab="save" onclick="goToHistory('save')">
+          저축
+        </button>
       </div>
 
-      <!-- 저축 계좌 카드 -->
-      <div class="savings-card">
+      <!-- 저축 계좌 카드 (클릭 가능) -->
+      <div
+        class="savings-card"
+        style="cursor: pointer"
+        onclick="location.href='savings.html'"
+      >
         <div class="savings-header">
           <span class="savings-title">💎 저축 계좌</span>
           <span class="interest-rate">주 2% 이자</span>
@@ -68,9 +88,13 @@
             >0</span
           >P 예정)
         </div>
-        <div class="savings-actions">
-          <button class="savings-btn" onclick="deposit()">입금하기</button>
-          <button class="savings-btn" onclick="withdraw()">출금하기</button>
+        <div class="savings-actions" onclick="event.stopPropagation();">
+          <button class="savings-btn" onclick="location.href='savings.html'">
+            입금하기
+          </button>
+          <button class="savings-btn" onclick="location.href='savings.html'">
+            출금하기
+          </button>
         </div>
       </div>
 
@@ -105,7 +129,7 @@
       <div class="activity-section">
         <div class="section-header">
           <span class="section-title">최근 포인트 활동</span>
-          <a href="#" class="view-all" onclick="showAllHistory()">전체보기 ›</a>
+          <a href="history.html" class="view-all">전체보기 ›</a>
         </div>
         <div class="activity-list" id="activityList">
           <div class="loading">데이터를 불러오는 중...</div>
@@ -156,7 +180,7 @@
       </div>
       <div
         class="nav-item"
-        data-page="points"
+        data-page="savings"
         onclick="location.href='savings.html'"
       >
         <span class="nav-icon">💰</span>
@@ -178,13 +202,17 @@
         <span class="nav-icon">🏆</span>
         <span class="nav-label">랭킹</span>
       </div>
-      <div class="nav-item" data-page="profile" onclick="showProfile()">
+      <div
+        class="nav-item"
+        data-page="profile"
+        onclick="location.href='profile.html'"
+      >
         <span class="nav-icon">👤</span>
         <span class="nav-label">내정보</span>
       </div>
     </div>
 
-    <!-- 모달: 포인트 이체 -->
+    <!-- 모달: 포인트 선물 -->
     <div id="transferModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -227,7 +255,209 @@
       </div>
     </div>
 
+    <!-- 모달: 기부하기 -->
+    <div id="donateModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>💝 포인트 기부</h2>
+          <button class="modal-close" onclick="closeDonateModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">기부 종류</label>
+            <select class="form-select" id="donationType">
+              <option value="school">학원 발전 기부</option>
+              <option value="friend">어려운 친구 돕기</option>
+              <option value="charity">자선 단체 기부</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">기부 포인트</label>
+            <input
+              type="number"
+              class="form-input"
+              id="donateAmount"
+              placeholder="기부할 포인트 입력"
+            />
+            <div class="form-hint">
+              보유 포인트: <span id="donatablePoints">0</span>P
+            </div>
+          </div>
+          <div
+            style="
+              background: #f0f9ff;
+              border-radius: 12px;
+              padding: 15px;
+              margin-top: 15px;
+            "
+          >
+            <div style="font-size: 13px; color: #0369a1">
+              💡 기부 시 기부천사 명예 포인트 10%를 추가로 받습니다!
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeDonateModal()">
+            취소
+          </button>
+          <button class="btn btn-primary" onclick="confirmDonate()">
+            기부하기
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/student.js"></script>
+
+    <script>
+      // 추가 함수들 - 페이지 연결
+
+      // 거래 내역 페이지로 이동 (필터 적용)
+      function goToHistory(filter) {
+        if (filter === 'all') {
+          location.href = 'history.html';
+        } else {
+          location.href = `history.html?filter=${filter}`;
+        }
+      }
+
+      // 전체 내역 보기
+      function showHistory() {
+        location.href = 'history.html';
+      }
+
+      // 전체 활동 보기
+      function showAllHistory() {
+        location.href = 'history.html';
+      }
+
+      // 친구 선물 모달
+      function showGift() {
+        document.getElementById('transferModal').classList.add('active');
+        // 보유 포인트 업데이트
+        const currentPoints = studentData?.currentPoints || 0;
+        document.getElementById('availablePoints').textContent =
+          currentPoints.toLocaleString();
+      }
+
+      // 기부 모달
+      function showDonate() {
+        document.getElementById('donateModal').classList.add('active');
+        // 보유 포인트 업데이트
+        const currentPoints = studentData?.currentPoints || 0;
+        document.getElementById('donatablePoints').textContent =
+          currentPoints.toLocaleString();
+      }
+
+      // 기부 모달 닫기
+      function closeDonateModal() {
+        document.getElementById('donateModal').classList.remove('active');
+        // 입력 초기화
+        document.getElementById('donationType').value = 'school';
+        document.getElementById('donateAmount').value = '';
+      }
+
+      // 기부 확인
+      async function confirmDonate() {
+        const type = document.getElementById('donationType').value;
+        const amount = parseInt(document.getElementById('donateAmount').value);
+
+        if (!amount || amount <= 0) {
+          alert('기부할 포인트를 입력해주세요.');
+          return;
+        }
+
+        if (amount > studentData.currentPoints) {
+          alert('포인트가 부족합니다.');
+          return;
+        }
+
+        const typeText = {
+          school: '학원 발전',
+          friend: '어려운 친구 돕기',
+          charity: '자선 단체',
+        };
+
+        if (confirm(`${typeText[type]}에 ${amount}P를 기부하시겠습니까?`)) {
+          // 실제로는 API 호출
+          const bonusPoints = Math.floor(amount * 0.1);
+          alert(
+            `기부가 완료되었습니다!\n기부천사 명예 포인트 ${bonusPoints}P를 받았습니다!`
+          );
+
+          // 데이터 업데이트
+          studentData.currentPoints -= amount;
+          studentData.currentPoints += bonusPoints;
+
+          closeDonateModal();
+          loadStudentData(); // 화면 새로고침
+        }
+      }
+
+      // 마일스톤 보기
+      function showMilestone() {
+        const currentTotal = studentData?.totalPoints || 0;
+        const milestones = [
+          { level: '🌱 씨앗', points: 0, reward: '기본' },
+          { level: '🌿 새싹', points: 1000, reward: '배지' },
+          { level: '🌳 나무', points: 3000, reward: '특별 배지' },
+          { level: '🌲 큰나무', points: 5000, reward: '보너스 100P' },
+          { level: '⭐ 별', points: 10000, reward: '보너스 500P' },
+          { level: '💎 다이아몬드', points: 20000, reward: '특별 선물' },
+        ];
+
+        let currentLevel = milestones[0];
+        let nextLevel = milestones[1];
+
+        for (let i = 0; i < milestones.length; i++) {
+          if (currentTotal >= milestones[i].points) {
+            currentLevel = milestones[i];
+            nextLevel = milestones[i + 1] || null;
+          }
+        }
+
+        const message = nextLevel
+          ? `현재 레벨: ${currentLevel.level}\n` +
+            `누적 포인트: ${currentTotal}P\n\n` +
+            `다음 레벨: ${nextLevel.level}\n` +
+            `필요 포인트: ${nextLevel.points - currentTotal}P\n` +
+            `달성 보상: ${nextLevel.reward}`
+          : `최고 레벨 달성! ${currentLevel.level}\n누적 포인트: ${currentTotal}P`;
+
+        alert(message);
+      }
+
+      // 프로필 보기
+      function showProfile() {
+        location.href = 'profile.html';
+      }
+
+      // 저축 관련 함수들 (savings.html로 이동)
+      function deposit() {
+        location.href = 'savings.html';
+      }
+
+      function withdraw() {
+        location.href = 'savings.html';
+      }
+
+      // ESC 키로 모달 닫기
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          closeDonateModal();
+        }
+      });
+
+      // 모달 외부 클릭 시 닫기
+      document.querySelectorAll('.modal').forEach((modal) => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('active');
+          }
+        });
+      });
+    </script>
   </body>
 </html>

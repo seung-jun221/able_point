@@ -6,6 +6,42 @@
     <title>포인트 뱅크 - 선생님 관리</title>
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/teacher.css" />
+
+    <!-- ⭐ 새로 추가: DataTables CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css"
+    />
+
+    <!-- ⭐ 새로 추가: Toastr (알림) CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+    />
+
+    <style>
+      /* Toastr 커스터마이징 */
+      .toast-success {
+        background-color: #22c55e !important;
+      }
+
+      .toast-error {
+        background-color: #ef4444 !important;
+      }
+
+      .toast-warning {
+        background-color: #f59e0b !important;
+      }
+
+      .toast-info {
+        background-color: #6366f1 !important;
+      }
+
+      #toast-container > div {
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+      }
+    </style>
   </head>
   <body>
     <!-- 사이드바 -->
@@ -128,6 +164,62 @@
         </div>
       </div>
 
+      <!-- ⭐ 새로 추가: 차트 섹션 -->
+      <div
+        class="charts-section"
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 20px;
+          margin: 30px 0;
+        "
+      >
+        <div
+          class="chart-card"
+          style="
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          "
+        >
+          <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
+            📊 주간 포인트 발급 현황
+          </h3>
+          <canvas id="weeklyPointsChart"></canvas>
+        </div>
+
+        <div
+          class="chart-card"
+          style="
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          "
+        >
+          <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
+            🥧 학생별 포인트 분포
+          </h3>
+          <canvas id="studentDistributionChart"></canvas>
+        </div>
+
+        <div
+          class="chart-card"
+          style="
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          "
+        >
+          <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
+            📈 카테고리별 포인트
+          </h3>
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+
       <!-- 학생 목록 테이블 -->
       <div class="table-section">
         <div class="table-header">
@@ -145,7 +237,7 @@
           </div>
         </div>
 
-        <table class="student-table">
+        <table class="student-table" id="studentTable">
           <thead>
             <tr>
               <th>학생</th>
@@ -222,7 +314,184 @@
       </div>
     </div>
 
+    <!-- ⭐ 스크립트 순서 중요! -->
+    <!-- jQuery 먼저 -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- 그 다음 DataTables -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Toastr -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- 기존 스크립트 -->
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/teacher.js"></script>
+
+    <!-- ⭐ 차트 초기화 스크립트 -->
+    <script>
+      // DataTables 한글 설정
+      const dataTableKorean = {
+        lengthMenu: '_MENU_ 명씩 보기',
+        zeroRecords: '데이터가 없습니다',
+        info: '전체 _TOTAL_명 중 _START_~_END_',
+        infoEmpty: '데이터가 없습니다',
+        infoFiltered: '(전체 _MAX_명 중 검색)',
+        search: '검색:',
+        paginate: {
+          first: '처음',
+          last: '마지막',
+          next: '다음',
+          previous: '이전',
+        },
+      };
+
+      // 페이지 로드 시 실행
+      document.addEventListener('DOMContentLoaded', function () {
+        // DataTables 초기화 (테이블에 데이터가 있을 때만)
+        setTimeout(() => {
+          if ($.fn.DataTable && $('#studentTableBody tr').length > 1) {
+            $('#studentTable').DataTable({
+              language: dataTableKorean,
+              pageLength: 10,
+              order: [[3, 'desc']], // 포인트 기준 정렬
+              responsive: true,
+            });
+          }
+        }, 1000);
+
+        // 차트 초기화
+        initCharts();
+      });
+
+      // 차트 초기화 함수
+      function initCharts() {
+        // 1. 주간 포인트 발급 차트
+        const weeklyCtx = document
+          .getElementById('weeklyPointsChart')
+          .getContext('2d');
+        new Chart(weeklyCtx, {
+          type: 'line',
+          data: {
+            labels: ['월', '화', '수', '목', '금'],
+            datasets: [
+              {
+                label: '발급 포인트',
+                data: [120, 190, 300, 250, 420],
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                tension: 0.4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) {
+                    return value + 'P';
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        // 2. 학생별 포인트 분포 차트
+        const distributionCtx = document
+          .getElementById('studentDistributionChart')
+          .getContext('2d');
+        new Chart(distributionCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['0-500P', '500-1000P', '1000-2000P', '2000P+'],
+            datasets: [
+              {
+                data: [8, 12, 15, 5],
+                backgroundColor: ['#fbbf24', '#34d399', '#60a5fa', '#a78bfa'],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+            },
+          },
+        });
+
+        // 3. 카테고리별 포인트 차트
+        const categoryCtx = document
+          .getElementById('categoryChart')
+          .getContext('2d');
+        new Chart(categoryCtx, {
+          type: 'bar',
+          data: {
+            labels: ['출석', '숙제', '시험', '태도', '특별'],
+            datasets: [
+              {
+                label: '포인트',
+                data: [300, 450, 200, 150, 100],
+                backgroundColor: [
+                  '#6366f1',
+                  '#22c55e',
+                  '#f59e0b',
+                  '#ef4444',
+                  '#8b5cf6',
+                ],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) {
+                    return value + 'P';
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // 차트 업데이트 함수 (teacher.js에서 호출용)
+      function updateCharts() {
+        // 실제 데이터로 차트 업데이트
+        const charts = Chart.instances;
+
+        if (charts[0]) {
+          // 주간 차트 업데이트
+          const today = new Date().getDay();
+          const dayIndex = today === 0 ? 4 : today - 1;
+          if (dayIndex >= 0 && dayIndex < 5) {
+            charts[0].data.datasets[0].data[dayIndex] += 10;
+            charts[0].update();
+          }
+        }
+      }
+    </script>
+    <!-- 기존 스크립트들 아래에 추가 -->
+    <!-- DataTables Buttons Extension (엑셀 다운로드용) -->
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   </body>
 </html>

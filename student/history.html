@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>포인트 내역 - 포인트 뱅크</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/history.css" />
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="profile-header">
+      <div class="profile-left">
+        <button
+          onclick="history.back()"
+          style="
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+          "
+        >
+          ‹
+        </button>
+        <h2 style="margin: 0 0 0 15px">포인트 내역</h2>
+      </div>
+      <div class="daily-points">
+        <div style="font-size: 12px; color: #64748b">현재 포인트</div>
+        <div
+          style="font-size: 18px; font-weight: bold; color: #6366f1"
+          id="currentPoints"
+        >
+          0P
+        </div>
+      </div>
+    </div>
+
+    <!-- 필터 탭 -->
+    <div class="filter-tabs">
+      <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="earn">획득</button>
+      <button class="filter-btn" data-filter="spend">사용</button>
+      <button class="filter-btn" data-filter="save">저축</button>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="history-container">
+      <!-- 기간 선택 -->
+      <div class="period-selector">
+        <span class="period-label">기간</span>
+        <div class="period-buttons">
+          <button class="period-btn" data-period="week">1주일</button>
+          <button class="period-btn active" data-period="month">1개월</button>
+          <button class="period-btn" data-period="3month">3개월</button>
+          <button class="period-btn" data-period="all">전체</button>
+        </div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="stats-card">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">획득 포인트</div>
+            <div class="stat-value positive" id="statEarn">+0P</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">사용 포인트</div>
+            <div class="stat-value negative" id="statSpend">0P</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">저축 포인트</div>
+            <div class="stat-value" id="statSave">0P</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 거래 내역 리스트 -->
+      <div id="historyListContainer">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 네비게이션 -->
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="location.href='index.html'">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">홈</span>
+      </div>
+      <div class="nav-item" onclick="location.href='savings.html'">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">저축</span>
+      </div>
+      <div class="nav-item" onclick="location.href='shop.html'">
+        <span class="nav-icon">🛍️</span>
+        <span class="nav-label">상점</span>
+      </div>
+      <div class="nav-item" onclick="location.href='ranking.html'">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">랭킹</span>
+      </div>
+      <div class="nav-item" onclick="location.href='profile.html'">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">내정보</span>
+      </div>
+    </div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/history.js"></script>
+  </body>
+</html>

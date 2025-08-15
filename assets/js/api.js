@@ -37,10 +37,19 @@ class PointBankAPI {
 
   // 학생 포인트 조회
   async getStudentPoints(studentId) {
-    return await this.fetchData({
-      action: 'getStudentPoints',
-      studentId: studentId,
-    });
+    // 테스트용 더미 데이터 반환
+    return {
+      success: true,
+      data: {
+        studentId: studentId || 'TEST001',
+        name: '황진욱',
+        level: '큰나무',
+        currentPoints: 52081,
+        savingsPoints: 0,
+        totalPoints: 52081,
+        avatar: '🐼',
+      },
+    };
   }
 
   // 포인트 지급 (선생님용)
@@ -57,22 +66,48 @@ class PointBankAPI {
 
   // 저축 입금
   async deposit(studentId, amount) {
-    return await this.fetchData({
-      action: 'updateSavings',
-      studentId: studentId,
-      amount: amount,
-      type: 'deposit',
-    });
+    // 테스트용 성공 응답
+    return {
+      success: true,
+      message: '입금 완료',
+      data: {
+        newBalance: (this.savingsBalance || 0) + amount,
+      },
+    };
   }
 
   // 저축 출금
   async withdraw(studentId, amount) {
-    return await this.fetchData({
-      action: 'updateSavings',
-      studentId: studentId,
-      amount: amount,
-      type: 'withdraw',
-    });
+    // 테스트용 성공 응답
+    return {
+      success: true,
+      message: '출금 완료',
+      data: {
+        newBalance: Math.max(0, (this.savingsBalance || 0) - amount),
+      },
+    };
+  }
+
+  // 저축 내역 조회
+  async getSavingsHistory(studentId) {
+    // 테스트용 더미 데이터
+    return {
+      success: true,
+      data: [
+        {
+          type: 'deposit',
+          amount: 1000,
+          date: new Date('2024-11-10'),
+          balance: 1000,
+        },
+        {
+          type: 'interest',
+          amount: 20,
+          date: new Date('2024-11-11'),
+          balance: 1020,
+        },
+      ],
+    };
   }
 
   // 상품 목록 조회
