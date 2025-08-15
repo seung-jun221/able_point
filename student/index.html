@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>포인트 뱅크 - 학생</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/student.css" />
+  </head>
+  <body>
+    <!-- 상단 프로필 헤더 -->
+    <div class="profile-header">
+      <div class="profile-left">
+        <div class="avatar" id="userAvatar">🦁</div>
+        <div class="profile-info">
+          <h2 id="userName">학생 이름</h2>
+          <span class="level-badge" id="userLevel">🌱 씨앗</span>
+        </div>
+      </div>
+      <div class="daily-points">
+        <div class="daily-label">오늘 획득</div>
+        <div class="daily-value" id="todayPoints">+0P</div>
+      </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+      <!-- 포인트 카드 섹션 -->
+      <div class="points-section">
+        <div class="points-header">
+          <div class="points-title">
+            <span class="point-icon">P</span>
+            <span>포인트 지갑</span>
+          </div>
+          <a href="#" class="points-link" onclick="showHistory()">›</a>
+        </div>
+        <div class="total-points" id="totalPoints">0P</div>
+        <div class="points-breakdown">
+          <div class="breakdown-item">
+            <span class="breakdown-label">총 획득</span>
+            <span class="breakdown-value" id="totalEarned">0P</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="breakdown-label">총 사용</span>
+            <span class="breakdown-value" id="totalSpent">0P</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 메뉴 -->
+      <div class="tab-menu">
+        <button class="tab-btn active" data-tab="overview">전체</button>
+        <button class="tab-btn" data-tab="earn">획득</button>
+        <button class="tab-btn" data-tab="spend">사용</button>
+        <button class="tab-btn" data-tab="save">저축</button>
+      </div>
+
+      <!-- 저축 계좌 카드 -->
+      <div class="savings-card">
+        <div class="savings-header">
+          <span class="savings-title">💎 저축 계좌</span>
+          <span class="interest-rate">주 2% 이자</span>
+        </div>
+        <div class="savings-amount" id="savingsAmount">0P</div>
+        <div class="next-interest">
+          다음 이자 지급일: <span id="nextInterestDate">월요일</span> (+<span
+            id="expectedInterest"
+            >0</span
+          >P 예정)
+        </div>
+        <div class="savings-actions">
+          <button class="savings-btn" onclick="deposit()">입금하기</button>
+          <button class="savings-btn" onclick="withdraw()">출금하기</button>
+        </div>
+      </div>
+
+      <!-- 이벤트 타이머 -->
+      <div class="event-timer">
+        <div class="event-title">🎁 다음 월간 경매까지</div>
+        <div class="event-countdown" id="eventCountdown">D-14</div>
+        <div class="event-date" id="eventDate">11월 29일 금요일 4:30PM</div>
+      </div>
+
+      <!-- 빠른 액션 -->
+      <div class="quick-actions">
+        <div class="action-btn" onclick="location.href='shop.html'">
+          <span class="action-icon">🛍️</span>
+          <span class="action-label">포인트샵</span>
+        </div>
+        <div class="action-btn" onclick="showGift()">
+          <span class="action-icon">🎁</span>
+          <span class="action-label">친구 선물</span>
+        </div>
+        <div class="action-btn" onclick="showDonate()">
+          <span class="action-icon">💝</span>
+          <span class="action-label">기부하기</span>
+        </div>
+        <div class="action-btn" onclick="showMilestone()">
+          <span class="action-icon">🏆</span>
+          <span class="action-label">마일스톤</span>
+        </div>
+      </div>
+
+      <!-- 최근 활동 -->
+      <div class="activity-section">
+        <div class="section-header">
+          <span class="section-title">최근 포인트 활동</span>
+          <a href="#" class="view-all" onclick="showAllHistory()">전체보기 ›</a>
+        </div>
+        <div class="activity-list" id="activityList">
+          <div class="loading">데이터를 불러오는 중...</div>
+        </div>
+      </div>
+
+      <!-- 이번 주 랭킹 -->
+      <div class="ranking-card">
+        <div class="section-header">
+          <span class="section-title">🏆 이번 주 랭킹</span>
+          <a href="ranking.html" class="view-all">전체 랭킹 ›</a>
+        </div>
+        <div class="ranking-list" id="rankingList">
+          <div class="loading">랭킹을 불러오는 중...</div>
+        </div>
+      </div>
+
+      <!-- 친구 기부 현황 -->
+      <div class="donation-section">
+        <div class="section-header">
+          <span class="section-title">💝 이번 달 기부 천사들</span>
+        </div>
+        <div class="donation-list" id="donationList">
+          <div class="donor-card">
+            <span class="donor-icon">👼</span>
+            <span class="donor-name">박민수</span>
+            <span class="donor-amount">300P</span>
+          </div>
+          <div class="donor-card">
+            <span class="donor-icon">👼</span>
+            <span class="donor-name">이영희</span>
+            <span class="donor-amount">200P</span>
+          </div>
+          <div class="donor-card">
+            <span class="donor-icon">👼</span>
+            <span class="donor-name">최지우</span>
+            <span class="donor-amount">150P</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 네비게이션 -->
+    <div class="bottom-nav">
+      <div class="nav-item active" data-page="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">홈</span>
+      </div>
+      <div
+        class="nav-item"
+        data-page="points"
+        onclick="location.href='savings.html'"
+      >
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">저축</span>
+      </div>
+      <div
+        class="nav-item"
+        data-page="shop"
+        onclick="location.href='shop.html'"
+      >
+        <span class="nav-icon">🛍️</span>
+        <span class="nav-label">상점</span>
+      </div>
+      <div
+        class="nav-item"
+        data-page="ranking"
+        onclick="location.href='ranking.html'"
+      >
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">랭킹</span>
+      </div>
+      <div class="nav-item" data-page="profile" onclick="showProfile()">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">내정보</span>
+      </div>
+    </div>
+
+    <!-- 모달: 포인트 이체 -->
+    <div id="transferModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">포인트 선물하기</h2>
+          <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">받는 친구</label>
+            <select class="form-select" id="recipientSelect">
+              <option value="">친구를 선택하세요</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">보낼 포인트</label>
+            <input
+              type="number"
+              class="form-input"
+              id="transferAmount"
+              placeholder="보낼 포인트 입력"
+            />
+            <div class="form-hint">
+              보유 포인트: <span id="availablePoints">0</span>P
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">메시지 (선택)</label>
+            <input
+              type="text"
+              class="form-input"
+              id="transferMessage"
+              placeholder="응원 메시지를 남겨보세요!"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+          <button class="btn btn-primary" onclick="sendGift()">선물하기</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/student.js"></script>
+  </body>
+</html>

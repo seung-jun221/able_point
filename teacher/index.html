@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>포인트 뱅크 - 선생님 관리</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/teacher.css" />
+  </head>
+  <body>
+    <!-- 사이드바 -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">🏦</div>
+          <span>포인트 뱅크</span>
+        </div>
+        <select class="class-selector" id="classSelector">
+          <option value="">전체 반</option>
+          <option value="4A">초등 4-A반</option>
+          <option value="4B">초등 4-B반</option>
+          <option value="5A">초등 5-A반</option>
+          <option value="6A">초등 6-A반</option>
+        </select>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>대시보드</span>
+        </a>
+        <a href="#" class="nav-item" data-page="students">
+          <span class="nav-icon">👥</span>
+          <span>학생 관리</span>
+        </a>
+        <a href="#" class="nav-item" data-page="points">
+          <span class="nav-icon">💰</span>
+          <span>포인트 지급</span>
+        </a>
+        <a href="#" class="nav-item" data-page="shop">
+          <span class="nav-icon">🛍️</span>
+          <span>포인트샵 관리</span>
+        </a>
+        <a href="#" class="nav-item" data-page="events">
+          <span class="nav-icon">🎯</span>
+          <span>이벤트 관리</span>
+        </a>
+        <a href="#" class="nav-item" data-page="ranking">
+          <span class="nav-icon">🏆</span>
+          <span>랭킹 관리</span>
+        </a>
+        <a href="#" class="nav-item" data-page="reports">
+          <span class="nav-icon">📈</span>
+          <span>리포트</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="teacher-profile">
+          <div class="teacher-avatar">👩‍🏫</div>
+          <div class="teacher-info">
+            <div class="teacher-name" id="teacherName">선생님</div>
+            <div class="teacher-role">담임 선생님</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">
+          <span>🚪</span> 로그아웃
+        </button>
+      </div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div class="main-content">
+      <!-- 페이지 헤더 -->
+      <div class="page-header">
+        <h1 class="page-title">대시보드</h1>
+        <p class="page-subtitle" id="todayDate">2024년 11월 15일 금요일</p>
+      </div>
+
+      <!-- 요약 카드 -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-icon icon-blue">👥</div>
+          <div class="summary-label">총 학생 수</div>
+          <div class="summary-value" id="totalStudents">0명</div>
+          <div class="summary-change">전체 학생</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon icon-green">💰</div>
+          <div class="summary-label">오늘 발행 포인트</div>
+          <div class="summary-value" id="todayPoints">0P</div>
+          <div class="summary-change">오늘 지급한 포인트</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon icon-purple">🏆</div>
+          <div class="summary-label">이번 주 1등</div>
+          <div class="summary-value" id="weeklyTop">-</div>
+          <div class="summary-change" id="weeklyTopPoints">0P 획득</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon icon-orange">🎯</div>
+          <div class="summary-label">다음 이벤트</div>
+          <div class="summary-value">D-14</div>
+          <div class="summary-change">월간 경매</div>
+        </div>
+      </div>
+
+      <!-- 빠른 액션 -->
+      <div class="quick-actions-grid">
+        <div class="quick-action" onclick="quickAction('attendance')">
+          <div class="quick-action-icon">✅</div>
+          <div class="quick-action-label">출석 포인트 지급</div>
+        </div>
+        <div class="quick-action" onclick="quickAction('test')">
+          <div class="quick-action-icon">📝</div>
+          <div class="quick-action-label">시험 점수 입력</div>
+        </div>
+        <div class="quick-action" onclick="quickAction('homework')">
+          <div class="quick-action-icon">📚</div>
+          <div class="quick-action-label">숙제 포인트</div>
+        </div>
+        <div class="quick-action" onclick="quickAction('interest')">
+          <div class="quick-action-icon">💎</div>
+          <div class="quick-action-label">이자 정산</div>
+        </div>
+      </div>
+
+      <!-- 학생 목록 테이블 -->
+      <div class="table-section">
+        <div class="table-header">
+          <h2 class="table-title">학생 포인트 현황</h2>
+          <div class="table-actions">
+            <input
+              type="text"
+              class="search-box"
+              id="searchInput"
+              placeholder="학생 검색..."
+            />
+            <button class="btn btn-primary" onclick="showPointModal()">
+              포인트 지급
+            </button>
+          </div>
+        </div>
+
+        <table class="student-table">
+          <thead>
+            <tr>
+              <th>학생</th>
+              <th>반</th>
+              <th>레벨</th>
+              <th>현재 포인트</th>
+              <th>저축 포인트</th>
+              <th>빠른 지급</th>
+            </tr>
+          </thead>
+          <tbody id="studentTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px">
+                데이터를 불러오는 중...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 포인트 지급 모달 -->
+    <div id="pointModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>포인트 지급</h2>
+          <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">대상 학생</label>
+          <select class="form-select" id="modalStudentSelect">
+            <option value="">학생을 선택하세요</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">포인트 종류</label>
+          <select class="form-select" id="modalPointType">
+            <option value="attendance">출석 포인트</option>
+            <option value="homework">숙제 포인트</option>
+            <option value="test">시험 포인트</option>
+            <option value="behavior">태도 포인트</option>
+            <option value="special">특별 포인트</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">포인트 금액</label>
+          <input
+            type="number"
+            class="form-input"
+            id="modalPointAmount"
+            placeholder="지급할 포인트 입력"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">사유 (선택)</label>
+          <input
+            type="text"
+            class="form-input"
+            id="modalPointReason"
+            placeholder="예: 수학 시험 만점"
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+          <button class="btn btn-primary" onclick="submitPoints()">
+            지급하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/teacher.js"></script>
+  </body>
+</html>

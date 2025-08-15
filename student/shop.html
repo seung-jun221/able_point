@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>포인트샵 - 포인트 뱅크</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/shop.css" />
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="shop-header">
+      <button class="back-btn" onclick="history.back()">‹</button>
+      <h1 class="page-title">포인트샵</h1>
+      <div class="my-points">
+        <span class="points-label">보유</span>
+        <span class="points-value" id="myPoints">0P</span>
+      </div>
+    </div>
+
+    <!-- 카테고리 탭 -->
+    <div class="category-tabs">
+      <button class="category-btn active" data-category="all">전체</button>
+      <button class="category-btn" data-category="stationery">문구류</button>
+      <button class="category-btn" data-category="snack">간식</button>
+      <button class="category-btn" data-category="voucher">상품권</button>
+      <button class="category-btn" data-category="special">특별상품</button>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+      <!-- 인기 상품 배너 -->
+      <div class="popular-banner">
+        <div class="banner-content">
+          <span class="banner-badge">🔥 HOT</span>
+          <div class="banner-info">
+            <h3>이번 주 인기 상품</h3>
+            <p>문화상품권 5,000원</p>
+          </div>
+          <div class="banner-price">1,000P</div>
+        </div>
+      </div>
+
+      <!-- 상품 그리드 -->
+      <div class="products-grid" id="productsGrid">
+        <!-- 상품 카드 예시 -->
+        <div class="product-card" data-category="stationery">
+          <div class="product-image">
+            <span class="product-emoji">✏️</span>
+            <span class="stock-badge">재고 50개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">연필 세트</h3>
+            <p class="product-desc">고급 연필 5자루 세트</p>
+            <div class="product-footer">
+              <span class="product-price">100P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM001', '연필 세트', 100)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="snack">
+          <div class="product-image">
+            <span class="product-emoji">🍪</span>
+            <span class="stock-badge">재고 30개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">과자 세트</h3>
+            <p class="product-desc">인기 과자 모음</p>
+            <div class="product-footer">
+              <span class="product-price">200P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM002', '과자 세트', 200)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="stationery">
+          <div class="product-image">
+            <span class="product-emoji">📒</span>
+            <span class="stock-badge">재고 20개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">노트북</h3>
+            <p class="product-desc">A4 스프링 노트</p>
+            <div class="product-footer">
+              <span class="product-price">150P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM003', '노트북', 150)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="voucher">
+          <div class="product-image">
+            <span class="product-emoji">🎁</span>
+            <span class="stock-badge stock-low">재고 5개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">문화상품권 5,000원</h3>
+            <p class="product-desc">온라인/오프라인 사용 가능</p>
+            <div class="product-footer">
+              <span class="product-price">1,000P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM004', '문화상품권', 1000)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="special">
+          <div class="product-image">
+            <span class="product-emoji">🍕</span>
+            <span class="stock-badge stock-low">재고 3개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">피자 쿠폰</h3>
+            <p class="product-desc">파파존스 라지 피자</p>
+            <div class="product-footer">
+              <span class="product-price">2,000P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM005', '피자 쿠폰', 2000)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="stationery">
+          <div class="product-image">
+            <span class="product-emoji">✂️</span>
+            <span class="stock-badge">재고 15개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">문구 세트</h3>
+            <p class="product-desc">가위, 풀, 자 세트</p>
+            <div class="product-footer">
+              <span class="product-price">250P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM006', '문구 세트', 250)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="snack">
+          <div class="product-image">
+            <span class="product-emoji">🥤</span>
+            <span class="stock-badge">재고 25개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">음료수</h3>
+            <p class="product-desc">콜라/사이다 선택</p>
+            <div class="product-footer">
+              <span class="product-price">50P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM007', '음료수', 50)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card" data-category="special">
+          <div class="product-image">
+            <span class="product-emoji">🎮</span>
+            <span class="stock-badge stock-low">재고 2개</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">게임 이용권</h3>
+            <p class="product-desc">PC방 2시간 이용권</p>
+            <div class="product-footer">
+              <span class="product-price">500P</span>
+              <button
+                class="buy-btn"
+                onclick="purchaseItem('ITEM008', '게임 이용권', 500)"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 구매 내역 -->
+      <div class="purchase-history">
+        <h2 class="section-title">최근 구매 내역</h2>
+        <div class="history-list" id="historyList">
+          <div class="history-item">
+            <div class="history-info">
+              <span class="history-icon">✏️</span>
+              <div>
+                <div class="history-name">연필 세트</div>
+                <div class="history-date">2024.11.10</div>
+              </div>
+            </div>
+            <span class="history-price">-100P</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 구매 확인 모달 -->
+    <div id="purchaseModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>구매 확인</h2>
+          <button class="modal-close" onclick="closePurchaseModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="purchase-item">
+            <span class="purchase-emoji" id="purchaseEmoji">🎁</span>
+            <h3 id="purchaseName">상품명</h3>
+            <p class="purchase-price" id="purchasePrice">0P</p>
+          </div>
+          <div class="purchase-info">
+            <div class="info-row">
+              <span>현재 포인트</span>
+              <span id="currentPoints">0P</span>
+            </div>
+            <div class="info-row">
+              <span>구매 후 잔액</span>
+              <span id="afterPoints">0P</span>
+            </div>
+          </div>
+          <p class="purchase-notice">구매하신 상품은 데스크에서 수령하세요!</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePurchaseModal()">
+            취소
+          </button>
+          <button class="btn btn-primary" id="confirmPurchase">구매하기</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/shop.js"></script>
+  </body>
+</html>

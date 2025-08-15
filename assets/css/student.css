@@ -1,0 +1,687 @@
+/* student.css - 학생 페이지 전용 스타일 */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 100px;
+  padding-bottom: 80px;
+  margin: 0;
+}
+
+/* 상단 프로필 헤더 - 고정 */
+.profile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.profile-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+}
+
+.profile-info h2 {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 5px;
+  margin: 0 0 5px 0;
+}
+
+.level-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f0f1ff;
+  color: #6366f1;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.daily-points {
+  text-align: right;
+}
+
+.daily-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.daily-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #6366f1;
+}
+
+/* 메인 컨테이너 */
+.main-container {
+  flex: 1;
+  padding: 20px;
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+/* 포인트 카드 섹션 */
+.points-section {
+  background: #1a1a1a;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.points-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.points-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.point-icon {
+  width: 20px;
+  height: 20px;
+  background: #ffd700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.points-link {
+  color: white;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+.total-points {
+  font-size: 42px;
+  font-weight: bold;
+  margin-bottom: 25px;
+}
+
+.points-breakdown {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.breakdown-label {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 5px;
+}
+
+.breakdown-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 탭 메뉴 */
+.tab-menu {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 20px;
+  background: white;
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-btn.active {
+  background: #6366f1;
+  color: white;
+}
+
+/* 저축 계좌 카드 */
+.savings-card {
+  background: #6366f1;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+}
+
+.savings-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+}
+
+.savings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.savings-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.interest-rate {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.savings-amount {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.next-interest {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 15px;
+}
+
+.savings-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.savings-btn {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.savings-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 이벤트 타이머 */
+.event-timer {
+  background: #ff6b6b;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.2);
+}
+
+.event-title {
+  font-size: 14px;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.event-countdown {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.event-date {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* 빠른 액션 */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn:hover {
+  border-color: #6366f1;
+  background: #f8f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+}
+
+.action-icon {
+  font-size: 28px;
+}
+
+.action-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 활동 섹션 */
+.activity-section,
+.ranking-card,
+.donation-section {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.view-all {
+  font-size: 12px;
+  color: #999;
+  text-decoration: none;
+}
+
+.view-all:hover {
+  color: #6366f1;
+}
+
+/* 활동 리스트 */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8f8f8;
+  border-radius: 10px;
+}
+
+.activity-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.icon-earn {
+  background: #e8f0ff;
+}
+.icon-save {
+  background: #fff8e1;
+}
+.icon-spend {
+  background: #ffe8e8;
+}
+.icon-gift {
+  background: #f3e5ff;
+}
+
+.activity-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.activity-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.activity-points {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.points-positive {
+  color: #22c55e;
+}
+.points-negative {
+  color: #ef4444;
+}
+
+/* 랭킹 리스트 */
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: #f8f8f8;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.rank-item.me {
+  background: #f0f1ff;
+  border: 2px solid #6366f1;
+}
+
+.rank-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.rank-1 {
+  background: #ffd700;
+  color: white;
+}
+.rank-2 {
+  background: #c0c0c0;
+  color: white;
+}
+.rank-3 {
+  background: #cd7f32;
+  color: white;
+}
+.rank-other {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.rank-info {
+  flex: 1;
+}
+
+.rank-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.rank-points {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 기부 섹션 */
+.donation-list {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+}
+
+.donor-card {
+  flex: 0 0 100px;
+  text-align: center;
+  padding: 15px;
+  background: #f8f8f8;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.donor-icon {
+  font-size: 32px;
+}
+
+.donor-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.donor-amount {
+  font-size: 14px;
+  font-weight: bold;
+  color: #6366f1;
+}
+
+/* 하단 네비게이션 - 고정 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #f0f0f0;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.3s;
+  flex: 1;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: #6366f1;
+  transition: width 0.3s;
+}
+
+.nav-item.active::before {
+  width: 30px;
+}
+
+.nav-item.active {
+  color: #6366f1;
+}
+
+.nav-icon {
+  font-size: 22px;
+  transition: transform 0.3s;
+}
+
+.nav-item.active .nav-icon {
+  transform: translateY(-2px);
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 모달 */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 로딩 */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
