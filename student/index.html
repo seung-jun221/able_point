@@ -6,6 +6,7 @@
     <title>포인트 뱅크 - 학생</title>
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/student-main.css" />
   </head>
   <body>
     <!-- 상단 프로필 헤더 -->
@@ -56,53 +57,209 @@
         <button
           class="tab-btn active"
           data-tab="overview"
-          onclick="goToHistory('all')"
+          onclick="showTab('overview')"
         >
           전체
         </button>
-        <button class="tab-btn" data-tab="earn" onclick="goToHistory('earn')">
+        <button class="tab-btn" data-tab="earn" onclick="showTab('earn')">
           획득
         </button>
-        <button class="tab-btn" data-tab="spend" onclick="goToHistory('spend')">
+        <button class="tab-btn" data-tab="spend" onclick="showTab('spend')">
           사용
         </button>
-        <button class="tab-btn" data-tab="save" onclick="goToHistory('save')">
+        <button class="tab-btn" data-tab="save" onclick="showTab('save')">
           저축
         </button>
       </div>
 
-      <!-- 저축 계좌 카드 (클릭 가능) -->
-      <div
-        class="savings-card"
-        style="cursor: pointer"
-        onclick="location.href='savings.html'"
-      >
-        <div class="savings-header">
-          <span class="savings-title">💎 저축 계좌</span>
-          <span class="interest-rate">주 2% 이자</span>
+      <!-- 탭 콘텐츠: 전체 -->
+      <div id="overview-content" class="tab-content active">
+        <!-- 저축 계좌 카드 -->
+        <div
+          class="savings-card"
+          style="cursor: pointer"
+          onclick="location.href='savings.html'"
+        >
+          <div class="savings-header">
+            <span class="savings-title">💎 저축 계좌</span>
+            <span class="interest-rate">주 2% 이자</span>
+          </div>
+          <div class="savings-amount" id="savingsAmount">0P</div>
+          <div class="next-interest">
+            다음 이자 지급일: <span id="nextInterestDate">월요일</span> (+<span
+              id="expectedInterest"
+              >0</span
+            >P 예정)
+          </div>
+          <div class="savings-actions" onclick="event.stopPropagation();">
+            <button class="savings-btn" onclick="location.href='savings.html'">
+              입금하기
+            </button>
+            <button class="savings-btn" onclick="location.href='savings.html'">
+              출금하기
+            </button>
+          </div>
         </div>
-        <div class="savings-amount" id="savingsAmount">0P</div>
-        <div class="next-interest">
-          다음 이자 지급일: <span id="nextInterestDate">월요일</span> (+<span
-            id="expectedInterest"
-            >0</span
-          >P 예정)
+
+        <!-- 이벤트 타이머 -->
+        <div class="event-timer">
+          <div class="event-title">🎁 다음 월간 경매까지</div>
+          <div class="event-countdown" id="eventCountdown">D-14</div>
+          <div class="event-date" id="eventDate">11월 29일 금요일 4:30PM</div>
         </div>
-        <div class="savings-actions" onclick="event.stopPropagation();">
-          <button class="savings-btn" onclick="location.href='savings.html'">
-            입금하기
-          </button>
-          <button class="savings-btn" onclick="location.href='savings.html'">
-            출금하기
+      </div>
+
+      <!-- 탭 콘텐츠: 획득 -->
+      <div id="earn-content" class="tab-content">
+        <div class="summary-card">
+          <div class="summary-header">
+            <span class="summary-title">이번 달 획득 포인트</span>
+          </div>
+          <div class="summary-value" style="color: #22c55e">+1,250P</div>
+
+          <div class="mini-history">
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #dcfce7">✅</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">출석 보상</div>
+                  <div class="mini-item-date">오늘 09:00</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-plus">+10P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #e0e7ff">📚</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">숙제 완료</div>
+                  <div class="mini-item-date">어제 17:00</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-plus">+30P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #fef3c7">💯</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">시험 만점</div>
+                  <div class="mini-item-date">3일 전</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-plus">+100P</div>
+            </div>
+          </div>
+
+          <button
+            class="view-more-btn"
+            onclick="location.href='history.html?filter=earn'"
+          >
+            전체 획득 내역 보기 →
           </button>
         </div>
       </div>
 
-      <!-- 이벤트 타이머 -->
-      <div class="event-timer">
-        <div class="event-title">🎁 다음 월간 경매까지</div>
-        <div class="event-countdown" id="eventCountdown">D-14</div>
-        <div class="event-date" id="eventDate">11월 29일 금요일 4:30PM</div>
+      <!-- 탭 콘텐츠: 사용 -->
+      <div id="spend-content" class="tab-content">
+        <div class="summary-card">
+          <div class="summary-header">
+            <span class="summary-title">이번 달 사용 포인트</span>
+          </div>
+          <div class="summary-value" style="color: #ef4444">-850P</div>
+
+          <div class="mini-history">
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #fee2e2">🛍️</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">연필 세트 구매</div>
+                  <div class="mini-item-date">오늘 14:30</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-minus">-100P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #fee2e2">🍪</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">과자 구매</div>
+                  <div class="mini-item-date">2일 전</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-minus">-50P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #fce7f3">🎁</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">친구 선물</div>
+                  <div class="mini-item-date">5일 전</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-minus">-200P</div>
+            </div>
+          </div>
+
+          <button
+            class="view-more-btn"
+            onclick="location.href='history.html?filter=spend'"
+          >
+            전체 사용 내역 보기 →
+          </button>
+        </div>
+      </div>
+
+      <!-- 탭 콘텐츠: 저축 -->
+      <div id="save-content" class="tab-content">
+        <div class="summary-card">
+          <div class="summary-header">
+            <span class="summary-title">저축 계좌 현황</span>
+          </div>
+          <div class="summary-value" style="color: #6366f1">2,000P</div>
+
+          <div class="mini-history">
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #e0e7ff">💰</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">저축 입금</div>
+                  <div class="mini-item-date">3일 전</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-minus">-500P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #fef3c7">💎</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">이자 지급</div>
+                  <div class="mini-item-date">월요일</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-plus">+40P</div>
+            </div>
+
+            <div class="mini-history-item">
+              <div class="mini-item-left">
+                <div class="mini-icon" style="background: #dcfce7">💸</div>
+                <div class="mini-item-info">
+                  <div class="mini-item-title">저축 출금</div>
+                  <div class="mini-item-date">2주 전</div>
+                </div>
+              </div>
+              <div class="mini-item-amount amount-plus">+1000P</div>
+            </div>
+          </div>
+
+          <button class="view-more-btn" onclick="location.href='savings.html'">
+            저축 계좌 관리 →
+          </button>
+        </div>
       </div>
 
       <!-- 빠른 액션 -->
@@ -307,157 +464,9 @@
       </div>
     </div>
 
+    <!-- 스크립트 로드 순서 중요! -->
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/student.js"></script>
-
-    <script>
-      // 추가 함수들 - 페이지 연결
-
-      // 거래 내역 페이지로 이동 (필터 적용)
-      function goToHistory(filter) {
-        if (filter === 'all') {
-          location.href = 'history.html';
-        } else {
-          location.href = `history.html?filter=${filter}`;
-        }
-      }
-
-      // 전체 내역 보기
-      function showHistory() {
-        location.href = 'history.html';
-      }
-
-      // 전체 활동 보기
-      function showAllHistory() {
-        location.href = 'history.html';
-      }
-
-      // 친구 선물 모달
-      function showGift() {
-        document.getElementById('transferModal').classList.add('active');
-        // 보유 포인트 업데이트
-        const currentPoints = studentData?.currentPoints || 0;
-        document.getElementById('availablePoints').textContent =
-          currentPoints.toLocaleString();
-      }
-
-      // 기부 모달
-      function showDonate() {
-        document.getElementById('donateModal').classList.add('active');
-        // 보유 포인트 업데이트
-        const currentPoints = studentData?.currentPoints || 0;
-        document.getElementById('donatablePoints').textContent =
-          currentPoints.toLocaleString();
-      }
-
-      // 기부 모달 닫기
-      function closeDonateModal() {
-        document.getElementById('donateModal').classList.remove('active');
-        // 입력 초기화
-        document.getElementById('donationType').value = 'school';
-        document.getElementById('donateAmount').value = '';
-      }
-
-      // 기부 확인
-      async function confirmDonate() {
-        const type = document.getElementById('donationType').value;
-        const amount = parseInt(document.getElementById('donateAmount').value);
-
-        if (!amount || amount <= 0) {
-          alert('기부할 포인트를 입력해주세요.');
-          return;
-        }
-
-        if (amount > studentData.currentPoints) {
-          alert('포인트가 부족합니다.');
-          return;
-        }
-
-        const typeText = {
-          school: '학원 발전',
-          friend: '어려운 친구 돕기',
-          charity: '자선 단체',
-        };
-
-        if (confirm(`${typeText[type]}에 ${amount}P를 기부하시겠습니까?`)) {
-          // 실제로는 API 호출
-          const bonusPoints = Math.floor(amount * 0.1);
-          alert(
-            `기부가 완료되었습니다!\n기부천사 명예 포인트 ${bonusPoints}P를 받았습니다!`
-          );
-
-          // 데이터 업데이트
-          studentData.currentPoints -= amount;
-          studentData.currentPoints += bonusPoints;
-
-          closeDonateModal();
-          loadStudentData(); // 화면 새로고침
-        }
-      }
-
-      // 마일스톤 보기
-      function showMilestone() {
-        const currentTotal = studentData?.totalPoints || 0;
-        const milestones = [
-          { level: '🌱 씨앗', points: 0, reward: '기본' },
-          { level: '🌿 새싹', points: 1000, reward: '배지' },
-          { level: '🌳 나무', points: 3000, reward: '특별 배지' },
-          { level: '🌲 큰나무', points: 5000, reward: '보너스 100P' },
-          { level: '⭐ 별', points: 10000, reward: '보너스 500P' },
-          { level: '💎 다이아몬드', points: 20000, reward: '특별 선물' },
-        ];
-
-        let currentLevel = milestones[0];
-        let nextLevel = milestones[1];
-
-        for (let i = 0; i < milestones.length; i++) {
-          if (currentTotal >= milestones[i].points) {
-            currentLevel = milestones[i];
-            nextLevel = milestones[i + 1] || null;
-          }
-        }
-
-        const message = nextLevel
-          ? `현재 레벨: ${currentLevel.level}\n` +
-            `누적 포인트: ${currentTotal}P\n\n` +
-            `다음 레벨: ${nextLevel.level}\n` +
-            `필요 포인트: ${nextLevel.points - currentTotal}P\n` +
-            `달성 보상: ${nextLevel.reward}`
-          : `최고 레벨 달성! ${currentLevel.level}\n누적 포인트: ${currentTotal}P`;
-
-        alert(message);
-      }
-
-      // 프로필 보기
-      function showProfile() {
-        location.href = 'profile.html';
-      }
-
-      // 저축 관련 함수들 (savings.html로 이동)
-      function deposit() {
-        location.href = 'savings.html';
-      }
-
-      function withdraw() {
-        location.href = 'savings.html';
-      }
-
-      // ESC 키로 모달 닫기
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          closeModal();
-          closeDonateModal();
-        }
-      });
-
-      // 모달 외부 클릭 시 닫기
-      document.querySelectorAll('.modal').forEach((modal) => {
-        modal.addEventListener('click', (e) => {
-          if (e.target === modal) {
-            modal.classList.remove('active');
-          }
-        });
-      });
-    </script>
+    <script src="../assets/js/student-main.js"></script>
   </body>
 </html>

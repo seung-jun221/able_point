@@ -1,6 +1,7 @@
-// api.js - Google Sheets API 연동 클래스
+// api.js - Google Sheets API 연동 클래스 (실제 연동 버전)
 class PointBankAPI {
   constructor() {
+    // 실제 배포된 Google Apps Script URL
     this.baseURL =
       'https://script.google.com/macros/s/AKfycbxIWWpnXg7b5v2YjrSsFK1-3OSaKK8EONDSxRMQh0fvrW-fC5PVY3tENF7KonLDGmUFig/exec';
   }
@@ -10,8 +11,10 @@ class PointBankAPI {
     const url = `${this.baseURL}?${queryString}`;
 
     try {
+      console.log('API 호출:', params.action, params);
       const response = await fetch(url);
       const data = await response.json();
+      console.log('API 응답:', data);
       return data;
     } catch (error) {
       console.error('API Error:', error);
@@ -28,31 +31,22 @@ class PointBankAPI {
     });
   }
 
-  // 학생 목록 조회 (선생님용)
+  // 학생 목록 조회
   async getStudents(classId = null) {
     const params = { action: 'getStudents' };
     if (classId) params.classId = classId;
     return await this.fetchData(params);
   }
 
-  // 학생 포인트 조회
+  // 학생 포인트 조회 - 실제 연동
   async getStudentPoints(studentId) {
-    // 테스트용 더미 데이터 반환
-    return {
-      success: true,
-      data: {
-        studentId: studentId || 'TEST001',
-        name: '황진욱',
-        level: '큰나무',
-        currentPoints: 52081,
-        savingsPoints: 0,
-        totalPoints: 52081,
-        avatar: '🐼',
-      },
-    };
+    return await this.fetchData({
+      action: 'getStudentPoints',
+      studentId: studentId,
+    });
   }
 
-  // 포인트 지급 (선생님용)
+  // 포인트 지급
   async addPoints(studentId, amount, type, reason) {
     return await this.fetchData({
       action: 'addPoints',
@@ -66,48 +60,28 @@ class PointBankAPI {
 
   // 저축 입금
   async deposit(studentId, amount) {
-    // 테스트용 성공 응답
-    return {
-      success: true,
-      message: '입금 완료',
-      data: {
-        newBalance: (this.savingsBalance || 0) + amount,
-      },
-    };
+    return await this.fetchData({
+      action: 'deposit',
+      studentId: studentId,
+      amount: amount,
+    });
   }
 
   // 저축 출금
   async withdraw(studentId, amount) {
-    // 테스트용 성공 응답
-    return {
-      success: true,
-      message: '출금 완료',
-      data: {
-        newBalance: Math.max(0, (this.savingsBalance || 0) - amount),
-      },
-    };
+    return await this.fetchData({
+      action: 'withdraw',
+      studentId: studentId,
+      amount: amount,
+    });
   }
 
   // 저축 내역 조회
   async getSavingsHistory(studentId) {
-    // 테스트용 더미 데이터
-    return {
-      success: true,
-      data: [
-        {
-          type: 'deposit',
-          amount: 1000,
-          date: new Date('2024-11-10'),
-          balance: 1000,
-        },
-        {
-          type: 'interest',
-          amount: 20,
-          date: new Date('2024-11-11'),
-          balance: 1020,
-        },
-      ],
-    };
+    return await this.fetchData({
+      action: 'getSavingsHistory',
+      studentId: studentId,
+    });
   }
 
   // 상품 목록 조회
@@ -134,6 +108,14 @@ class PointBankAPI {
     });
   }
 
+  // 거래 내역 조회
+  async getTransactionHistory(studentId) {
+    return await this.fetchData({
+      action: 'getTransactionHistory',
+      studentId: studentId,
+    });
+  }
+
   // 랭킹 조회
   async getRanking(classId = null) {
     const params = { action: 'getRanking' };
@@ -144,3 +126,8 @@ class PointBankAPI {
 
 // API 인스턴스 생성
 const api = new PointBankAPI();
+
+// 전역 에러 핸들러
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('API 오류:', event.reason);
+});

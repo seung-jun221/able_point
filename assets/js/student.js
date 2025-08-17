@@ -1,4 +1,4 @@
-// student.js - 학생 페이지 기능
+// student.js - 학생 페이지 기능 (실제 연동 버전)
 
 // 전역 변수
 const studentId = localStorage.getItem('loginId');
@@ -16,12 +16,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 사용자 이름 표시
-  document.getElementById('userName').textContent = userName + ' 님';
+  document.getElementById('userName').textContent = userName || '학생';
 
   // 데이터 로드
   await loadStudentData();
   await loadRanking();
-  await loadStudentsList();
+  await loadActivityHistory();
 
   // 이벤트 리스너 설정
   setupEventListeners();
@@ -30,98 +30,134 @@ document.addEventListener('DOMContentLoaded', async () => {
   startEventCountdown();
 });
 
-// 학생 데이터 로드
+// 학생 데이터 로드 - 실제 연동
 async function loadStudentData() {
   try {
     const result = await api.getStudentPoints(studentId);
 
     if (result.success) {
       studentData = result.data;
+      console.log('학생 데이터:', studentData);
 
       // 포인트 표시
       document.getElementById('totalPoints').textContent =
-        studentData.currentPoints + 'P';
+        (studentData.currentPoints || 0).toLocaleString() + 'P';
       document.getElementById('savingsAmount').textContent =
-        studentData.savingsPoints + 'P';
+        (studentData.savingsPoints || 0).toLocaleString() + 'P';
       document.getElementById('totalEarned').textContent =
-        studentData.totalPoints + 'P';
+        (studentData.totalPoints || 0).toLocaleString() + 'P';
 
-      const totalSpent =
+      const totalSpent = Math.max(
+        0,
         studentData.totalPoints -
-        studentData.currentPoints -
-        studentData.savingsPoints;
+          studentData.currentPoints -
+          studentData.savingsPoints
+      );
       document.getElementById('totalSpent').textContent =
-        Math.max(0, totalSpent) + 'P';
+        totalSpent.toLocaleString() + 'P';
 
       // 레벨 표시
-      document.getElementById('userLevel').textContent = studentData.level;
+      const levelText = getLevelDisplay(studentData.level);
+      document.getElementById('userLevel').textContent = levelText;
 
       // 아바타 표시
       if (studentData.avatar) {
         document.getElementById('userAvatar').textContent = studentData.avatar;
       }
 
+      // 오늘 획득 포인트 계산
+      await calculateTodayPoints();
+
       // 예상 이자 계산
-      const expectedInterest = Math.floor(studentData.savingsPoints * 0.02);
+      const expectedInterest = Math.floor(
+        (studentData.savingsPoints || 0) * 0.02
+      );
       document.getElementById('expectedInterest').textContent =
         expectedInterest;
 
-      // 활동 내역 표시
-      loadActivityHistory();
+      // 다음 월요일 표시
+      const nextMonday = getNextMonday();
+      document.getElementById('nextInterestDate').textContent =
+        nextMonday.toLocaleDateString('ko-KR', { weekday: 'long' });
+    } else {
+      console.error('학생 데이터 로드 실패:', result.error);
+      alert('데이터를 불러올 수 없습니다.');
     }
   } catch (error) {
     console.error('데이터 로드 오류:', error);
   }
 }
 
-// 활동 내역 로드
+// 오늘 획득 포인트 계산
+async function calculateTodayPoints() {
+  try {
+    const result = await api.getPointHistory(studentId);
+
+    if (result.success) {
+      const today = new Date().toDateString();
+      const todayPoints = result.data
+        .filter((item) => new Date(item.date).toDateString() === today)
+        .filter((item) => item.amount > 0)
+        .reduce((sum, item) => sum + parseInt(item.amount), 0);
+
+      document.getElementById('todayPoints').textContent = `+${todayPoints}P`;
+    }
+  } catch (error) {
+    console.error('오늘 포인트 계산 오류:', error);
+  }
+}
+
+// 활동 내역 로드 - 실제 연동
 async function loadActivityHistory() {
   const activityList = document.getElementById('activityList');
 
-  // 임시 데이터 (실제로는 API에서 가져옴)
-  const activities = [
-    { type: 'earn', title: '출석 보상', amount: 10, time: '오늘 09:00' },
-    { type: 'earn', title: '숙제 완료', amount: 30, time: '어제 17:00' },
-    { type: 'save', title: '저축 입금', amount: -500, time: '3일 전' },
-    { type: 'spend', title: '연필세트 구매', amount: -100, time: '5일 전' },
-  ];
+  try {
+    const result = await api.getPointHistory(studentId);
 
-  activityList.innerHTML = activities
-    .map((activity) => {
-      const iconClass =
-        activity.type === 'earn'
-          ? 'icon-earn'
-          : activity.type === 'save'
-          ? 'icon-save'
-          : 'icon-spend';
-      const icon =
-        activity.type === 'earn'
-          ? '✅'
-          : activity.type === 'save'
-          ? '💎'
-          : '🛍️';
-      const pointsClass =
-        activity.amount > 0 ? 'points-positive' : 'points-negative';
-      const amountText =
-        activity.amount > 0 ? `+${activity.amount}P` : `${activity.amount}P`;
+    if (result.success && result.data.length > 0) {
+      // 최근 5개만 표시
+      const recentActivities = result.data.slice(0, 5);
 
-      return `
-            <div class="activity-item">
-                <div class="activity-left">
-                    <div class="activity-icon ${iconClass}">${icon}</div>
-                    <div class="activity-info">
-                        <span class="activity-title">${activity.title}</span>
-                        <span class="activity-time">${activity.time}</span>
-                    </div>
-                </div>
-                <span class="activity-points ${pointsClass}">${amountText}</span>
+      activityList.innerHTML = recentActivities
+        .map((activity) => {
+          const iconClass = getIconClass(activity.type);
+          const icon = getIcon(activity.type);
+          const pointsClass =
+            activity.amount > 0 ? 'points-positive' : 'points-negative';
+          const amountText =
+            activity.amount > 0
+              ? `+${activity.amount}P`
+              : `${activity.amount}P`;
+          const timeText = formatTimeAgo(activity.date);
+
+          return `
+          <div class="activity-item">
+            <div class="activity-left">
+              <div class="activity-icon ${iconClass}">${icon}</div>
+              <div class="activity-info">
+                <span class="activity-title">${
+                  activity.reason || activity.type
+                }</span>
+                <span class="activity-time">${timeText}</span>
+              </div>
             </div>
+            <span class="activity-points ${pointsClass}">${amountText}</span>
+          </div>
         `;
-    })
-    .join('');
+        })
+        .join('');
+    } else {
+      activityList.innerHTML =
+        '<div class="no-data">아직 활동 내역이 없습니다.</div>';
+    }
+  } catch (error) {
+    console.error('활동 내역 로드 오류:', error);
+    activityList.innerHTML =
+      '<div class="error">데이터를 불러올 수 없습니다.</div>';
+  }
 }
 
-// 랭킹 로드
+// 랭킹 로드 - 실제 연동
 async function loadRanking() {
   try {
     const result = await api.getRanking();
@@ -143,20 +179,14 @@ async function loadRanking() {
           const isMe = student.studentId === studentId;
 
           return `
-                    <div class="rank-item ${isMe ? 'me' : ''}">
-                        <span class="rank-number ${rankClass}">${
-            index + 1
-          }</span>
-                        <div class="rank-info">
-                            <div class="rank-name">${student.name} ${
-            isMe ? '(나)' : ''
-          }</div>
-                            <div class="rank-points">${
-                              student.currentPoints
-                            }P</div>
-                        </div>
-                    </div>
-                `;
+          <div class="rank-item ${isMe ? 'me' : ''}">
+            <span class="rank-number ${rankClass}">${index + 1}</span>
+            <div class="rank-info">
+              <div class="rank-name">${student.name} ${isMe ? '(나)' : ''}</div>
+              <div class="rank-points">${student.currentPoints.toLocaleString()}P</div>
+            </div>
+          </div>
+        `;
         })
         .join('');
     }
@@ -165,29 +195,68 @@ async function loadRanking() {
   }
 }
 
-// 학생 목록 로드 (친구 선물용)
-async function loadStudentsList() {
-  try {
-    const result = await api.getStudents();
+// 레벨 표시 헬퍼
+function getLevelDisplay(level) {
+  const levelMap = {
+    씨앗: '🌱 씨앗',
+    새싹: '🌿 새싹',
+    나무: '🌳 나무',
+    큰나무: '🌲 큰나무',
+    별: '⭐ 별',
+    다이아몬드: '💎 다이아몬드',
+  };
+  return levelMap[level] || level;
+}
 
-    if (result.success) {
-      allStudents = result.data.filter((s) => s.studentId !== studentId);
+// 아이콘 클래스
+function getIconClass(type) {
+  const classes = {
+    attendance: 'icon-earn',
+    homework: 'icon-earn',
+    test: 'icon-earn',
+    purchase: 'icon-spend',
+    deposit: 'icon-save',
+    withdraw: 'icon-save',
+    gift: 'icon-spend',
+  };
+  return classes[type] || 'icon-earn';
+}
 
-      // 친구 선택 옵션 업데이트
-      const select = document.getElementById('recipientSelect');
-      select.innerHTML = '<option value="">친구를 선택하세요</option>';
+// 아이콘 가져오기
+function getIcon(type) {
+  const icons = {
+    attendance: '✅',
+    homework: '📚',
+    test: '💯',
+    purchase: '🛍️',
+    deposit: '💰',
+    withdraw: '💸',
+    gift: '🎁',
+  };
+  return icons[type] || '📝';
+}
 
-      allStudents.forEach((student) => {
-        select.innerHTML += `
-                    <option value="${student.studentId}">
-                        ${student.name} (${student.classId})
-                    </option>
-                `;
-      });
-    }
-  } catch (error) {
-    console.error('학생 목록 로드 오류:', error);
-  }
+// 시간 포맷
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000); // 초 단위
+
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+
+  return date.toLocaleDateString('ko-KR');
+}
+
+// 다음 월요일 계산
+function getNextMonday() {
+  const today = new Date();
+  const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + daysUntilMonday);
+  return nextMonday;
 }
 
 // 이벤트 리스너 설정
@@ -218,196 +287,10 @@ function setupEventListeners() {
   });
 }
 
-// 저축하기
-async function deposit() {
-  const maxAmount = studentData.currentPoints;
-  const amount = prompt(`저축할 포인트를 입력하세요 (보유: ${maxAmount}P):`);
-
-  if (amount && !isNaN(amount)) {
-    const depositAmount = parseInt(amount);
-
-    if (depositAmount <= 0) {
-      alert('올바른 금액을 입력해주세요.');
-      return;
-    }
-
-    if (depositAmount > maxAmount) {
-      alert('보유 포인트가 부족합니다.');
-      return;
-    }
-
-    try {
-      const result = await api.deposit(studentId, depositAmount);
-
-      if (result.success) {
-        alert(
-          `${depositAmount}P를 저축했습니다!\n매주 2% 이자를 받을 수 있어요!`
-        );
-        loadStudentData();
-      } else {
-        alert(result.error || '저축에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('저축 오류:', error);
-      alert('저축 중 오류가 발생했습니다.');
-    }
-  }
-}
-
-// 출금하기
-async function withdraw() {
-  const maxAmount = studentData.savingsPoints;
-  const amount = prompt(`출금할 포인트를 입력하세요 (저축: ${maxAmount}P):`);
-
-  if (amount && !isNaN(amount)) {
-    const withdrawAmount = parseInt(amount);
-
-    if (withdrawAmount <= 0) {
-      alert('올바른 금액을 입력해주세요.');
-      return;
-    }
-
-    if (withdrawAmount > maxAmount) {
-      alert('저축 포인트가 부족합니다.');
-      return;
-    }
-
-    try {
-      const result = await api.withdraw(studentId, withdrawAmount);
-
-      if (result.success) {
-        alert(`${withdrawAmount}P를 출금했습니다!`);
-        loadStudentData();
-      } else {
-        alert(result.error || '출금에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('출금 오류:', error);
-      alert('출금 중 오류가 발생했습니다.');
-    }
-  }
-}
-
-// 친구 선물
-function showGift() {
-  document.getElementById('modalTitle').textContent =
-    '친구에게 포인트 선물하기';
-  document.getElementById('availablePoints').textContent =
-    studentData.currentPoints;
-  document.getElementById('transferModal').classList.add('active');
-}
-
-// 선물 보내기
-async function sendGift() {
-  const recipientId = document.getElementById('recipientSelect').value;
-  const amount = parseInt(document.getElementById('transferAmount').value);
-  const message = document.getElementById('transferMessage').value;
-
-  if (!recipientId) {
-    alert('받는 친구를 선택해주세요.');
-    return;
-  }
-
-  if (!amount || amount <= 0) {
-    alert('올바른 포인트를 입력해주세요.');
-    return;
-  }
-
-  if (amount > studentData.currentPoints) {
-    alert('보유 포인트가 부족합니다.');
-    return;
-  }
-
-  if (confirm(`${amount}P를 선물하시겠습니까?`)) {
-    // 실제로는 API 호출
-    alert(
-      `선물이 전송되었습니다!\n기부천사 포인트 ${Math.floor(
-        amount * 0.1
-      )}P를 추가로 받았어요!`
-    );
-    closeModal();
-    loadStudentData();
-  }
-}
-
-// 기부하기
-function showDonate() {
-  const options = [
-    '1. 학원 발전 기부 (학원 시설 개선)',
-    '2. 친구 도움 기부 (어려운 친구 돕기)',
-    '3. 자선 단체 기부 (실제 기부 연계)',
-  ].join('\n');
-
-  const choice = prompt(
-    `기부 종류를 선택하세요:\n\n${options}\n\n번호를 입력하세요:`
-  );
-
-  if (choice) {
-    const amount = prompt('기부할 포인트를 입력하세요:');
-    if (amount && !isNaN(amount)) {
-      alert(
-        `${amount}P를 기부했습니다!\n기부천사 명예 포인트 ${Math.floor(
-          amount * 0.1
-        )}P를 받았어요!`
-      );
-    }
-  }
-}
-
-// 마일스톤 보기
-function showMilestone() {
-  const currentTotal = studentData.totalPoints;
-  const milestones = [
-    { level: '🌱 씨앗', points: 0, reward: '기본' },
-    { level: '🌿 새싹', points: 1000, reward: '배지' },
-    { level: '🌳 나무', points: 3000, reward: '특별 배지' },
-    { level: '🌲 큰나무', points: 5000, reward: '보너스 100P' },
-    { level: '⭐ 별', points: 10000, reward: '보너스 500P' },
-    { level: '💎 다이아몬드', points: 20000, reward: '특별 선물' },
-  ];
-
-  let currentLevel = milestones[0];
-  let nextLevel = milestones[1];
-
-  for (let i = 0; i < milestones.length; i++) {
-    if (currentTotal >= milestones[i].points) {
-      currentLevel = milestones[i];
-      nextLevel = milestones[i + 1] || null;
-    }
-  }
-
-  const message = nextLevel
-    ? `현재 레벨: ${currentLevel.level}\n` +
-      `누적 포인트: ${currentTotal}P\n\n` +
-      `다음 레벨: ${nextLevel.level}\n` +
-      `필요 포인트: ${nextLevel.points - currentTotal}P\n` +
-      `달성 보상: ${nextLevel.reward}`
-    : `최고 레벨 달성! ${currentLevel.level}\n누적 포인트: ${currentTotal}P`;
-
-  alert(message);
-}
-
-// 프로필 보기
-function showProfile() {
-  alert(
-    `📱 내 정보\n\n이름: ${userName}\n학번: ${studentId}\n레벨: ${studentData.level}\n누적 포인트: ${studentData.totalPoints}P`
-  );
-}
-
 // 활동 내역 필터링
 function filterActivities(tab) {
-  // 실제로는 활동 내역을 필터링해서 표시
   console.log('필터:', tab);
-}
-
-// 모달 닫기
-function closeModal() {
-  document.getElementById('transferModal').classList.remove('active');
-
-  // 폼 초기화
-  document.getElementById('recipientSelect').value = '';
-  document.getElementById('transferAmount').value = '';
-  document.getElementById('transferMessage').value = '';
+  // 실제 필터링 로직 구현
 }
 
 // 이벤트 카운트다운
@@ -442,7 +325,6 @@ function startEventCountdown() {
     const diff = lastFriday - now;
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     document.getElementById('eventCountdown').textContent = `D-${days}`;
 
@@ -458,11 +340,6 @@ function startEventCountdown() {
   setInterval(updateCountdown, 60000); // 1분마다 업데이트
 }
 
-// 전체 내역 보기
-function showHistory() {
-  alert('전체 포인트 내역 페이지로 이동합니다.');
-}
-
-function showAllHistory() {
-  alert('전체 활동 내역 페이지로 이동합니다.');
-}
+// 전역 함수로 내보내기
+window.studentData = studentData;
+window.loadStudentData = loadStudentData;

@@ -1,4 +1,4 @@
-// history.js - 거래 내역 페이지 로직
+// history.js - 거래 내역 페이지 로직 (실제 연동 버전)
 
 // 전역 변수
 let allHistory = [];
@@ -14,85 +14,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 로그인 체크
   const studentId = localStorage.getItem('loginId');
   if (!studentId) {
-    // 테스트 모드
-    initTestData();
-  } else {
-    await loadStudentData();
+    alert('로그인이 필요합니다.');
+    window.location.href = '../login.html';
+    return;
   }
 
+  // 학생 데이터 로드
+  await loadStudentData();
+
+  // 거래 내역 로드
   await loadHistory();
+
+  // 이벤트 리스너 설정
   setupEventListeners();
+
+  // 화면 업데이트
   updateDisplay();
 });
-
-// 테스트 데이터 초기화
-function initTestData() {
-  studentData = {
-    studentId: 'TEST001',
-    name: '테스트학생',
-    currentPoints: 52081,
-    level: '큰나무',
-  };
-
-  // 테스트 거래 내역
-  allHistory = generateTestHistory();
-}
-
-// 테스트 거래 내역 생성
-function generateTestHistory() {
-  const types = [
-    { type: 'earn', title: '출석 보상', amount: 10, icon: '✅' },
-    { type: 'earn', title: '숙제 완료', amount: 30, icon: '📚' },
-    { type: 'earn', title: '시험 만점', amount: 100, icon: '💯' },
-    { type: 'spend', title: '연필 구매', amount: -10, icon: '✏️' },
-    { type: 'spend', title: '과자 구매', amount: -50, icon: '🍪' },
-    { type: 'save', title: '저축 입금', amount: -500, icon: '💰' },
-    { type: 'save', title: '저축 출금', amount: 500, icon: '💸' },
-    { type: 'interest', title: '저축 이자', amount: 10, icon: '💎' },
-    { type: 'gift', title: '친구 선물', amount: -100, icon: '🎁' },
-    { type: 'gift', title: '선물 받음', amount: 100, icon: '🎁' },
-  ];
-
-  const history = [];
-  let balance = 52081;
-
-  // 최근 30일간의 거래 생성
-  for (let i = 0; i < 50; i++) {
-    const daysAgo = Math.floor(Math.random() * 30);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-
-    const transaction = types[Math.floor(Math.random() * types.length)];
-
-    history.push({
-      id: `TRX${String(i + 1).padStart(5, '0')}`,
-      date: date,
-      type: transaction.type,
-      title: transaction.title,
-      amount: transaction.amount,
-      balance: balance,
-      icon: transaction.icon,
-      description: getDescription(transaction.type),
-    });
-
-    balance -= transaction.amount;
-  }
-
-  // 날짜순 정렬 (최신순)
-  return history.sort((a, b) => b.date - a.date);
-}
-
-// 설명 생성
-function getDescription(type) {
-  const descriptions = {
-    earn: '포인트 획득',
-    spend: '포인트 사용',
-    save: '저축 계좌',
-    interest: '이자 지급',
-    gift: '포인트 선물',
-  };
-  return descriptions[type] || '';
-}
 
 // 학생 데이터 로드
 async function loadStudentData() {
@@ -102,32 +40,125 @@ async function loadStudentData() {
 
     if (result.success) {
       studentData = result.data;
+      console.log('학생 데이터 로드:', studentData);
+    } else {
+      console.error('학생 데이터 로드 실패:', result.error);
     }
   } catch (error) {
     console.error('학생 데이터 로드 오류:', error);
   }
 }
 
-// 거래 내역 로드
+// 거래 내역 로드 - 실제 API 연동
 async function loadHistory() {
   try {
-    const studentId = localStorage.getItem('loginId') || 'TEST001';
+    const studentId = localStorage.getItem('loginId');
 
-    // 실제 API 호출 시
-    // const result = await api.getPointHistory(studentId);
-    // if (result.success) {
-    //   allHistory = result.data;
-    // }
+    // Points 시트에서 포인트 내역 가져오기
+    const pointsResult = await api.getPointHistory(studentId);
 
-    // 현재는 테스트 데이터 사용
-    if (allHistory.length === 0) {
-      allHistory = generateTestHistory();
+    // Transactions 시트에서 거래 내역 가져오기
+    const transResult = await api.getTransactionHistory(studentId);
+
+    allHistory = [];
+
+    // Points 데이터 처리
+    if (pointsResult.success && pointsResult.data) {
+      pointsResult.data.forEach((item) => {
+        allHistory.push({
+          id: item.id,
+          date: new Date(item.date),
+          type: getTransactionType(item.type, item.amount),
+          title: item.reason || getDefaultTitle(item.type),
+          amount: parseInt(item.amount),
+          icon: getIconForType(item.type),
+          description: item.type,
+          source: 'points',
+        });
+      });
     }
 
+    // Transactions 데이터 처리
+    if (transResult.success && transResult.data) {
+      transResult.data.forEach((item) => {
+        allHistory.push({
+          id: item.transactionId,
+          date: new Date(item.createdAt),
+          type: getTransactionType(item.type, item.amount),
+          title: item.itemName || getDefaultTitle(item.type),
+          amount: parseInt(item.amount),
+          icon: getIconForType(item.type),
+          description: item.type,
+          source: 'transactions',
+        });
+      });
+    }
+
+    // 날짜순 정렬 (최신순)
+    allHistory.sort((a, b) => b.date - a.date);
+
+    // 잔액 계산 (역순으로)
+    let balance = studentData ? studentData.currentPoints : 0;
+    for (let i = 0; i < allHistory.length; i++) {
+      allHistory[i].balance = balance;
+      balance -= allHistory[i].amount;
+    }
+
+    console.log('거래 내역 로드 완료:', allHistory.length + '건');
     applyFilters();
   } catch (error) {
     console.error('거래 내역 로드 오류:', error);
+    allHistory = [];
   }
+}
+
+// 거래 타입 결정
+function getTransactionType(type, amount) {
+  amount = parseInt(amount);
+
+  if (type === 'deposit' || type === 'withdraw' || type === 'interest') {
+    return 'save';
+  }
+  if (type === 'purchase') {
+    return 'spend';
+  }
+  if (type === 'gift') {
+    return amount > 0 ? 'earn' : 'spend';
+  }
+  if (amount > 0) {
+    return 'earn';
+  }
+  return 'spend';
+}
+
+// 기본 제목 생성
+function getDefaultTitle(type) {
+  const titles = {
+    attendance: '출석 보상',
+    homework: '숙제 완료',
+    test: '시험 점수',
+    purchase: '상품 구매',
+    deposit: '저축 입금',
+    withdraw: '저축 출금',
+    interest: '이자 지급',
+    gift: '포인트 선물',
+  };
+  return titles[type] || type;
+}
+
+// 아이콘 가져오기
+function getIconForType(type) {
+  const icons = {
+    attendance: '✅',
+    homework: '📚',
+    test: '💯',
+    purchase: '🛍️',
+    deposit: '💰',
+    withdraw: '💸',
+    interest: '💎',
+    gift: '🎁',
+  };
+  return icons[type] || '📝';
 }
 
 // 이벤트 리스너 설정
@@ -157,6 +188,19 @@ function setupEventListeners() {
       applyFilters();
     });
   });
+
+  // URL 파라미터 체크
+  const urlParams = new URLSearchParams(window.location.search);
+  const filter = urlParams.get('filter');
+  if (filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach((btn) => {
+      btn.classList.remove('active');
+      if (btn.dataset.filter === filter) {
+        btn.classList.add('active');
+      }
+    });
+  }
 }
 
 // 필터 적용
@@ -168,11 +212,11 @@ function applyFilters() {
     filtered = filtered.filter((item) => {
       switch (currentFilter) {
         case 'earn':
-          return item.amount > 0 && item.type !== 'save';
+          return item.amount > 0 && item.type === 'earn';
         case 'spend':
           return item.amount < 0 && item.type === 'spend';
         case 'save':
-          return item.type === 'save' || item.type === 'interest';
+          return item.type === 'save';
         default:
           return true;
       }
@@ -235,7 +279,9 @@ function displayHistory() {
       const amountClass =
         item.amount > 0 ? 'amount-positive' : 'amount-negative';
       const amountText =
-        item.amount > 0 ? `+${item.amount}P` : `${item.amount}P`;
+        item.amount > 0
+          ? `+${Math.abs(item.amount)}P`
+          : `-${Math.abs(item.amount)}P`;
 
       html += `
         <div class="history-item">
@@ -282,8 +328,6 @@ function getIconClass(type) {
     earn: 'icon-earn',
     spend: 'icon-spend',
     save: 'icon-save',
-    interest: 'icon-interest',
-    gift: 'icon-gift',
   };
   return classes[type] || 'icon-earn';
 }
@@ -295,11 +339,11 @@ function updateStatistics() {
   let totalSave = 0;
 
   filteredHistory.forEach((item) => {
-    if (item.amount > 0 && item.type !== 'save') {
-      totalEarn += item.amount;
-    } else if (item.amount < 0 && item.type === 'spend') {
+    if (item.type === 'earn' && item.amount > 0) {
+      totalEarn += Math.abs(item.amount);
+    } else if (item.type === 'spend' && item.amount < 0) {
       totalSpend += Math.abs(item.amount);
-    } else if (item.type === 'save' || item.type === 'interest') {
+    } else if (item.type === 'save') {
       totalSave += Math.abs(item.amount);
     }
   });
@@ -329,18 +373,3 @@ function updateDisplay() {
     pointsElement.textContent = `${studentData.currentPoints.toLocaleString()}P`;
   }
 }
-
-// 내보내기 함수 (다른 페이지에서 사용)
-window.filterHistory = function (type) {
-  currentFilter = type;
-
-  // 해당 탭 활성화
-  document.querySelectorAll('.filter-btn').forEach((btn) => {
-    btn.classList.remove('active');
-    if (btn.dataset.filter === type) {
-      btn.classList.add('active');
-    }
-  });
-
-  applyFilters();
-};

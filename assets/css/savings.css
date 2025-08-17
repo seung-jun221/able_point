@@ -533,3 +533,80 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* 커스텀 알림 스타일 */
+.custom-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  animation: slideDown 0.3s ease;
+}
+
+.notification-content {
+  background: white;
+  padding: 15px 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 250px;
+  border-left: 4px solid;
+}
+
+.notification-content.success {
+  border-left-color: #10b981;
+  color: #10b981;
+}
+
+.notification-content.error {
+  border-left-color: #ef4444;
+  color: #ef4444;
+}
+
+.notification-content.warning {
+  border-left-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.notification-content.info {
+  border-left-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.notification-icon {
+  font-size: 20px;
+}
+
+.notification-message {
+  color: #1a1a1a;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.custom-notification.fade-out {
+  animation: fadeOut 0.3s ease;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}

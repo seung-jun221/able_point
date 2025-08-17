@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>랭킹 - 포인트 뱅크</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/ranking.css" />
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="profile-header">
+      <div class="profile-left">
+        <button
+          onclick="history.back()"
+          style="
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+          "
+        >
+          ‹
+        </button>
+        <h2 style="margin: 0 0 0 15px">랭킹</h2>
+      </div>
+      <div class="daily-points">
+        <button
+          id="refreshBtn"
+          onclick="refreshRanking()"
+          style="
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.5s;
+          "
+          title="새로고침"
+        >
+          🔄
+        </button>
+      </div>
+    </div>
+
+    <!-- 랭킹 탭 -->
+    <div class="ranking-tabs">
+      <button class="ranking-tab active" data-tab="accumulated">
+        <span>💰</span>
+        <span>포인트 랭킹</span>
+      </button>
+      <button class="ranking-tab" data-tab="weekly">
+        <span>🏆</span>
+        <span>이번주 스타</span>
+      </button>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="ranking-container">
+      <!-- 내 현황 카드 -->
+      <div class="my-status-card" id="myStatusCard">
+        <!-- 동적 생성 -->
+      </div>
+
+      <!-- 랭킹 콘텐츠 -->
+      <div id="rankingContent">
+        <!-- 동적 생성 -->
+      </div>
+    </div>
+
+    <!-- 하단 네비게이션 -->
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="location.href='index.html'">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">홈</span>
+      </div>
+      <div class="nav-item" onclick="location.href='savings.html'">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">저축</span>
+      </div>
+      <div class="nav-item" onclick="location.href='shop.html'">
+        <span class="nav-icon">🛍️</span>
+        <span class="nav-label">상점</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">랭킹</span>
+      </div>
+      <div class="nav-item" onclick="location.href='profile.html'">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">내정보</span>
+      </div>
+    </div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/ranking.js"></script>
+  </body>
+</html>

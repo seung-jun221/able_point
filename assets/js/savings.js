@@ -1,4 +1,4 @@
-// savings.js - 저축 시스템 핵심 로직
+// savings.js - 저축 시스템 핵심 로직 (실제 연동 버전)
 
 // 전역 변수
 let studentData = null;
@@ -13,7 +13,8 @@ const SAVINGS_POLICY = {
   새싹: { bonusRate: 0.5, maxLimit: 1000, color: '#22c55e' },
   나무: { bonusRate: 1.0, maxLimit: 2000, color: '#3b82f6' },
   큰나무: { bonusRate: 1.5, maxLimit: 5000, color: '#8b5cf6' },
-  다이아: { bonusRate: 2.0, maxLimit: 10000, color: '#fbbf24' },
+  별: { bonusRate: 2.0, maxLimit: 8000, color: '#fbbf24' },
+  다이아몬드: { bonusRate: 2.5, maxLimit: 10000, color: '#ec4899' },
 };
 
 const WITHDRAWAL_POLICY = {
@@ -37,6 +38,14 @@ const WITHDRAWAL_POLICY = {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('저축 페이지 초기화 시작');
 
+  // 로그인 체크
+  const studentId = localStorage.getItem('loginId');
+  if (!studentId) {
+    alert('로그인이 필요합니다.');
+    window.location.href = '../login.html';
+    return;
+  }
+
   showLoading(true);
 
   try {
@@ -54,16 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 5분마다 COFIX 금리 업데이트
   setInterval(loadCofixRate, 5 * 60 * 1000);
 });
-
-// 로그인 체크
-function checkLogin() {
-  const studentId = localStorage.getItem('loginId');
-  if (!studentId) {
-    console.log('로그인 정보 없음 - 테스트 모드로 진행');
-    return false;
-  }
-  return true;
-}
 
 // 로딩 표시
 function showLoading(show) {
@@ -83,38 +82,55 @@ function hideLoading() {
   });
 }
 
-// 학생 데이터 로드
+// 학생 데이터 로드 - 실제 연동
 async function loadStudentData() {
   try {
-    const studentId = localStorage.getItem('loginId') || 'TEST001';
+    const studentId = localStorage.getItem('loginId');
     const result = await api.getStudentPoints(studentId);
 
     if (result.success) {
       studentData = result.data;
       console.log('학생 데이터 로드 성공:', studentData);
+
+      // 현재 예치 정보 확인 (최근 입금 내역에서)
+      await checkCurrentDeposit();
     } else {
-      throw new Error('API 응답 실패');
+      throw new Error('API 응답 실패: ' + result.error);
     }
   } catch (error) {
     console.error('학생 데이터 로드 오류:', error);
-    // 기본 데이터 설정
-    studentData = {
-      studentId: 'TEST001',
-      name: '테스트학생',
-      level: '큰나무',
-      currentPoints: 52081,
-      savingsPoints: 0,
-      totalPoints: 52081,
-    };
+    alert('데이터를 불러올 수 없습니다.');
+    window.location.href = 'index.html';
   }
 }
 
-// COFIX 금리 로드
+// 현재 예치 정보 확인
+async function checkCurrentDeposit() {
+  if (studentData.savingsPoints > 0) {
+    // 저축 잔액이 있으면 최근 입금 날짜 찾기
+    const history = await loadSavingsHistory();
+    const deposits = history
+      .filter((h) => h.type === 'deposit')
+      .sort((a, b) => b.date - a.date);
+
+    if (deposits.length > 0) {
+      currentDeposit = {
+        amount: studentData.savingsPoints,
+        startDate: new Date(deposits[0].date),
+        rate: cofixRate + (SAVINGS_POLICY[studentData.level]?.bonusRate || 0),
+      };
+    }
+  }
+}
+
+// COFIX 금리 로드 (시뮬레이션)
 async function loadCofixRate() {
   try {
-    // 시뮬레이션 (실제로는 한국은행 API 사용)
+    // 실제로는 한국은행 API 또는 Google Sheets에서 가져올 수 있음
     previousCofixRate = cofixRate;
-    cofixRate = 3.5 + (Math.random() * 0.5 - 0.25); // 3.25~3.75%
+
+    // 시뮬레이션: 3.25~3.75% 사이에서 변동
+    cofixRate = 3.5 + (Math.random() * 0.5 - 0.25);
     cofixRate = Math.round(cofixRate * 100) / 100;
 
     // 마지막 업데이트 시간
@@ -151,7 +167,7 @@ function updateRateDisplay() {
     cofixElement.innerHTML = `${cofixRate.toFixed(2)}%${changeIndicator}`;
   }
 
-  // 등급 가산 금리
+  // 등급 우대 금리
   const bonusElement = document.getElementById('bonusRate');
   if (bonusElement) {
     bonusElement.textContent = `+${policy.bonusRate}%`;
@@ -199,7 +215,7 @@ function updateDisplay() {
   }
 
   // 예치 기간 표시
-  if (currentDeposit) {
+  if (currentDeposit && savingsAmount > 0) {
     const days = Math.floor(
       (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
     );
@@ -292,7 +308,7 @@ function calculateNextInterest() {
   );
 
   // 장기 보너스 적용
-  if (currentDeposit) {
+  if (currentDeposit && studentData.savingsPoints > 0) {
     const days = Math.floor(
       (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
     );
@@ -325,24 +341,43 @@ function calculateNextInterest() {
   }
 }
 
-// 거래 내역 로드
+// 거래 내역 로드 - 실제 연동
 async function loadSavingsHistory() {
   try {
-    const studentId = localStorage.getItem('loginId') || 'TEST001';
+    const studentId = localStorage.getItem('loginId');
     const result = await api.getSavingsHistory(studentId);
 
     if (result.success) {
-      savingsHistory = result.data;
+      savingsHistory = result.data.map((item) => ({
+        type: item.type,
+        amount: item.amount,
+        date: new Date(item.date),
+        itemName: item.itemName || getDefaultTitle(item.type),
+      }));
+
+      displayHistory();
+      return savingsHistory;
     } else {
       savingsHistory = [];
+      displayHistory();
+      return [];
     }
-
-    displayHistory();
   } catch (error) {
     console.error('거래 내역 로드 오류:', error);
     savingsHistory = [];
     displayHistory();
+    return [];
   }
+}
+
+// 기본 제목
+function getDefaultTitle(type) {
+  const titles = {
+    deposit: '저축 입금',
+    withdraw: '저축 출금',
+    interest: '이자 지급',
+  };
+  return titles[type] || type;
 }
 
 // 거래 내역 표시
@@ -392,9 +427,6 @@ function displayHistory() {
           <div class="history-amount ${amountClass}">
             ${amountSign}${item.amount.toLocaleString()}P
           </div>
-          <div style="font-size: 11px; color: #94a3b8; text-align: right;">
-            잔액 ${item.balance.toLocaleString()}P
-          </div>
         </div>
       </div>
     `;
@@ -405,14 +437,13 @@ function displayHistory() {
 // 날짜 포맷
 function formatDate(date) {
   const now = new Date();
-  const targetDate = new Date(date);
-  const diff = Math.floor((now - targetDate) / (1000 * 60 * 60 * 24));
+  const diff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
   if (diff === 0) return '오늘';
   if (diff === 1) return '어제';
   if (diff < 7) return `${diff}일 전`;
 
-  return targetDate.toLocaleDateString('ko-KR', {
+  return date.toLocaleDateString('ko-KR', {
     month: 'numeric',
     day: 'numeric',
   });
@@ -445,7 +476,7 @@ window.showWithdrawModal = function () {
     modal.classList.add('active');
 
     // 조기 출금 경고 표시
-    if (currentDeposit) {
+    if (currentDeposit && studentData.savingsPoints > 0) {
       const days = Math.floor(
         (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
       );
@@ -504,7 +535,7 @@ window.setMaxWithdraw = function () {
   }
 };
 
-// 입금 확인
+// 입금 확인 - 실제 API 연동
 window.confirmDeposit = async function () {
   const amountInput = document.getElementById('depositAmount');
   if (!amountInput) return;
@@ -533,7 +564,7 @@ window.confirmDeposit = async function () {
   }
 
   try {
-    const studentId = localStorage.getItem('loginId') || 'TEST001';
+    const studentId = localStorage.getItem('loginId');
     const result = await api.deposit(studentId, amount);
 
     if (result.success) {
@@ -554,16 +585,15 @@ window.confirmDeposit = async function () {
       updateDisplay();
       calculateNextInterest();
 
-      // 내역 추가
-      savingsHistory.unshift({
-        type: 'deposit',
-        amount: amount,
-        date: new Date(),
-        balance: studentData.savingsPoints,
-      });
-      displayHistory();
+      // 내역 다시 로드
+      await loadSavingsHistory();
 
       closeModal('depositModal');
+    } else {
+      showNotification(
+        result.error || '입금 처리 중 오류가 발생했습니다',
+        'error'
+      );
     }
   } catch (error) {
     console.error('입금 오류:', error);
@@ -571,12 +601,18 @@ window.confirmDeposit = async function () {
   }
 };
 
-// 출금 확인
+// 출금 확인 - 실제 API 연동
 window.confirmWithdraw = async function () {
   const amountInput = document.getElementById('withdrawAmount');
   if (!amountInput) return;
 
   const amount = parseInt(amountInput.value);
+  console.log(
+    '출금 시도 - 금액:',
+    amount,
+    '학생ID:',
+    localStorage.getItem('loginId')
+  );
 
   if (!amount || amount <= 0) {
     showNotification('금액을 입력해주세요', 'warning');
@@ -588,56 +624,23 @@ window.confirmWithdraw = async function () {
     return;
   }
 
-  // 조기 출금 확인
-  let isEarlyWithdraw = false;
-  if (currentDeposit) {
-    const days = Math.floor(
-      (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
-    );
-    if (days < 7) {
-      isEarlyWithdraw = true;
-      if (
-        !confirm('7일 미만 출금 시 이자를 받을 수 없습니다.\n계속하시겠습니까?')
-      ) {
-        return;
-      }
-    }
-  }
+  // 조기 출금 확인 (생략 가능)
 
   try {
-    const studentId = localStorage.getItem('loginId') || 'TEST001';
+    const studentId = localStorage.getItem('loginId');
+    console.log('API 호출 - studentId:', studentId, 'amount:', amount);
+
     const result = await api.withdraw(studentId, amount);
+    console.log('API 응답:', result);
 
     if (result.success) {
-      let message = `${amount.toLocaleString()}P 출금 완료!`;
-
-      // 이자 계산 (7일 이상인 경우)
-      if (!isEarlyWithdraw && currentDeposit) {
-        const days = Math.floor(
-          (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
-        );
-        const weeklyRate = currentDeposit.rate / 52;
-        let interest = Math.floor(amount * (weeklyRate / 100) * (days / 7));
-
-        // 장기 보너스
-        if (days >= 28) {
-          interest = Math.floor(interest * 1.5);
-          message += ` (이자 ${interest}P 포함)`;
-        } else if (days >= 14) {
-          interest = Math.floor(interest * 1.2);
-          message += ` (이자 ${interest}P 포함)`;
-        }
-
-        studentData.currentPoints += interest;
-      }
-
-      showNotification(message, 'success');
+      showNotification(`${amount.toLocaleString()}P 출금 완료!`, 'success');
 
       // 데이터 업데이트
       studentData.currentPoints += amount;
       studentData.savingsPoints -= amount;
 
-      // 전액 출금인 경우 예치 정보 초기화
+      // 전액 출금인 경우
       if (studentData.savingsPoints === 0) {
         currentDeposit = null;
       }
@@ -645,17 +648,15 @@ window.confirmWithdraw = async function () {
       // 화면 업데이트
       updateDisplay();
       calculateNextInterest();
-
-      // 내역 추가
-      savingsHistory.unshift({
-        type: 'withdraw',
-        amount: amount,
-        date: new Date(),
-        balance: studentData.savingsPoints,
-      });
-      displayHistory();
+      await loadSavingsHistory();
 
       closeModal('withdrawModal');
+    } else {
+      console.error('출금 실패:', result.error);
+      showNotification(
+        result.error || '출금 처리 중 오류가 발생했습니다',
+        'error'
+      );
     }
   } catch (error) {
     console.error('출금 오류:', error);
@@ -663,15 +664,38 @@ window.confirmWithdraw = async function () {
   }
 };
 
-// 알림 표시
+// 알림 표시 - 안전한 버전
 function showNotification(message, type = 'info') {
-  // toastr가 있으면 사용
-  if (typeof toastr !== 'undefined') {
-    toastr[type](message);
-  } else {
-    // 없으면 alert
-    alert(message);
-  }
+  // 간단한 커스텀 알림 만들기
+  const notification = document.createElement('div');
+  notification.className = 'custom-notification';
+  notification.innerHTML = `
+    <div class="notification-content ${type}">
+      <span class="notification-icon">
+        ${
+          type === 'success'
+            ? '✅'
+            : type === 'error'
+            ? '❌'
+            : type === 'warning'
+            ? '⚠️'
+            : 'ℹ️'
+        }
+      </span>
+      <span class="notification-message">${message}</span>
+    </div>
+  `;
+
+  // body에 추가
+  document.body.appendChild(notification);
+
+  // 3초 후 제거
+  setTimeout(() => {
+    notification.classList.add('fade-out');
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 3000);
 }
 
 // ESC 키로 모달 닫기

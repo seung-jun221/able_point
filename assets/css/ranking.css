@@ -1,0 +1,594 @@
+/* ranking.css - 랭킹 페이지 스타일 */
+
+.ranking-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: 140px;
+  padding-bottom: 100px;
+}
+
+/* 랭킹 탭 */
+.ranking-tabs {
+  background: white;
+  border-radius: 12px;
+  padding: 5px;
+  display: flex;
+  gap: 5px;
+  margin-bottom: 20px;
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 460px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ranking-tab.active {
+  background: #6366f1;
+  color: white;
+}
+
+/* 내 현황 카드 */
+.my-status-card {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 16px;
+  padding: 20px;
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.my-status-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 1;
+}
+
+.status-title {
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+}
+
+.status-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.status-label {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.status-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.status-value.rank {
+  color: #fbbf24;
+}
+
+.status-subtext {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* TOP 3 포디움 */
+.podium-section {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.podium-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-bottom: 25px;
+}
+
+/* 포디움 컨테이너 - 가로 배치 확실히 하기 */
+.podium-container {
+  display: flex !important;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-height: 250px;
+  padding: 20px;
+}
+
+/* 포디움 아이템 - 기본 스타일 */
+.podium-item {
+  flex: 1;
+  max-width: 120px;
+  text-align: center;
+  transition: all 0.3s;
+  position: relative;
+  padding-top: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.podium-item:hover {
+  transform: translateY(-5px);
+}
+
+/* 포디움 등수 표시 */
+.podium-rank-number {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.podium-item.first .podium-rank-number {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: white;
+  font-size: 18px;
+  padding: 10px 20px;
+}
+
+.podium-item.second .podium-rank-number {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+  color: #333;
+}
+
+.podium-item.third .podium-rank-number {
+  background: linear-gradient(135deg, #cd7f32, #e6a866);
+  color: white;
+}
+
+/* 아바타 */
+.podium-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.podium-item.first .podium-avatar {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  font-size: 32px;
+}
+
+.podium-item.second .podium-avatar {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+}
+
+.podium-item.third .podium-avatar {
+  background: linear-gradient(135deg, #cd7f32, #e6a866);
+}
+
+/* 이름과 포인트 */
+.podium-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 5px;
+}
+
+.podium-points {
+  font-size: 16px;
+  font-weight: bold;
+  color: #6366f1;
+  margin-bottom: 10px;
+}
+
+/* 포디움 바 */
+.podium-bar {
+  width: 100%;
+  background: #f0f1ff;
+  border-radius: 8px 8px 0 0;
+  margin-top: 10px;
+  transition: all 0.5s;
+  animation: growBar 1s ease-out;
+}
+
+.podium-item.first .podium-bar {
+  height: 100px;
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+}
+
+.podium-item.second .podium-bar {
+  height: 80px;
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+}
+
+.podium-item.third .podium-bar {
+  height: 60px;
+  background: linear-gradient(135deg, #cd7f32, #e6a866);
+}
+
+@keyframes growBar {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 1등 특별 효과 */
+.podium-item.first {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* 랭킹 리스트 */
+.ranking-list-section {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.list-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.list-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 개별 순위 (1-10위, 11-20위) */
+.ranking-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  transition: all 0.3s;
+}
+
+.ranking-item:hover {
+  background: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.ranking-item.me {
+  background: linear-gradient(135deg, #f0f1ff, #e8e9ff);
+  border: 2px solid #6366f1;
+}
+
+.rank-number {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  margin-right: 12px;
+}
+
+.rank-1 {
+  background: #ffd700;
+  color: white;
+}
+.rank-2 {
+  background: #c0c0c0;
+  color: white;
+}
+.rank-3 {
+  background: #cd7f32;
+  color: white;
+}
+.rank-other {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.rank-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 12px;
+}
+
+.rank-info {
+  flex: 1;
+}
+
+.rank-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+
+.rank-points {
+  font-size: 18px;
+  font-weight: bold;
+  color: #6366f1;
+}
+
+.rank-points.weekly {
+  color: #22c55e;
+}
+
+.rank-points.weekly::before {
+  content: '+';
+}
+
+/* 구간별 그룹 */
+.group-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.group-header:hover {
+  background: #f0f1ff;
+}
+
+.group-header.active {
+  background: #6366f1;
+  color: white;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.group-icon {
+  font-size: 20px;
+}
+
+.group-range {
+  font-size: 16px;
+}
+
+.group-count {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.group-expand {
+  font-size: 20px;
+  transition: transform 0.3s;
+}
+
+.group-header.active .group-expand {
+  transform: rotate(180deg);
+}
+
+.group-content {
+  display: none;
+  padding: 10px;
+  animation: slideDown 0.3s;
+}
+
+.group-content.show {
+  display: block;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group-member {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+}
+
+.group-member.me {
+  background: #f0f1ff;
+  border: 1px solid #6366f1;
+}
+
+.group-member-name {
+  flex: 1;
+  font-size: 13px;
+  color: #666;
+}
+
+.group-member-points {
+  font-size: 14px;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+/* 메시지 */
+.notice-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #0369a1;
+  text-align: center;
+}
+
+.no-rank-message {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.no-rank-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+/* 로딩 */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 8px;
+  height: 60px;
+  margin-bottom: 10px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+  .ranking-container {
+    padding: 15px;
+  }
+
+  .status-content {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .podium-container {
+    gap: 5px;
+  }
+
+  .podium-avatar {
+    width: 50px;
+    height: 50px;
+  }
+
+  .podium-item.first .podium-avatar {
+    width: 60px;
+    height: 60px;
+  }
+}
