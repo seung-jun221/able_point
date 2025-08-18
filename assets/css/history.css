@@ -165,9 +165,6 @@
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #f0f0f0;
-  position: sticky;
-  top: 130px;
-  z-index: 10;
 }
 
 .history-item {

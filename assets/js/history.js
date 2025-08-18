@@ -1,4 +1,75 @@
-// history.js - 거래 내역 페이지 로직 (실제 연동 버전)
+// 한국 날짜 형식 파싱 함수 - 최종 수정 버전
+function parseKoreanDate(dateString) {
+  if (!dateString) return null;
+
+  try {
+    let date;
+
+    // "2025. 8. 15. 오후 5:28:28" 형식 처리
+    if (
+      typeof dateString === 'string' &&
+      (dateString.includes('오전') || dateString.includes('오후'))
+    ) {
+      // 마지막 점(.) 제거하고 처리
+      let cleanDate = dateString.trim();
+
+      // "2025. 8. 15. 오후 5:28:28" → 배열로 분리
+      const parts = cleanDate.split(' ');
+
+      if (parts.length >= 5) {
+        // ["2025.", "8.", "15.", "오후", "5:28:28"]
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const day = parseInt(parts[2]);
+        const ampm = parts[3];
+        const timePart = parts[4];
+
+        const [hour, minute, second] = timePart
+          .split(':')
+          .map((v) => parseInt(v));
+
+        let adjustedHour = hour;
+        if (ampm === '오후' && hour !== 12) {
+          adjustedHour += 12;
+        } else if (ampm === '오전' && hour === 12) {
+          adjustedHour = 0;
+        }
+
+        date = new Date(
+          year,
+          month - 1,
+          day,
+          adjustedHour,
+          minute || 0,
+          second || 0
+        );
+      }
+    }
+    // "2024/11/15 09:00:00" 형식
+    else if (typeof dateString === 'string' && dateString.includes('/')) {
+      date = new Date(dateString);
+    }
+    // ISO 형식 또는 기타
+    else if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else {
+      return null;
+    }
+
+    // 유효성 검사
+    if (!date || !date.getTime || isNaN(date.getTime())) {
+      console.log('파싱 실패:', dateString);
+      return null;
+    }
+
+    return date;
+  } catch (error) {
+    console.error('날짜 파싱 오류:', dateString, error);
+    return null;
+  }
+}
+
+// history.js - 거래 내역 페이지 로직 (디버깅 강화 버전)
 
 // 전역 변수
 let allHistory = [];
@@ -19,17 +90,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 학생 데이터 로드
-  await loadStudentData();
+  // 로딩 표시
+  const container = document.getElementById('historyListContainer');
+  if (container) {
+    container.innerHTML = `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div style="margin-top: 10px; color: #94a3b8;">데이터를 불러오는 중...</div>
+      </div>
+    `;
+  }
 
-  // 거래 내역 로드
-  await loadHistory();
+  try {
+    // 학생 데이터 로드
+    await loadStudentData();
 
-  // 이벤트 리스너 설정
-  setupEventListeners();
+    // 거래 내역 로드
+    await loadHistory();
 
-  // 화면 업데이트
-  updateDisplay();
+    // 이벤트 리스너 설정
+    setupEventListeners();
+
+    // 화면 업데이트
+    updateDisplay();
+  } catch (error) {
+    console.error('초기화 오류:', error);
+
+    if (container) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">❌</div>
+          <div class="empty-title">초기화 실패</div>
+          <div class="empty-desc">페이지를 새로고침해주세요</div>
+        </div>
+      `;
+    }
+  }
 });
 
 // 학생 데이터 로드
@@ -49,67 +145,162 @@ async function loadStudentData() {
   }
 }
 
-// 거래 내역 로드 - 실제 API 연동
-async function loadHistory() {
+// 전역 변수 추가
+let currentPage = 1;
+const ITEMS_PER_PAGE = 20;
+let isLoading = false;
+
+// loadHistory 함수 수정 - 페이지네이션 적용
+async function loadHistory(loadMore = false) {
+  if (isLoading) return;
+  isLoading = true;
+
   try {
     const studentId = localStorage.getItem('loginId');
+    const container = document.getElementById('historyListContainer');
 
-    // Points 시트에서 포인트 내역 가져오기
-    const pointsResult = await api.getPointHistory(studentId);
+    // 첫 로드시 스켈레톤 UI
+    if (!loadMore) {
+      container.innerHTML = generateSkeletonList(10);
+    }
 
-    // Transactions 시트에서 거래 내역 가져오기
-    const transResult = await api.getTransactionHistory(studentId);
+    // 캐시 체크
+    const cacheKey = `history_${studentId}_${currentPage}`;
+    let historyData = cache.get(cacheKey);
 
-    allHistory = [];
+    if (!historyData) {
+      // API 호출
+      console.log('📍 API 호출 - 페이지:', currentPage);
 
-    // Points 데이터 처리
-    if (pointsResult.success && pointsResult.data) {
-      pointsResult.data.forEach((item) => {
-        allHistory.push({
-          id: item.id,
-          date: new Date(item.date),
-          type: getTransactionType(item.type, item.amount),
-          title: item.reason || getDefaultTitle(item.type),
-          amount: parseInt(item.amount),
-          icon: getIconForType(item.type),
-          description: item.type,
-          source: 'points',
+      const [pointsResult, transResult] = await Promise.all([
+        api.getPointHistory(studentId),
+        api.getTransactionHistory(studentId),
+      ]);
+
+      // 데이터 처리 (기존 로직 활용)
+      const tempHistory = [];
+
+      // Points 데이터 처리
+      if (pointsResult.success && pointsResult.data) {
+        pointsResult.data.forEach((item) => {
+          const parsedDate = parseKoreanDate(item.date);
+          if (parsedDate) {
+            tempHistory.push({
+              date: parsedDate,
+              type: getTransactionType(item.type, item.amount),
+              title: item.reason || getDefaultTitle(item.type),
+              amount: parseInt(item.amount) || 0,
+              icon: getIconForType(item.type),
+              description: item.type,
+              source: 'points',
+            });
+          }
         });
-      });
-    }
+      }
 
-    // Transactions 데이터 처리
-    if (transResult.success && transResult.data) {
-      transResult.data.forEach((item) => {
-        allHistory.push({
-          id: item.transactionId,
-          date: new Date(item.createdAt),
-          type: getTransactionType(item.type, item.amount),
-          title: item.itemName || getDefaultTitle(item.type),
-          amount: parseInt(item.amount),
-          icon: getIconForType(item.type),
-          description: item.type,
-          source: 'transactions',
+      // Transactions 데이터 처리
+      if (transResult.success && transResult.data) {
+        transResult.data.forEach((item) => {
+          const parsedDate = parseKoreanDate(item.createdAt);
+          if (parsedDate) {
+            tempHistory.push({
+              date: parsedDate,
+              type: getTransactionType(item.type, item.amount),
+              title: item.itemName || getDefaultTitle(item.type),
+              amount: parseInt(item.amount) || 0,
+              icon: getIconForType(item.type),
+              description: item.type,
+              source: 'transactions',
+            });
+          }
         });
-      });
+      }
+
+      // 정렬
+      tempHistory.sort((a, b) => b.date - a.date);
+
+      // 페이지네이션 적용
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      historyData = tempHistory.slice(start, end);
+
+      // 캐시 저장
+      cache.set(cacheKey, historyData);
+
+      // 전체 데이터도 저장 (필터용)
+      if (!loadMore) {
+        allHistory = tempHistory;
+      }
     }
 
-    // 날짜순 정렬 (최신순)
-    allHistory.sort((a, b) => b.date - a.date);
-
-    // 잔액 계산 (역순으로)
-    let balance = studentData ? studentData.currentPoints : 0;
-    for (let i = 0; i < allHistory.length; i++) {
-      allHistory[i].balance = balance;
-      balance -= allHistory[i].amount;
+    // 데이터 표시
+    if (loadMore) {
+      // 추가 로드
+      appendHistoryItems(historyData);
+    } else {
+      // 초기 로드
+      filteredHistory = historyData;
+      displayHistory();
     }
 
-    console.log('거래 내역 로드 완료:', allHistory.length + '건');
-    applyFilters();
+    // 더보기 버튼 표시
+    if (historyData.length === ITEMS_PER_PAGE) {
+      showLoadMoreButton();
+    }
   } catch (error) {
     console.error('거래 내역 로드 오류:', error);
-    allHistory = [];
+  } finally {
+    isLoading = false;
   }
+}
+// 더보기 버튼 표시
+function showLoadMoreButton() {
+  const container = document.getElementById('historyListContainer');
+  const existingBtn = document.getElementById('loadMoreBtn');
+
+  if (!existingBtn) {
+    const btnHtml = `
+      <div id="loadMoreBtn" class="load-more-container">
+        <button class="btn btn-secondary" onclick="loadMore()">
+          더 많은 내역 보기
+        </button>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', btnHtml);
+  }
+}
+
+// 더보기 기능
+function loadMore() {
+  currentPage++;
+  loadHistory(true);
+}
+
+// 스켈레톤 리스트 생성
+function generateSkeletonList(count) {
+  let html = '<div class="history-list">';
+  html += '<div class="date-group skeleton-line" style="width: 100px"></div>';
+
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="history-item skeleton">
+        <div class="item-left">
+          <div class="skeleton-circle"></div>
+          <div class="item-info">
+            <div class="skeleton-line" style="width: 150px"></div>
+            <div class="skeleton-line" style="width: 100px; opacity: 0.5"></div>
+          </div>
+        </div>
+        <div class="item-right">
+          <div class="skeleton-line" style="width: 80px"></div>
+          <div class="skeleton-line" style="width: 60px; opacity: 0.5"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // 거래 타입 결정
@@ -142,6 +333,7 @@ function getDefaultTitle(type) {
     withdraw: '저축 출금',
     interest: '이자 지급',
     gift: '포인트 선물',
+    manual: '수동 지급',
   };
   return titles[type] || type;
 }
@@ -157,6 +349,7 @@ function getIconForType(type) {
     withdraw: '💸',
     interest: '💎',
     gift: '🎁',
+    manual: '✨',
   };
   return icons[type] || '📝';
 }
@@ -203,9 +396,14 @@ function setupEventListeners() {
   }
 }
 
-// 필터 적용
+// 3️⃣ applyFilters 함수 수정 (디버깅 추가)
 function applyFilters() {
+  console.log('📍 applyFilters 호출됨');
+  console.log('현재 필터:', currentFilter);
+  console.log('현재 기간:', currentPeriod);
+
   let filtered = [...allHistory];
+  console.log('필터 전 개수:', filtered.length);
 
   // 타입 필터
   if (currentFilter !== 'all') {
@@ -214,13 +412,14 @@ function applyFilters() {
         case 'earn':
           return item.amount > 0 && item.type === 'earn';
         case 'spend':
-          return item.amount < 0 && item.type === 'spend';
+          return item.amount < 0 || item.type === 'spend';
         case 'save':
           return item.type === 'save';
         default:
           return true;
       }
     });
+    console.log('타입 필터 후 개수:', filtered.length);
   }
 
   // 기간 필터
@@ -233,22 +432,61 @@ function applyFilters() {
   };
 
   const daysLimit = periodDays[currentPeriod] || 30;
+  console.log('기간 제한:', daysLimit + '일');
 
   filtered = filtered.filter((item) => {
+    // 날짜가 없으면 제외
+    if (!item.date || isNaN(item.date.getTime())) {
+      console.log('Invalid date item:', item);
+      return false;
+    }
+
     const daysDiff = Math.floor((now - item.date) / (1000 * 60 * 60 * 24));
-    return daysDiff <= daysLimit;
+    const isIncluded = daysDiff <= daysLimit;
+
+    if (!isIncluded && daysDiff < 100) {
+      // 100일 이내인데 필터링된 경우만 로그
+      console.log(
+        `필터링됨: ${item.title}, ${daysDiff}일 전 (제한: ${daysLimit}일)`
+      );
+    }
+
+    return isIncluded;
   });
 
+  console.log('기간 필터 후 개수:', filtered.length);
+
   filteredHistory = filtered;
+  console.log('📍 최종 필터 결과:', filteredHistory.length + '건');
+
   displayHistory();
   updateStatistics();
 }
 
-// 거래 내역 표시
+// 거래 내역 표시 - 디버깅 강화 버전
 function displayHistory() {
+  console.log('displayHistory 호출됨');
+  console.log('filteredHistory 개수:', filteredHistory.length);
+
   const container = document.getElementById('historyListContainer');
 
+  if (!container) {
+    console.error('❌ historyListContainer를 찾을 수 없습니다');
+    // 대체 컨테이너 찾기
+    const alternativeContainer = document.querySelector('.history-container');
+    if (alternativeContainer) {
+      console.log('대체 컨테이너 찾음');
+      const newDiv = document.createElement('div');
+      newDiv.id = 'historyListContainer';
+      alternativeContainer.appendChild(newDiv);
+    }
+    return;
+  }
+
+  console.log('✅ Container 찾음:', container);
+
   if (filteredHistory.length === 0) {
+    console.log('거래 내역이 없음');
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">📋</div>
@@ -258,6 +496,8 @@ function displayHistory() {
     `;
     return;
   }
+
+  console.log('거래 내역 렌더링 시작');
 
   // 날짜별 그룹화
   const grouped = {};
@@ -269,8 +509,11 @@ function displayHistory() {
     grouped[dateKey].push(item);
   });
 
+  console.log('그룹화된 데이터:', grouped);
+
   // HTML 생성
-  let html = '';
+  let html = '<div class="history-list">';
+
   Object.keys(grouped).forEach((dateKey) => {
     html += `<div class="date-group">${dateKey}</div>`;
 
@@ -280,8 +523,8 @@ function displayHistory() {
         item.amount > 0 ? 'amount-positive' : 'amount-negative';
       const amountText =
         item.amount > 0
-          ? `+${Math.abs(item.amount)}P`
-          : `-${Math.abs(item.amount)}P`;
+          ? `+${Math.abs(item.amount).toLocaleString()}P`
+          : `-${Math.abs(item.amount).toLocaleString()}P`;
 
       html += `
         <div class="history-item">
@@ -291,19 +534,52 @@ function displayHistory() {
             </div>
             <div class="item-info">
               <div class="item-title">${item.title}</div>
-              <div class="item-desc">${item.description}</div>
+              <div class="item-desc">${formatDescription(item)}</div>
             </div>
           </div>
           <div class="item-right">
             <div class="item-amount ${amountClass}">${amountText}</div>
-            <div class="item-balance">잔액 ${item.balance.toLocaleString()}P</div>
+            ${
+              item.balance !== undefined
+                ? `<div class="item-balance">잔액 ${item.balance.toLocaleString()}P</div>`
+                : ''
+            }
           </div>
         </div>
       `;
     });
   });
 
-  container.innerHTML = `<div class="history-list">${html}</div>`;
+  html += '</div>';
+
+  console.log('생성된 HTML 길이:', html.length);
+  container.innerHTML = html;
+  console.log('✅ HTML 삽입 완료');
+}
+
+// 설명 포맷 함수
+function formatDescription(item) {
+  const typeDescriptions = {
+    attendance: '출석 체크',
+    homework: '과제 완료',
+    test: '시험 성적',
+    purchase: '상품 구매',
+    deposit: '포인트 저축',
+    withdraw: '포인트 인출',
+    interest: '주간 이자',
+    gift: '친구 선물',
+    manual: '수동 지급',
+  };
+
+  // 시간 정보 추가
+  const time = item.date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const desc =
+    typeDescriptions[item.description] || item.description || item.type;
+  return `${desc} • ${time}`;
 }
 
 // 날짜 키 포맷
@@ -339,25 +615,42 @@ function updateStatistics() {
   let totalSave = 0;
 
   filteredHistory.forEach((item) => {
+    const amount = Math.abs(item.amount);
+
     if (item.type === 'earn' && item.amount > 0) {
-      totalEarn += Math.abs(item.amount);
-    } else if (item.type === 'spend' && item.amount < 0) {
-      totalSpend += Math.abs(item.amount);
+      totalEarn += amount;
+    } else if (
+      (item.type === 'spend' && item.amount < 0) ||
+      item.type === 'spend'
+    ) {
+      totalSpend += amount;
     } else if (item.type === 'save') {
-      totalSave += Math.abs(item.amount);
+      if (item.description === 'deposit') {
+        totalSave += amount;
+      } else if (item.description === 'withdraw') {
+        totalSave -= amount;
+      } else {
+        totalSave += amount;
+      }
     }
   });
 
-  // 통계 표시
-  document.getElementById(
-    'statEarn'
-  ).textContent = `+${totalEarn.toLocaleString()}P`;
-  document.getElementById(
-    'statSpend'
-  ).textContent = `${totalSpend.toLocaleString()}P`;
-  document.getElementById(
-    'statSave'
-  ).textContent = `${totalSave.toLocaleString()}P`;
+  // 통계 표시 업데이트
+  const earnElement = document.getElementById('statEarn');
+  const spendElement = document.getElementById('statSpend');
+  const saveElement = document.getElementById('statSave');
+
+  if (earnElement) {
+    earnElement.textContent = `+${totalEarn.toLocaleString()}P`;
+  }
+
+  if (spendElement) {
+    spendElement.textContent = `${totalSpend.toLocaleString()}P`;
+  }
+
+  if (saveElement) {
+    saveElement.textContent = `${Math.abs(totalSave).toLocaleString()}P`;
+  }
 }
 
 // 전체 화면 업데이트

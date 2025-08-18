@@ -102,3 +102,63 @@ body {
     padding: 15px;
   }
 }
+/* 스켈레톤 UI */
+.skeleton {
+  animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s infinite;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.skeleton-circle {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s infinite;
+  border-radius: 50%;
+}
+
+@keyframes skeleton-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 페이드인 애니메이션 */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 더보기 버튼 */
+.load-more-container {
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.load-more-container .btn {
+  padding: 12px 30px;
+  font-size: 14px;
+  font-weight: 600;
+}

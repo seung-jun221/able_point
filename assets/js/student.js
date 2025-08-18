@@ -107,17 +107,32 @@ async function calculateTodayPoints() {
   }
 }
 
-// 활동 내역 로드 - 실제 연동
+// 활동 내역 로드 - 캐싱 + 최소 로드 버전
 async function loadActivityHistory() {
   const activityList = document.getElementById('activityList');
 
+  // 스켈레톤 UI 표시
+  activityList.innerHTML = generateSkeletonUI(5);
+
   try {
-    const result = await api.getPointHistory(studentId);
+    const studentId = localStorage.getItem('loginId');
 
-    if (result.success && result.data.length > 0) {
-      // 최근 5개만 표시
-      const recentActivities = result.data.slice(0, 5);
+    // 캐시 확인
+    const cacheKey = `activity_${studentId}`;
+    let recentActivities = cache.get(cacheKey);
 
+    if (!recentActivities) {
+      // 캐시가 없으면 API 호출
+      const result = await api.getPointHistory(studentId);
+
+      if (result.success && result.data.length > 0) {
+        // 최근 5개만 저장
+        recentActivities = result.data.slice(0, 5);
+        cache.set(cacheKey, recentActivities);
+      }
+    }
+
+    if (recentActivities && recentActivities.length > 0) {
       activityList.innerHTML = recentActivities
         .map((activity) => {
           const iconClass = getIconClass(activity.type);
@@ -128,15 +143,24 @@ async function loadActivityHistory() {
             activity.amount > 0
               ? `+${activity.amount}P`
               : `${activity.amount}P`;
-          const timeText = formatTimeAgo(activity.date);
+
+          let timeText = '방금 전';
+          if (activity.date) {
+            const dateObj = parseKoreanDate(activity.date);
+            if (dateObj && !isNaN(dateObj.getTime())) {
+              timeText = formatTimeAgo(activity.date);
+            } else {
+              timeText = activity.date;
+            }
+          }
 
           return `
-          <div class="activity-item">
+          <div class="activity-item fade-in">
             <div class="activity-left">
               <div class="activity-icon ${iconClass}">${icon}</div>
               <div class="activity-info">
                 <span class="activity-title">${
-                  activity.reason || activity.type
+                  activity.reason || activity.type || '포인트 활동'
                 }</span>
                 <span class="activity-time">${timeText}</span>
               </div>
@@ -155,6 +179,25 @@ async function loadActivityHistory() {
     activityList.innerHTML =
       '<div class="error">데이터를 불러올 수 없습니다.</div>';
   }
+}
+// 스켈레톤 UI 생성
+function generateSkeletonUI(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="activity-item skeleton">
+        <div class="activity-left">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-text">
+            <div class="skeleton-line" style="width: 120px"></div>
+            <div class="skeleton-line" style="width: 80px; opacity: 0.5"></div>
+          </div>
+        </div>
+        <div class="skeleton-line" style="width: 60px"></div>
+      </div>
+    `;
+  }
+  return html;
 }
 
 // 랭킹 로드 - 실제 연동
@@ -236,18 +279,30 @@ function getIcon(type) {
   return icons[type] || '📝';
 }
 
-// 시간 포맷
+// formatTimeAgo 함수도 수정
 function formatTimeAgo(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = Math.floor((now - date) / 1000); // 초 단위
+  try {
+    const date = new Date(dateString);
 
-  if (diff < 60) return '방금 전';
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+    // 날짜가 유효하지 않으면 원본 문자열 반환
+    if (isNaN(date.getTime())) {
+      console.log('Invalid date:', dateString);
+      return dateString || '날짜 없음';
+    }
 
-  return date.toLocaleDateString('ko-KR');
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // 초 단위
+
+    if (diff < 60) return '방금 전';
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+
+    return date.toLocaleDateString('ko-KR');
+  } catch (error) {
+    console.error('날짜 포맷 오류:', error, dateString);
+    return '날짜 오류';
+  }
 }
 
 // 다음 월요일 계산
