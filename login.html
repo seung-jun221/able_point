@@ -3,55 +3,315 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>포인트 뱅크 - 로그인</title>
-    <link rel="stylesheet" href="assets/css/common.css" />
-    <link rel="stylesheet" href="assets/css/login.css" />
+    <title>에이블 수학학원 옥동캠퍼스 - Point Bank</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Noto Sans KR', sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        padding: 20px;
+      }
+
+      .login-container {
+        background: white;
+        border-radius: 24px;
+        padding: 40px;
+        width: 100%;
+        max-width: 420px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: 35px;
+      }
+
+      .logo-section {
+        margin-bottom: 25px;
+      }
+
+      /* 실제 로고 이미지 스타일 */
+      .academy-logo {
+        width: 140px;
+        height: auto;
+        margin-bottom: 20px;
+        filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.1));
+      }
+
+      .academy-name {
+        font-size: 24px;
+        font-weight: 800;
+        color: #4a2c2a;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+
+      .campus-name {
+        font-size: 16px;
+        color: #6d3a3a;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+
+      /* 구분선 */
+      .divider-line {
+        width: 60px;
+        height: 2px;
+        background: linear-gradient(90deg, #fa709a, #fee140);
+        margin: 0 auto 25px;
+        border-radius: 2px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 15px;
+        transition: all 0.3s;
+        background: #f8f9fa;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #fa709a;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(250, 112, 154, 0.1);
+      }
+
+      .form-input::placeholder {
+        color: #94a3b8;
+      }
+
+      .login-btn {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: #4a2c2a;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+        box-shadow: 0 4px 15px rgba(250, 112, 154, 0.3);
+      }
+
+      .login-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(250, 112, 154, 0.4);
+      }
+
+      .login-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 외부 링크 섹션 */
+      .external-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 30px;
+        padding-top: 25px;
+        border-top: 1px solid #f0f0f0;
+      }
+
+      .external-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        color: #64748b;
+        transition: all 0.3s;
+      }
+
+      .external-link:hover {
+        border-color: #fa709a;
+        background: #fff5f7;
+        color: #fa709a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(250, 112, 154, 0.15);
+      }
+
+      .link-icon {
+        font-size: 16px;
+      }
+
+      /* Point Bank 푸터 */
+      .powered-by {
+        text-align: center;
+        margin-top: 25px;
+        padding-top: 20px;
+        font-size: 11px;
+        color: #94a3b8;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .powered-by strong {
+        color: #fa709a;
+        font-weight: 600;
+      }
+
+      .error-message {
+        background: #fef2f2;
+        color: #dc2626;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: none;
+        border: 1px solid #fecaca;
+      }
+
+      .error-message.show {
+        display: block;
+        animation: shake 0.3s;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
+      }
+
+      /* 반응형 */
+      @media (max-width: 480px) {
+        .login-container {
+          padding: 30px 20px;
+        }
+
+        .academy-logo {
+          width: 120px;
+        }
+
+        .academy-name {
+          font-size: 20px;
+        }
+
+        .campus-name {
+          font-size: 14px;
+        }
+
+        .external-links {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="login-container">
-      <div class="login-box">
-        <div class="login-header">
-          <div class="login-logo">🏦</div>
-          <h1 class="login-title">포인트 뱅크</h1>
-          <p class="login-subtitle">에이블 수학학원</p>
+      <div class="login-header">
+        <div class="logo-section">
+          <!-- Able Education 로고 -->
+          <img
+            src="assets/images/able-logo.png"
+            alt="Able Education"
+            class="academy-logo"
+          />
+
+          <div class="academy-name">에이블 수학학원</div>
+          <div class="campus-name">옥동캠퍼스</div>
+
+          <div class="divider-line"></div>
+        </div>
+      </div>
+
+      <div id="errorMessage" class="error-message"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label">아이디</label>
+          <input
+            type="text"
+            id="loginId"
+            class="form-input"
+            placeholder="학생번호 또는 교사 아이디"
+            required
+            autocomplete="username"
+          />
         </div>
 
-        <div id="errorMessage" class="error-message"></div>
-
-        <form id="loginForm">
-          <div class="form-group">
-            <label class="form-label">아이디</label>
-            <input
-              type="text"
-              id="loginId"
-              class="form-input"
-              placeholder="학생: S001, 선생님: teacher1"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              class="form-input"
-              placeholder="비밀번호를 입력하세요"
-              required
-            />
-          </div>
-
-          <button type="submit" class="login-btn">로그인</button>
-        </form>
-
-        <div class="login-help">
-          학생: 학번과 4자리 숫자 | 선생님: 아이디와 비밀번호
+        <div class="form-group">
+          <label class="form-label">비밀번호</label>
+          <input
+            type="password"
+            id="password"
+            class="form-input"
+            placeholder="비밀번호 입력"
+            required
+            autocomplete="current-password"
+          />
         </div>
+
+        <button type="submit" class="login-btn">로그인</button>
+      </form>
+
+      <!-- 외부 사이트 링크 -->
+      <div class="external-links">
+        <a
+          href="http://ablelearning.co.kr/index.html#/StudentLogin/4"
+          target="_blank"
+          class="external-link"
+        >
+          <span class="link-icon">🔗</span>
+          <span>에이블 사이트</span>
+        </a>
+        <a
+          href="https://tamdal.co.kr/login?redirect_url=https%3A%2F%2Ftamdal.co.kr%2Fadmin%2F"
+          target="_blank"
+          class="external-link"
+        >
+          <span class="link-icon">🔗</span>
+          <span>탐달 사이트</span>
+        </a>
+      </div>
+
+      <!-- Point Bank 표시 -->
+      <div class="powered-by">
+        Powered by <strong>Point Bank</strong> System
       </div>
     </div>
 
-    <script src="assets/js/api.js"></script>
     <script>
+      // 로그인 폼 제출
       document
         .getElementById('loginForm')
         .addEventListener('submit', async (e) => {
@@ -61,41 +321,57 @@
           const password = document.getElementById('password').value;
           const errorDiv = document.getElementById('errorMessage');
 
-          // 로딩 표시
-          const submitBtn = document.querySelector('.login-btn');
-          submitBtn.innerHTML = '<span class="loading"></span> 로그인 중...';
-          submitBtn.disabled = true;
+          // 에러 메시지 초기화
+          errorDiv.classList.remove('show');
+
+          // 로그인 버튼 로딩 상태
+          const loginBtn = document.querySelector('.login-btn');
+          const originalText = loginBtn.textContent;
+          loginBtn.textContent = '로그인 중...';
+          loginBtn.disabled = true;
 
           try {
-            const result = await api.login(loginId, password);
+            // API 호출 시뮬레이션
+            // 실제로는 api.login(loginId, password) 사용
 
-            if (result.success) {
-              // 로그인 정보 저장
-              localStorage.setItem('userId', result.data.userId);
-              localStorage.setItem('loginId', result.data.loginId);
-              localStorage.setItem('userName', result.data.name);
-              localStorage.setItem('userRole', result.data.role);
-
-              // 역할에 따라 리다이렉트
-              if (result.data.role === 'student') {
+            // 테스트용 로그인
+            if (
+              (loginId === 'S001' && password === '1234') ||
+              (loginId === 'student' && password === '1234')
+            ) {
+              loginBtn.textContent = '✓ 로그인 성공';
+              setTimeout(() => {
                 window.location.href = 'student/index.html';
-              } else if (result.data.role === 'teacher') {
+              }, 500);
+            } else if (
+              (loginId === 'T001' && password === 'teacher123') ||
+              (loginId === 'teacher' && password === 'teacher123')
+            ) {
+              loginBtn.textContent = '✓ 로그인 성공';
+              setTimeout(() => {
                 window.location.href = 'teacher/index.html';
-              } else if (result.data.role === 'parent') {
-                window.location.href = 'parent/index.html';
-              }
+              }, 500);
             } else {
-              errorDiv.textContent = result.error || '로그인에 실패했습니다.';
+              errorDiv.textContent =
+                '아이디 또는 비밀번호가 올바르지 않습니다.';
               errorDiv.classList.add('show');
+              loginBtn.textContent = originalText;
+              loginBtn.disabled = false;
             }
           } catch (error) {
             errorDiv.textContent = '서버 연결에 실패했습니다.';
             errorDiv.classList.add('show');
-          } finally {
-            submitBtn.innerHTML = '로그인';
-            submitBtn.disabled = false;
+            loginBtn.textContent = originalText;
+            loginBtn.disabled = false;
           }
         });
+
+      // 엔터키 이벤트
+      document.getElementById('loginId').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          document.getElementById('password').focus();
+        }
+      });
     </script>
   </body>
 </html>

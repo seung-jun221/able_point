@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 정보 - 포인트 뱅크</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/profile.css" />
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="profile-header">
+      <div class="profile-left">
+        <button onclick="history.back()" class="back-button">‹</button>
+        <h2>내 정보</h2>
+      </div>
+      <div class="profile-right">
+        <button
+          onclick="showEditModal()"
+          class="edit-button"
+          title="프로필 편집"
+        >
+          ✏️
+        </button>
+      </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="profile-container">
+      <!-- 프로필 카드 -->
+      <div class="profile-main-card">
+        <div class="avatar-section">
+          <div class="profile-avatar" id="profileAvatar">
+            <span id="avatarEmoji">🦁</span>
+          </div>
+          <button class="avatar-change-btn" onclick="showAvatarModal()">
+            변경
+          </button>
+        </div>
+
+        <h2 class="profile-name" id="profileName">학생이름</h2>
+
+        <div class="profile-badges">
+          <span class="level-badge" id="profileLevel">🌱 씨앗</span>
+        </div>
+
+        <!-- 개선된 레벨 진행률 표시 -->
+        <div class="level-progress">
+          <div class="progress-info">
+            <div class="current-points-display">
+              <span class="points-label">현재 포인트</span>
+              <span class="points-value" id="currentTotalPoints">0P</span>
+            </div>
+            <div class="next-level-info">
+              <span class="next-label">다음 레벨까지</span>
+              <span class="next-value" id="pointsToNext">-</span>
+            </div>
+          </div>
+
+          <div class="progress-bar-container">
+            <div
+              class="progress-bar-fill"
+              id="levelProgress"
+              style="width: 0%"
+            ></div>
+            <div class="progress-milestone" id="progressMilestone"></div>
+          </div>
+
+          <div class="progress-text">
+            <span id="progressDisplay">0 / 0P</span>
+            <span class="progress-percentage" id="progressPercentage">0%</span>
+          </div>
+
+          <div class="next-level-preview">
+            <span id="nextLevelPreview">다음: 🌿 새싹</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="stats-card">
+        <h3 class="section-title">
+          <span class="title-text">나의 기록</span>
+          <span class="title-badge">My Stats</span>
+        </h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+              <div class="stat-label">누적 포인트</div>
+              <div class="stat-value" id="totalPointsStat">0P</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📈</div>
+            <div class="stat-info">
+              <div class="stat-label">이번달 획득</div>
+              <div class="stat-value positive" id="monthlyPointsStat">+0P</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">💎</div>
+            <div class="stat-info">
+              <div class="stat-label">저축 잔액</div>
+              <div class="stat-value" id="savingsStat">0P</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-info">
+              <div class="stat-label">전체 순위</div>
+              <div class="stat-value" id="rankingStat">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 업적/배지 -->
+      <div class="achievement-card">
+        <h3 class="section-title">🏆 획득한 배지</h3>
+        <div class="achievement-grid" id="achievementGrid">
+          <!-- 동적 생성 -->
+        </div>
+        <div class="achievement-progress">
+          <span class="achievement-text">
+            <span id="unlockedCount">0</span> /
+            <span id="totalBadges">20</span> 개 획득
+          </span>
+        </div>
+      </div>
+
+      <!-- 활동 그래프 -->
+      <div class="activity-card">
+        <h3 class="section-title">📈 주간 활동</h3>
+        <div class="activity-chart">
+          <canvas id="weeklyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 설정 -->
+      <div class="settings-card">
+        <h3 class="section-title">⚙️ 설정</h3>
+
+        <div class="setting-item">
+          <div class="setting-left">
+            <span class="setting-icon">🔔</span>
+            <div class="setting-info">
+              <div class="setting-title">알림 설정</div>
+              <div class="setting-desc">포인트 획득 시 알림</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notificationToggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-left">
+            <span class="setting-icon">🌙</span>
+            <div class="setting-info">
+              <div class="setting-title">다크 모드</div>
+              <div class="setting-desc">어두운 테마 사용</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item clickable" onclick="changePassword()">
+          <div class="setting-left">
+            <span class="setting-icon">🔑</span>
+            <div class="setting-info">
+              <div class="setting-title">비밀번호 변경</div>
+              <div class="setting-desc">계정 보안 설정</div>
+            </div>
+          </div>
+          <span class="setting-arrow">›</span>
+        </div>
+
+        <div class="setting-item clickable" onclick="showDataExport()">
+          <div class="setting-left">
+            <span class="setting-icon">📥</span>
+            <div class="setting-info">
+              <div class="setting-title">데이터 내보내기</div>
+              <div class="setting-desc">내 활동 기록 다운로드</div>
+            </div>
+          </div>
+          <span class="setting-arrow">›</span>
+        </div>
+
+        <div class="setting-item clickable danger" onclick="logout()">
+          <div class="setting-left">
+            <span class="setting-icon">🚪</span>
+            <div class="setting-info">
+              <div class="setting-title">로그아웃</div>
+              <div class="setting-desc">계정에서 로그아웃</div>
+            </div>
+          </div>
+          <span class="setting-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- 앱 정보 -->
+      <div class="app-info">
+        <p>포인트 뱅크 v1.0.0</p>
+        <p>© 2024 에이블 수학학원</p>
+      </div>
+    </div>
+
+    <!-- 아바타 선택 모달 -->
+    <div id="avatarModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>아바타 선택</h2>
+          <button class="modal-close" onclick="closeAvatarModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="avatar-grid" id="avatarGrid">
+            <!-- 동적 생성 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비밀번호 변경 모달 -->
+    <div id="passwordModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>비밀번호 변경</h2>
+          <button class="modal-close" onclick="closePasswordModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">현재 비밀번호</label>
+            <input type="password" class="form-input" id="currentPassword" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">새 비밀번호</label>
+            <input type="password" class="form-input" id="newPassword" />
+            <div class="form-hint">4자리 이상 입력하세요</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">새 비밀번호 확인</label>
+            <input type="password" class="form-input" id="confirmPassword" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePasswordModal()">
+            취소
+          </button>
+          <button class="btn btn-primary" onclick="updatePassword()">
+            변경하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 네비게이션 -->
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="location.href='index.html'">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">홈</span>
+      </div>
+      <div class="nav-item" onclick="location.href='savings.html'">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">저축</span>
+      </div>
+      <div class="nav-item" onclick="location.href='shop.html'">
+        <span class="nav-icon">🛍️</span>
+        <span class="nav-label">상점</span>
+      </div>
+      <div class="nav-item" onclick="location.href='ranking.html'">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">랭킹</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">내정보</span>
+      </div>
+    </div>
+
+    <!-- Chart.js (그래프용) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 기본 스크립트 -->
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/cache.js"></script>
+    <script src="../assets/js/profile.js"></script>
+  </body>
+</html>
