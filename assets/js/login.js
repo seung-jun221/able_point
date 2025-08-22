@@ -34,11 +34,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       }
 
       // 기억하기 처리
-      if (rememberMe) {
-        localStorage.setItem('savedLoginId', loginId);
-      } else {
-        localStorage.removeItem('savedLoginId');
-      }
+      //if (rememberMe) {
+      //  localStorage.setItem('savedLoginId', loginId);
+      //} else {
+      //  localStorage.removeItem('savedLoginId');
+      //}
 
       submitBtn.innerHTML = '✅ 로그인 성공!';
       submitBtn.style.background = 'linear-gradient(135deg, #10b981, #22c55e)';
