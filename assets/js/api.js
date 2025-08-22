@@ -210,6 +210,8 @@ class PointBankAPI {
           level: data.level || '씨앗',
           avatar: data.avatar || '🦁',
           classId: data.class_id,
+          className: data.class_name, // 추가 정보
+          grade: data.grade, // 추가 정보
         },
       };
     } catch (error) {
@@ -227,11 +229,11 @@ class PointBankAPI {
     try {
       debugLog('Adding points', { loginId, amount, type, reason });
 
-      // 1. student_details 뷰에서 학생 정보 조회
+      // student_details 뷰에서 직접 조회 (개선됨)
       const { data: studentDetail } = await supabase
         .from('student_details')
         .select('student_id, user_id, current_points, total_points')
-        .eq('login_id', loginId)
+        .eq('login_id', loginId) // ✅ 이제 작동함!
         .single();
 
       if (!studentDetail) {

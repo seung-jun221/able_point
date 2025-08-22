@@ -321,68 +321,6 @@
       </div>
     </div>
 
-    <script>
-      // 로그인 폼 제출
-      document
-        .getElementById('loginForm')
-        .addEventListener('submit', async (e) => {
-          e.preventDefault();
-
-          const loginId = document.getElementById('loginId').value;
-          const password = document.getElementById('password').value;
-          const errorDiv = document.getElementById('errorMessage');
-
-          // 에러 메시지 초기화
-          errorDiv.classList.remove('show');
-
-          // 로그인 버튼 로딩 상태
-          const loginBtn = document.querySelector('.login-btn');
-          const originalText = loginBtn.textContent;
-          loginBtn.textContent = '로그인 중...';
-          loginBtn.disabled = true;
-
-          try {
-            // API 호출 시뮬레이션
-            // 실제로는 api.login(loginId, password) 사용
-
-            // 테스트용 로그인
-            if (
-              (loginId === 'S001' && password === '1234') ||
-              (loginId === 'student' && password === '1234')
-            ) {
-              loginBtn.textContent = '✓ 로그인 성공';
-              setTimeout(() => {
-                window.location.href = 'student/index.html';
-              }, 500);
-            } else if (
-              (loginId === 'T001' && password === 'teacher123') ||
-              (loginId === 'teacher' && password === 'teacher123')
-            ) {
-              loginBtn.textContent = '✓ 로그인 성공';
-              setTimeout(() => {
-                window.location.href = 'teacher/index.html';
-              }, 500);
-            } else {
-              errorDiv.textContent =
-                '아이디 또는 비밀번호가 올바르지 않습니다.';
-              errorDiv.classList.add('show');
-              loginBtn.textContent = originalText;
-              loginBtn.disabled = false;
-            }
-          } catch (error) {
-            errorDiv.textContent = '서버 연결에 실패했습니다.';
-            errorDiv.classList.add('show');
-            loginBtn.textContent = originalText;
-            loginBtn.disabled = false;
-          }
-        });
-
-      // 엔터키 이벤트
-      document.getElementById('loginId').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          document.getElementById('password').focus();
-        }
-      });
-    </script>
+    <script src="assets/js/login.js"></script>
   </body>
 </html>
