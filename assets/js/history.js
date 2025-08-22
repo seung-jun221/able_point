@@ -1,64 +1,15 @@
-// 한국 날짜 형식 파싱 함수 - 최종 수정 버전
-function parseKoreanDate(dateString) {
+// ✅ Supabase ISO 형식 날짜 파싱 함수
+function parseDate(dateString) {
   if (!dateString) return null;
 
   try {
-    let date;
-
-    // "2025. 8. 15. 오후 5:28:28" 형식 처리
-    if (
-      typeof dateString === 'string' &&
-      (dateString.includes('오전') || dateString.includes('오후'))
-    ) {
-      // 마지막 점(.) 제거하고 처리
-      let cleanDate = dateString.trim();
-
-      // "2025. 8. 15. 오후 5:28:28" → 배열로 분리
-      const parts = cleanDate.split(' ');
-
-      if (parts.length >= 5) {
-        // ["2025.", "8.", "15.", "오후", "5:28:28"]
-        const year = parseInt(parts[0]);
-        const month = parseInt(parts[1]);
-        const day = parseInt(parts[2]);
-        const ampm = parts[3];
-        const timePart = parts[4];
-
-        const [hour, minute, second] = timePart
-          .split(':')
-          .map((v) => parseInt(v));
-
-        let adjustedHour = hour;
-        if (ampm === '오후' && hour !== 12) {
-          adjustedHour += 12;
-        } else if (ampm === '오전' && hour === 12) {
-          adjustedHour = 0;
-        }
-
-        date = new Date(
-          year,
-          month - 1,
-          day,
-          adjustedHour,
-          minute || 0,
-          second || 0
-        );
-      }
-    }
-    // "2024/11/15 09:00:00" 형식
-    else if (typeof dateString === 'string' && dateString.includes('/')) {
-      date = new Date(dateString);
-    }
-    // ISO 형식 또는 기타
-    else if (typeof dateString === 'string') {
-      date = new Date(dateString);
-    } else {
-      return null;
-    }
+    // Supabase는 ISO 8601 형식 반환
+    // 예: "2024-11-15T09:30:00+00:00" 또는 "2024-11-15T09:30:00.123Z"
+    const date = new Date(dateString);
 
     // 유효성 검사
     if (!date || !date.getTime || isNaN(date.getTime())) {
-      console.log('파싱 실패:', dateString);
+      console.log('Invalid date:', dateString);
       return null;
     }
 
@@ -78,19 +29,18 @@ let currentFilter = 'all';
 let currentPeriod = 'month';
 let studentData = null;
 
-// 초기화
+// 초기화 - 수정
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('거래 내역 페이지 초기화');
 
-  // 로그인 체크
-  const studentId = localStorage.getItem('loginId');
-  if (!studentId) {
+  // ✅ loginId 사용
+  const loginId = localStorage.getItem('loginId');
+  if (!loginId) {
     alert('로그인이 필요합니다.');
     window.location.href = '../login.html';
     return;
   }
 
-  // 로딩 표시
   const container = document.getElementById('historyListContainer');
   if (container) {
     container.innerHTML = `
@@ -102,20 +52,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    // 학생 데이터 로드
     await loadStudentData();
-
-    // 거래 내역 로드
     await loadHistory();
-
-    // 이벤트 리스너 설정
     setupEventListeners();
-
-    // 화면 업데이트
     updateDisplay();
   } catch (error) {
     console.error('초기화 오류:', error);
-
     if (container) {
       container.innerHTML = `
         <div class="empty-state">
@@ -128,11 +70,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// 학생 데이터 로드
+// 학생 데이터 로드 - 수정
 async function loadStudentData() {
   try {
-    const studentId = localStorage.getItem('loginId');
-    const result = await api.getStudentPoints(studentId);
+    // ✅ loginId 사용
+    const loginId = localStorage.getItem('loginId');
+    const result = await api.getStudentPoints(loginId);
 
     if (result.success) {
       studentData = result.data;
@@ -145,45 +88,37 @@ async function loadStudentData() {
   }
 }
 
-// 전역 변수 추가
-let currentPage = 1;
-const ITEMS_PER_PAGE = 20;
-let isLoading = false;
-
-// loadHistory 함수 수정 - 페이지네이션 적용
+// loadHistory 함수 수정
 async function loadHistory(loadMore = false) {
   if (isLoading) return;
   isLoading = true;
 
   try {
-    const studentId = localStorage.getItem('loginId');
+    // ✅ loginId 사용
+    const loginId = localStorage.getItem('loginId');
     const container = document.getElementById('historyListContainer');
 
-    // 첫 로드시 스켈레톤 UI
     if (!loadMore) {
       container.innerHTML = generateSkeletonList(10);
     }
 
-    // 캐시 체크
-    const cacheKey = `history_${studentId}_${currentPage}`;
+    const cacheKey = `history_${loginId}_${currentPage}`;
     let historyData = cache.get(cacheKey);
 
     if (!historyData) {
-      // API 호출
       console.log('📍 API 호출 - 페이지:', currentPage);
 
       const [pointsResult, transResult] = await Promise.all([
-        api.getPointHistory(studentId),
-        api.getTransactionHistory(studentId),
+        api.getPointHistory(loginId),
+        api.getTransactionHistory(loginId),
       ]);
 
-      // 데이터 처리 (기존 로직 활용)
       const tempHistory = [];
 
-      // Points 데이터 처리
+      // Points 데이터 처리 - 수정된 날짜 파싱
       if (pointsResult.success && pointsResult.data) {
         pointsResult.data.forEach((item) => {
-          const parsedDate = parseKoreanDate(item.date);
+          const parsedDate = parseDate(item.date); // ✅ 새 함수 사용
           if (parsedDate) {
             tempHistory.push({
               date: parsedDate,
@@ -198,10 +133,10 @@ async function loadHistory(loadMore = false) {
         });
       }
 
-      // Transactions 데이터 처리
+      // Transactions 데이터 처리 - 수정된 날짜 파싱
       if (transResult.success && transResult.data) {
         transResult.data.forEach((item) => {
-          const parsedDate = parseKoreanDate(item.createdAt);
+          const parsedDate = parseDate(item.createdAt); // ✅ 새 함수 사용
           if (parsedDate) {
             tempHistory.push({
               date: parsedDate,
@@ -224,26 +159,20 @@ async function loadHistory(loadMore = false) {
       const end = start + ITEMS_PER_PAGE;
       historyData = tempHistory.slice(start, end);
 
-      // 캐시 저장
       cache.set(cacheKey, historyData);
 
-      // 전체 데이터도 저장 (필터용)
       if (!loadMore) {
         allHistory = tempHistory;
       }
     }
 
-    // 데이터 표시
     if (loadMore) {
-      // 추가 로드
       appendHistoryItems(historyData);
     } else {
-      // 초기 로드
       filteredHistory = historyData;
       displayHistory();
     }
 
-    // 더보기 버튼 표시
     if (historyData.length === ITEMS_PER_PAGE) {
       showLoadMoreButton();
     }
