@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>에이블 수학학원 옥동캠퍼스 - Point Bank</title>
 
-    <!-- 🔴 여기서 스크립트 로드 시작 -->
-    <!-- 1. Supabase 클라이언트 (최상단) -->
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- 2. Config 파일 (Supabase 다음) -->
+    <!-- 설정 파일들 로드 -->
     <script src="assets/js/config.js"></script>
-
-    <!-- 3. API 파일 (Config 다음) -->
     <script src="assets/js/api.js"></script>
 
     <style>
@@ -51,7 +48,6 @@
         margin-bottom: 25px;
       }
 
-      /* 실제 로고 이미지 스타일 */
       .academy-logo {
         width: 140px;
         height: auto;
@@ -74,7 +70,6 @@
         font-weight: 600;
       }
 
-      /* 구분선 */
       .divider-line {
         width: 60px;
         height: 2px;
@@ -140,7 +135,11 @@
         transform: translateY(0);
       }
 
-      /* 외부 링크 섹션 */
+      .login-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
       .external-links {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -178,7 +177,6 @@
         font-size: 16px;
       }
 
-      /* Point Bank 푸터 */
       .powered-by {
         text-align: center;
         margin-top: 25px;
@@ -223,7 +221,22 @@
         }
       }
 
-      /* 반응형 */
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #4a2c2a;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       @media (max-width: 480px) {
         .login-container {
           padding: 30px 20px;
@@ -251,12 +264,26 @@
     <div class="login-container">
       <div class="login-header">
         <div class="logo-section">
-          <!-- Able Education 로고 -->
+          <!-- 실제 로고 이미지로 교체하세요 -->
           <img
             src="assets/images/able-logo.png"
             alt="Able Education"
             class="academy-logo"
+            onerror="this.style.display='none'; document.getElementById('fallbackLogo').style.display='flex';"
           />
+          <!-- 로고 이미지가 없을 때 대체 -->
+          <div
+            id="fallbackLogo"
+            class="academy-logo"
+            style="
+              display: none;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto;
+            "
+          >
+            <span style="font-size: 60px">📚</span>
+          </div>
 
           <div class="academy-name">에이블 수학학원</div>
           <div class="campus-name">옥동캠퍼스</div>
@@ -292,7 +319,7 @@
           />
         </div>
 
-        <button type="submit" class="login-btn">로그인</button>
+        <button type="submit" class="login-btn" id="loginBtn">로그인</button>
       </form>
 
       <!-- 외부 사이트 링크 -->
@@ -321,6 +348,126 @@
       </div>
     </div>
 
-    <script src="assets/js/login.js"></script>
+    <!-- 로그인 스크립트 -->
+    <script>
+      // API 로드 확인
+      if (!window.api) {
+        console.error('API가 로드되지 않았습니다.');
+        // API가 없을 경우 임시 처리
+        window.api = {
+          login: async function (loginId, password) {
+            // 테스트 계정만 허용 (임시)
+            if (
+              (loginId === 'S001' && password === '1234') ||
+              (loginId === 'EM301' && password === '1234')
+            ) {
+              return {
+                success: true,
+                data: {
+                  userId: 'U001',
+                  loginId: loginId,
+                  name: loginId === 'EM301' ? '홍길동' : '김학생',
+                  role: 'student',
+                  studentId: 'STU001',
+                  avatar: '🦁',
+                },
+              };
+            } else if (loginId === 'T001' && password === 'teacher123') {
+              return {
+                success: true,
+                data: {
+                  userId: 'U002',
+                  loginId: 'T001',
+                  name: '김선생',
+                  role: 'teacher',
+                },
+              };
+            }
+            return {
+              success: false,
+              error: '아이디 또는 비밀번호가 올바르지 않습니다.',
+            };
+          },
+        };
+      }
+
+      document
+        .getElementById('loginForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const loginId = document.getElementById('loginId').value;
+          const password = document.getElementById('password').value;
+          const errorDiv = document.getElementById('errorMessage');
+          const loginBtn = document.getElementById('loginBtn');
+
+          // 에러 메시지 초기화
+          errorDiv.classList.remove('show');
+
+          // 버튼 로딩 상태
+          const originalContent = loginBtn.innerHTML;
+          loginBtn.innerHTML = '<span class="loading"></span> 로그인 중...';
+          loginBtn.disabled = true;
+
+          try {
+            // API 호출
+            const result = await window.api.login(loginId, password);
+            console.log('로그인 결과:', result);
+
+            if (result.success) {
+              // 로그인 성공
+              localStorage.setItem('userId', result.data.userId);
+              localStorage.setItem('studentId', result.data.studentId || '');
+              localStorage.setItem('loginId', result.data.loginId);
+              localStorage.setItem('userName', result.data.name);
+              localStorage.setItem('userRole', result.data.role);
+
+              if (result.data.avatar) {
+                localStorage.setItem('userAvatar', result.data.avatar);
+              }
+
+              // 성공 표시
+              loginBtn.innerHTML = '✅ 로그인 성공!';
+              loginBtn.style.background =
+                'linear-gradient(135deg, #10b981, #22c55e)';
+
+              // 역할별 리다이렉트
+              setTimeout(() => {
+                if (result.data.role === 'student') {
+                  window.location.href = 'student/index.html';
+                } else if (result.data.role === 'teacher') {
+                  window.location.href = 'teacher/index.html';
+                } else {
+                  window.location.href = 'index.html';
+                }
+              }, 500);
+            } else {
+              // 로그인 실패
+              errorDiv.textContent =
+                result.error || '아이디 또는 비밀번호가 올바르지 않습니다.';
+              errorDiv.classList.add('show');
+              loginBtn.innerHTML = originalContent;
+              loginBtn.disabled = false;
+            }
+          } catch (error) {
+            console.error('로그인 오류:', error);
+            errorDiv.textContent = '서버 연결에 실패했습니다.';
+            errorDiv.classList.add('show');
+            loginBtn.innerHTML = originalContent;
+            loginBtn.disabled = false;
+          }
+        });
+
+      // 개발 환경에서 디버깅 정보 표시
+      if (
+        window.POINTBANK_CONFIG &&
+        window.POINTBANK_CONFIG.env === 'development'
+      ) {
+        console.log('🔧 개발 모드');
+        console.log(
+          '📝 테스트 계정: S001 / 1234, EM301 / 1234, T001 / teacher123'
+        );
+      }
+    </script>
   </body>
 </html>
