@@ -7,6 +7,31 @@ let previousCofixRate = 3.5; // 이전 금리 (비교용)
 let savingsHistory = [];
 let currentDeposit = null;
 
+// 전역 변수로 로딩 상태 관리
+let isLoading = false;
+let dataLoaded = false;
+
+// 페이지 초기화 - 중복 방지
+async function initializePage() {
+  // 이미 로딩 중이면 리턴
+  if (isLoading || dataLoaded) return;
+
+  isLoading = true;
+  console.log('저축 페이지 초기화 시작');
+
+  try {
+    // 1. 학생 데이터 한 번만 로드
+    await loadStudentData();
+
+    // 2. 저축 내역 한 번만 로드
+    await loadSavingsHistory();
+
+    dataLoaded = true;
+  } finally {
+    isLoading = false;
+  }
+}
+
 // 상수
 const SAVINGS_POLICY = {
   씨앗: { bonusRate: 0, maxLimit: 500, color: '#10b981' },
@@ -36,6 +61,12 @@ const WITHDRAWAL_POLICY = {
 
 // 초기화
 document.addEventListener('DOMContentLoaded', async () => {
+  // 🔴 중복 실행 방지
+  if (isLoading || dataLoaded) return;
+  if (window.savingsPageInitialized) return;
+  window.savingsPageInitialized = true;
+
+  isLoading = true;
   console.log('저축 페이지 초기화 시작');
 
   // 로그인 체크
@@ -51,9 +82,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadStudentData();
     await loadCofixRate();
-    await loadSavingsHistory();
+    await loadSavingsHistory(); // 먼저 로드
+    await checkCurrentDeposit(); // 그 다음에 체크
+    dataLoaded = true; // 🔴 추가
   } catch (error) {
     console.error('초기화 오류:', error);
+  } finally {
+    isLoading = false; // 🔴 추가
   }
 
   updateDisplay();
@@ -104,21 +139,22 @@ async function loadStudentData() {
   }
 }
 
-// 현재 예치 정보 확인
+// 현재 예치 정보 확인 (수정 버전)
 async function checkCurrentDeposit() {
   if (studentData.savingsPoints > 0) {
-    // 저축 잔액이 있으면 최근 입금 날짜 찾기
-    const history = await loadSavingsHistory();
-    const deposits = history
-      .filter((h) => h.type === 'deposit')
-      .sort((a, b) => b.date - a.date);
+    // 🔴 이미 로드된 savingsHistory 사용 (재호출 X)
+    if (savingsHistory.length > 0) {
+      const deposits = savingsHistory
+        .filter((h) => h.type === 'deposit')
+        .sort((a, b) => b.date - a.date);
 
-    if (deposits.length > 0) {
-      currentDeposit = {
-        amount: studentData.savingsPoints,
-        startDate: new Date(deposits[0].date),
-        rate: cofixRate + (SAVINGS_POLICY[studentData.level]?.bonusRate || 0),
-      };
+      if (deposits.length > 0) {
+        currentDeposit = {
+          amount: studentData.savingsPoints,
+          startDate: new Date(deposits[0].date),
+          rate: cofixRate + (SAVINGS_POLICY[studentData.level]?.bonusRate || 0),
+        };
+      }
     }
   }
 }

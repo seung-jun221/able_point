@@ -374,41 +374,8 @@ class PointBankAPI {
         throw new Error('포인트가 부족합니다.');
       }
 
-      // 2. savings 테이블 확인/업데이트
-      const { data: existingSavings } = await supabase
-        .from('savings')
-        .select('*')
-        .eq('student_id', student.student_id)
-        .single();
-
-      const newBalance = (existingSavings?.balance || 0) + parseInt(amount);
-
-      if (existingSavings) {
-        // 기존 저축 계좌 업데이트
-        const { error: savingsError } = await supabase
-          .from('savings')
-          .update({
-            balance: newBalance,
-            last_interest_date: new Date().toISOString(),
-          })
-          .eq('savings_id', existingSavings.savings_id);
-
-        if (savingsError) throw savingsError;
-      } else {
-        // 새 저축 계좌 생성
-        const { error: savingsError } = await supabase.from('savings').insert({
-          savings_id: this.generateId(),
-          student_id: student.student_id,
-          balance: parseInt(amount),
-          interest_rate: 2.0,
-          created_at: new Date().toISOString(),
-        });
-
-        if (savingsError) throw savingsError;
-      }
-
-      // 3. transactions 테이블에 기록
-      const { error: transError } = await supabase.from('transactions').insert({
+      // 2. transactions 테이블에 기록
+      await supabase.from('transactions').insert({
         transaction_id: this.generateId(),
         student_id: student.student_id,
         type: 'deposit',
@@ -417,13 +384,8 @@ class PointBankAPI {
         status: 'completed',
       });
 
-      if (transError) {
-        window.POINTBANK_CONFIG.debugLog('Transaction error', transError);
-        throw transError;
-      }
-
-      // 4. students 테이블 업데이트
-      const { error: updateError } = await supabase
+      // 3. students 테이블만 업데이트
+      await supabase
         .from('students')
         .update({
           current_points: student.current_points - parseInt(amount),
@@ -432,16 +394,11 @@ class PointBankAPI {
         })
         .eq('student_id', student.student_id);
 
-      if (updateError) {
-        window.POINTBANK_CONFIG.debugLog('Students update error', updateError);
-        throw updateError;
-      }
-
       window.POINTBANK_CONFIG.debugLog('Deposit successful', {
         loginId,
         amount,
-        newBalance,
       });
+
       return { success: true };
     } catch (error) {
       console.error('Deposit error:', error);
@@ -454,11 +411,6 @@ class PointBankAPI {
    */
   async withdraw(loginId, amount) {
     try {
-      window.POINTBANK_CONFIG.debugLog('Processing withdrawal', {
-        loginId,
-        amount,
-      });
-
       // 1. 학생 정보 조회
       const { data: student } = await supabase
         .from('student_details')
@@ -468,34 +420,13 @@ class PointBankAPI {
 
       if (!student) throw new Error('학생을 찾을 수 없습니다.');
 
+      // 2. students.savings_points만 사용 (savings 테이블 무시)
       if (student.savings_points < amount) {
-        throw new Error('저축 포인트가 부족합니다.');
-      }
-
-      // 2. savings 테이블 업데이트
-      const { data: savings } = await supabase
-        .from('savings')
-        .select('*')
-        .eq('student_id', student.student_id)
-        .single();
-
-      if (!savings || savings.balance < amount) {
         throw new Error('저축 잔액이 부족합니다.');
       }
 
-      const newBalance = savings.balance - parseInt(amount);
-
-      const { error: savingsError } = await supabase
-        .from('savings')
-        .update({
-          balance: newBalance,
-        })
-        .eq('savings_id', savings.savings_id);
-
-      if (savingsError) throw savingsError;
-
-      // 3. transactions 테이블에 기록
-      const { error: transError } = await supabase.from('transactions').insert({
+      // 3. transactions 기록
+      await supabase.from('transactions').insert({
         transaction_id: this.generateId(),
         student_id: student.student_id,
         type: 'withdraw',
@@ -504,13 +435,8 @@ class PointBankAPI {
         status: 'completed',
       });
 
-      if (transError) {
-        window.POINTBANK_CONFIG.debugLog('Transaction error', transError);
-        throw transError;
-      }
-
       // 4. students 테이블 업데이트
-      const { error: updateError } = await supabase
+      await supabase
         .from('students')
         .update({
           current_points: student.current_points + parseInt(amount),
@@ -519,16 +445,6 @@ class PointBankAPI {
         })
         .eq('student_id', student.student_id);
 
-      if (updateError) {
-        window.POINTBANK_CONFIG.debugLog('Students update error', updateError);
-        throw updateError;
-      }
-
-      window.POINTBANK_CONFIG.debugLog('Withdrawal successful', {
-        loginId,
-        amount,
-        newBalance,
-      });
       return { success: true };
     } catch (error) {
       console.error('Withdraw error:', error);
