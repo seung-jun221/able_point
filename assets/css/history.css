@@ -1,33 +1,42 @@
-/* history.css - 심플한 리스트형 거래 내역 스타일 */
+/* history.css - 통일감 있는 개선 버전 */
 
 .history-container {
-  max-width: 580px; /* 필터탭과 동일하게 맞춤 */
+  max-width: 500px;
   margin: 0 auto;
-  padding: 10px; /* 패딩 줄임 */
-  padding-top: 140px; /* 필터 탭 공간 확보 */
+  padding: 20px;
+  padding-top: 160px; /* 고정된 필터 탭 공간 */
   padding-bottom: 100px;
   box-sizing: border-box;
 }
 
-.history-container > * {
-  box-sizing: border-box;
-}
-
-/* 필터 탭 - 고정 위치 (컨테이너와 동일한 계산) */
+/* 필터 탭 - 상단 고정 + 배경 통일 */
 .filter-tabs {
   background: white;
-  border-radius: 12px;
-  padding: 5px;
+  border-radius: 20px;
+  padding: 6px;
   display: flex;
-  gap: 5px;
+  gap: 6px;
   position: fixed;
-  top: 70px;
+  top: 65px; /* app-header 바로 아래 */
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 20px); /* 컨테이너 패딩과 동일 */
-  max-width: 560px; /* 최대 너비 제한 */
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 480px;
+  max-width: calc(100% - 40px);
+  z-index: 999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(250, 112, 154, 0.1);
+}
+
+/* 필터 탭 아래 흐림 효과로 스크롤 시 자연스럽게 */
+.filter-tabs::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(248, 249, 250, 0.9), transparent);
+  pointer-events: none;
 }
 
 .filter-btn {
@@ -35,10 +44,10 @@
   padding: 12px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 14px;
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: #78716c;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -46,18 +55,18 @@
 }
 
 .filter-btn:hover {
-  background: rgba(99, 102, 241, 0.05);
-  transform: translateY(-1px);
+  background: rgba(250, 112, 154, 0.08);
+  color: #fa709a;
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(250, 112, 154, 0.3);
+  transform: scale(1.02);
 }
 
-/* 기간 선택 */
+/* 기간 선택 - 원래 스타일 유지 */
 .period-selector {
   background: white;
   border-radius: 12px;
@@ -92,6 +101,7 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  color: #666;
 }
 
 .period-btn:hover {
@@ -105,34 +115,56 @@
   border-color: #6366f1;
 }
 
-/* 요약 헤더 */
+/* 요약 헤더 - 그라데이션 유지 + 오른쪽 정렬 */
 .summary-header {
-  background: linear-gradient(135deg, #f0f1ff 0%, #e8e9ff 100%);
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   padding: 14px 16px;
   border-radius: 12px;
   margin-bottom: 15px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between; /* 좌우 정렬 */
   font-size: 13px;
-  color: #495057;
+  color: white;
   font-weight: 500;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(250, 112, 154, 0.2);
   width: 100%;
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 그라데이션 오버레이 효과 */
+.summary-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
 }
 
 .summary-period {
-  color: #6c757d;
+  color: white;
+  position: relative;
+  z-index: 1;
 }
 
 .summary-divider {
-  color: #cbd5e1;
+  display: none; /* 구분선 제거 */
 }
 
 .summary-total {
-  color: #6366f1;
+  color: white;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 /* 거래 내역 리스트 컨테이너 */
@@ -145,20 +177,7 @@
   overflow: hidden;
 }
 
-/* 리스트 구분선 */
-.list-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 0;
-}
-
-.list-thick-divider {
-  height: 2px;
-  background: #cbd5e1;
-  margin: 12px 0;
-}
-
-/* 거래 내역 아이템 - 심플한 한 줄 표시 */
+/* 거래 내역 아이템 */
 .history-item-simple {
   display: flex;
   align-items: center;
@@ -166,6 +185,7 @@
   border-bottom: 1px solid #f1f3f5;
   transition: background 0.2s;
   font-size: 14px;
+  position: relative;
 }
 
 .history-item-simple:hover {
@@ -178,7 +198,7 @@
 
 /* 날짜/시간 */
 .item-datetime {
-  min-width: 95px;
+  min-width: 85px;
   color: #6c757d;
   font-size: 13px;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
@@ -234,6 +254,13 @@
   font-weight: 500;
 }
 
+/* 리스트 구분선 */
+.list-thick-divider {
+  height: 2px;
+  background: #cbd5e1;
+  margin: 12px 0;
+}
+
 /* 로딩 스켈레톤 */
 .skeleton {
   animation: skeleton-loading 1.5s infinite ease-in-out;
@@ -268,6 +295,11 @@
 
   .filter-tabs {
     width: calc(100% - 20px);
+  }
+
+  .summary-header {
+    font-size: 12px;
+    padding: 12px 14px;
   }
 }
 
@@ -318,14 +350,26 @@
   }
 }
 
-/* 데스크톱 화면 */
+/* 데스크톱 화면 - 너비 강제 적용 */
 @media (min-width: 768px) {
-  .history-container {
-    max-width: 580px;
+  html body .history-container {
+    width: 500px !important;
+    max-width: 500px !important;
   }
 
-  .filter-tabs {
-    width: 560px; /* 데스크톱에서는 고정 */
-    max-width: 560px;
+  html body .filter-tabs {
+    width: 480px !important;
+    max-width: 480px !important;
   }
+}
+
+/* 최고 우선순위로 강제 적용 */
+html body.with-both-nav div.history-container {
+  width: 500px !important;
+  max-width: 500px !important;
+}
+
+html body.with-both-nav div.filter-tabs {
+  width: 480px !important;
+  max-width: 480px !important;
 }
