@@ -1,5 +1,60 @@
 // assets/js/student.js - 수정된 버전
 
+// student.js 파일 최상단에 추가
+
+// 1. 캐시 시스템
+const cache = {
+  data: {},
+  set(key, value) {
+    this.data[key] = { value, timestamp: Date.now() };
+  },
+  get(key, maxAge = 300000) {
+    const item = this.data[key];
+    if (!item) return null;
+    if (Date.now() - item.timestamp > maxAge) {
+      delete this.data[key];
+      return null;
+    }
+    return item.value;
+  },
+};
+
+// 2. 스켈레톤 UI 생성
+function generateSkeletonUI(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += '<div class="activity-item skeleton">로딩중...</div>';
+  }
+  return html;
+}
+
+// 3. 아이콘 관련 함수들
+function getIconClass(type) {
+  return 'activity-icon';
+}
+
+function getIcon(type) {
+  const icons = {
+    attendance: '✅',
+    homework: '📚',
+    test: '💯',
+    purchase: '🛍️',
+  };
+  return icons[type] || '📌';
+}
+
+// 4. 시간 포맷팅
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
+
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
+}
+
 // 전역 변수 - 수정
 const loginId = localStorage.getItem('loginId'); // S001
 const studentId = localStorage.getItem('studentId'); // STU001
@@ -100,52 +155,70 @@ async function calculateTodayPoints() {
 // 활동 내역 로드 - 수정
 async function loadActivityHistory() {
   const activityList = document.getElementById('activityList');
+  if (!activityList) return;
+
   activityList.innerHTML = generateSkeletonUI(5);
 
   try {
-    // ✅ loginId 사용
-    const cacheKey = `activity_${loginId}`;
-    let recentActivities = cache.get(cacheKey);
+    const loginId = localStorage.getItem('loginId');
 
-    if (!recentActivities) {
-      const result = await api.getPointHistory(loginId);
+    // ✅ 두 API 모두 호출 (history.js와 동일하게)
+    const [pointsResult, transResult] = await Promise.all([
+      api.getPointHistory(loginId),
+      api.getTransactionHistory(loginId),
+    ]);
 
-      if (result.success && result.data.length > 0) {
-        recentActivities = result.data.slice(0, 5);
-        cache.set(cacheKey, recentActivities);
-      }
+    // 모든 활동 수집
+    const allActivities = [];
+
+    // Points 데이터
+    if (pointsResult.success && pointsResult.data) {
+      pointsResult.data.forEach((item) => {
+        allActivities.push({
+          date: item.date,
+          type: item.type,
+          reason: item.reason || getDefaultTitle(item.type),
+          amount: item.amount,
+        });
+      });
     }
 
-    if (recentActivities && recentActivities.length > 0) {
+    // Transactions 데이터
+    if (transResult.success && transResult.data) {
+      transResult.data.forEach((item) => {
+        allActivities.push({
+          date: item.createdAt,
+          type: item.type,
+          reason: item.itemName || getDefaultTitle(item.type),
+          amount: item.amount,
+        });
+      });
+    }
+
+    // 날짜순 정렬 후 최근 5개만
+    allActivities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recentActivities = allActivities.slice(0, 5);
+
+    if (recentActivities.length > 0) {
       activityList.innerHTML = recentActivities
-        .map((activity) => {
-          const iconClass = getIconClass(activity.type);
-          const icon = getIcon(activity.type);
-          const pointsClass =
-            activity.amount > 0 ? 'points-positive' : 'points-negative';
-          const amountText =
-            activity.amount > 0
-              ? `+${activity.amount}P`
-              : `${activity.amount}P`;
-
-          // 날짜 처리 - Supabase ISO 형식 대응
-          const timeText = formatTimeAgo(activity.date);
-
-          return `
-          <div class="activity-item fade-in">
-            <div class="activity-left">
-              <div class="activity-icon ${iconClass}">${icon}</div>
-              <div class="activity-info">
-                <span class="activity-title">${
-                  activity.reason || activity.type || '포인트 활동'
-                }</span>
-                <span class="activity-time">${timeText}</span>
-              </div>
+        .map(
+          (activity) => `
+        <div class="activity-item">
+          <div class="activity-left">
+            <div class="activity-icon">${getIcon(activity.type)}</div>
+            <div class="activity-info">
+              <span class="activity-title">${activity.reason}</span>
+              <span class="activity-time">${formatTimeAgo(activity.date)}</span>
             </div>
-            <span class="activity-points ${pointsClass}">${amountText}</span>
           </div>
-        `;
-        })
+          <span class="activity-points ${
+            activity.amount > 0 ? 'points-positive' : 'points-negative'
+          }">
+            ${activity.amount > 0 ? '+' : ''}${activity.amount}P
+          </span>
+        </div>
+      `
+        )
         .join('');
     } else {
       activityList.innerHTML =
@@ -156,6 +229,21 @@ async function loadActivityHistory() {
     activityList.innerHTML =
       '<div class="error">데이터를 불러올 수 없습니다.</div>';
   }
+}
+
+// 기본 제목 헬퍼 함수 추가
+function getDefaultTitle(type) {
+  const titles = {
+    attendance: '출석 보상',
+    homework: '숙제 완료',
+    test: '시험 점수',
+    purchase: '상품 구매',
+    deposit: '저축 입금',
+    withdraw: '저축 출금',
+    interest: '이자 지급',
+    gift: '포인트 선물',
+  };
+  return titles[type] || '포인트 활동';
 }
 // 레벨 표시 헬퍼 함수
 function getLevelDisplay(level) {
