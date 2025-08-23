@@ -1,7 +1,70 @@
-/* ========================================
-   NAVIGATION HELPER FUNCTIONS
-   네비게이션 동작을 위한 헬퍼 함수들
-   ======================================== */
+// navigation.js - 수정된 버전
+
+// 헤더 포인트 업데이트 함수 (완전한 버전)
+async function updateHeaderPoints() {
+  // ID와 클래스 모두 체크
+  const pointsElement =
+    document.querySelector('#headerTotalPoints') ||
+    document.querySelector('.header-points-value');
+
+  if (!pointsElement) {
+    console.error('포인트 표시 요소를 찾을 수 없습니다');
+    return;
+  }
+
+  try {
+    const loginId = localStorage.getItem('loginId');
+
+    if (!loginId) {
+      console.warn('로그인 ID가 없습니다');
+      pointsElement.textContent = '0P';
+      return;
+    }
+
+    // API를 통해 실제 포인트 가져오기
+    if (typeof api !== 'undefined' && api.getStudentPoints) {
+      const result = await api.getStudentPoints(loginId);
+
+      if (result.success && result.data) {
+        const currentPoints = result.data.currentPoints || 0;
+        const formattedPoints = currentPoints.toLocaleString() + 'P';
+
+        // 값이 변경되었을 때만 업데이트
+        if (pointsElement.textContent !== formattedPoints) {
+          pointsElement.textContent = formattedPoints;
+          pointsElement.classList.add('updated');
+
+          // localStorage에도 저장 (캐싱용)
+          localStorage.setItem('currentPoints', currentPoints);
+
+          // 애니메이션 후 클래스 제거
+          setTimeout(() => {
+            pointsElement.classList.remove('updated');
+          }, 600);
+        }
+
+        console.log('포인트 업데이트 성공:', formattedPoints);
+      } else {
+        console.error('API 응답 실패:', result.error);
+        // localStorage에서 백업 데이터 사용
+        const cachedPoints = localStorage.getItem('currentPoints') || '0';
+        pointsElement.textContent =
+          parseInt(cachedPoints).toLocaleString() + 'P';
+      }
+    } else {
+      // API가 없을 경우 localStorage 사용
+      const currentPoints = localStorage.getItem('currentPoints') || '0';
+      const formattedPoints = parseInt(currentPoints).toLocaleString() + 'P';
+      pointsElement.textContent = formattedPoints;
+    }
+  } catch (error) {
+    console.error('포인트 업데이트 실패:', error);
+
+    // 에러 시 localStorage 백업 사용
+    const cachedPoints = localStorage.getItem('currentPoints') || '0';
+    pointsElement.textContent = parseInt(cachedPoints).toLocaleString() + 'P';
+  }
+}
 
 // 네비게이션 초기화
 function initNavigation() {
@@ -23,15 +86,12 @@ function setActiveNavItem() {
   const currentPath = window.location.pathname;
   const navItems = document.querySelectorAll('.nav-item');
 
-  // 모든 active 클래스 제거
   navItems.forEach((item) => item.classList.remove('active'));
 
-  // 현재 페이지 매칭
   let activeFound = false;
   navItems.forEach((item) => {
     const href = item.getAttribute('href') || item.dataset.page;
 
-    // 경로 매칭 로직
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
       if (href === 'index.html' || href === 'home') {
         item.classList.add('active');
@@ -46,40 +106,8 @@ function setActiveNavItem() {
     }
   });
 
-  // 매칭되는 항목이 없으면 홈 활성화
   if (!activeFound && navItems.length > 0) {
     navItems[0].classList.add('active');
-  }
-}
-
-// 헤더 포인트 업데이트
-async function updateHeaderPoints() {
-  const pointsElement = document.querySelector('.header-points-value');
-  if (!pointsElement) return;
-
-  try {
-    // localStorage에서 포인트 가져오기 (실제로는 API 호출)
-    const studentId = localStorage.getItem('loginId');
-    if (!studentId) return;
-
-    // API 호출 시뮬레이션 (실제 코드에서는 api.js 사용)
-    const currentPoints = localStorage.getItem('currentPoints') || '0';
-
-    // 포인트 표시 업데이트
-    const formattedPoints = parseInt(currentPoints).toLocaleString() + 'P';
-
-    // 값이 변경되었을 때만 업데이트
-    if (pointsElement.textContent !== formattedPoints) {
-      pointsElement.textContent = formattedPoints;
-      pointsElement.classList.add('updated');
-
-      // 애니메이션 후 클래스 제거
-      setTimeout(() => {
-        pointsElement.classList.remove('updated');
-      }, 600);
-    }
-  } catch (error) {
-    console.error('포인트 업데이트 실패:', error);
   }
 }
 
@@ -88,7 +116,6 @@ function checkNotifications() {
   const badge = document.querySelector('.notification-badge');
   if (!badge) return;
 
-  // localStorage에서 알림 수 확인 (실제로는 API 호출)
   const unreadCount = localStorage.getItem('unreadNotifications') || '0';
 
   if (parseInt(unreadCount) > 0) {
@@ -110,7 +137,6 @@ function initScrollEffect() {
     () => {
       const currentScroll = window.pageYOffset;
 
-      // 스크롤 다운: 헤더 축소
       if (currentScroll > 50) {
         header.classList.add('scrolled');
       } else {
@@ -125,10 +151,8 @@ function initScrollEffect() {
 
 // 네비게이션 아이템 클릭 처리
 function handleNavClick(page) {
-  // 로딩 상태 표시
   event.currentTarget.classList.add('nav-loading');
 
-  // 페이지 이동 (약간의 딜레이로 부드러운 전환)
   setTimeout(() => {
     switch (page) {
       case 'home':
@@ -157,7 +181,6 @@ function handlePointsClick() {
 
 // 알림 클릭 시
 function handleNotificationClick() {
-  // 알림 페이지로 이동 또는 모달 표시
   window.location.href = 'notifications.html';
 }
 
@@ -175,7 +198,7 @@ function formatPoints(points) {
   return parseInt(points).toLocaleString() + 'P';
 }
 
-// 유틸리티: 짧은 포인트 표시 (1.2K, 10.5K 등)
+// 유틸리티: 짧은 포인트 표시
 function formatPointsShort(points) {
   const num = parseInt(points);
   if (num >= 1000000) {
@@ -188,7 +211,13 @@ function formatPointsShort(points) {
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('Navigation 초기화 시작');
+
+  // 초기화
   initNavigation();
+
+  // 즉시 포인트 업데이트 (페이지 로드 시)
+  updateHeaderPoints();
 
   // 5초마다 포인트 업데이트 (실시간 동기화)
   setInterval(updateHeaderPoints, 5000);
@@ -204,3 +233,10 @@ document.addEventListener('visibilitychange', () => {
     checkNotifications();
   }
 });
+
+// 디버그용 - 콘솔에서 테스트 가능
+window.debugUpdatePoints = function (points) {
+  localStorage.setItem('currentPoints', points);
+  updateHeaderPoints();
+  console.log('포인트가 ' + points + '로 설정되었습니다');
+};

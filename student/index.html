@@ -15,6 +15,36 @@
     <!-- 🆕 네비게이션 CSS 추가 -->
     <link rel="stylesheet" href="../assets/css/navigation.css" />
   </head>
+  <!-- API 및 네비게이션 스크립트 추가 -->
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/navigation.js"></script>
+  <script src="../assets/js/student.js"></script>
+  <script src="../assets/js/student-main.js"></script>
+
+  <script>
+    // 페이지 로드 시 포인트 즉시 업데이트
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('학생 메인 페이지 초기화');
+
+      // 로그인 체크
+      const loginId = localStorage.getItem('loginId');
+      if (!loginId) {
+        console.error('로그인 정보가 없습니다');
+        window.location.href = '../login.html';
+        return;
+      }
+
+      // 헤더 포인트 즉시 업데이트
+      if (typeof updateHeaderPoints === 'function') {
+        await updateHeaderPoints();
+      }
+
+      // 학생 데이터 로드 (student.js에 정의된 함수)
+      if (typeof loadStudentData === 'function') {
+        await loadStudentData();
+      }
+    });
+  </script>
   <body class="with-both-nav">
     <!-- 상단 프로필 헤더 -->
     <div class="app-header">

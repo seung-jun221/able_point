@@ -13,32 +13,27 @@
 
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/navigation.css" />
     <link rel="stylesheet" href="../assets/css/history.css" />
   </head>
-  <body>
+  <body class="with-both-nav">
     <!-- 상단 헤더 -->
-    <div class="profile-header">
-      <div class="profile-left">
-        <button
-          onclick="history.back()"
-          style="
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-          "
-        >
-          ‹
-        </button>
-        <h2 style="margin: 0 0 0 15px">포인트 내역</h2>
+    <div class="app-header">
+      <div class="header-user">
+        <div class="header-avatar">
+          <div class="header-avatar-inner" id="userAvatar">🦁</div>
+        </div>
+        <div class="header-name" id="userName">학생 이름</div>
       </div>
-      <div class="daily-points">
-        <div style="font-size: 12px; color: #64748b">현재 포인트</div>
-        <div
-          style="font-size: 18px; font-weight: bold; color: #6366f1"
-          id="currentPoints"
-        >
-          0P
+      <div class="header-spacer"></div>
+      <div class="header-actions">
+        <div class="header-points" onclick="location.href='history.html'">
+          <span class="header-points-icon">P</span>
+          <span class="header-points-value" id="headerTotalPoints">0P</span>
+        </div>
+        <div class="header-notification" onclick="handleNotificationClick()">
+          <span class="notification-icon">🔔</span>
+          <span class="notification-badge"></span>
         </div>
       </div>
     </div>
@@ -91,31 +86,85 @@
     </div>
 
     <!-- 하단 네비게이션 -->
-    <div class="bottom-nav">
-      <div class="nav-item" onclick="location.href='index.html'">
+    <nav class="app-nav">
+      <a
+        href="index.html"
+        class="nav-item"
+        data-page="home"
+        onclick="handleNavClick('home'); return false;"
+      >
         <span class="nav-icon">🏠</span>
         <span class="nav-label">홈</span>
-      </div>
-      <div class="nav-item" onclick="location.href='savings.html'">
-        <span class="nav-icon">💰</span>
+      </a>
+      <a
+        href="savings.html"
+        class="nav-item"
+        data-page="savings"
+        onclick="handleNavClick('savings'); return false;"
+      >
+        <span class="nav-icon">🏦</span>
         <span class="nav-label">저축</span>
-      </div>
-      <div class="nav-item" onclick="location.href='shop.html'">
+      </a>
+      <a
+        href="shop.html"
+        class="nav-item"
+        data-page="shop"
+        onclick="handleNavClick('shop'); return false;"
+      >
         <span class="nav-icon">🛍️</span>
         <span class="nav-label">상점</span>
-      </div>
-      <div class="nav-item" onclick="location.href='ranking.html'">
+      </a>
+      <a
+        href="ranking.html"
+        class="nav-item"
+        data-page="ranking"
+        onclick="handleNavClick('ranking'); return false;"
+      >
         <span class="nav-icon">🏆</span>
         <span class="nav-label">랭킹</span>
-      </div>
-      <div class="nav-item" onclick="location.href='profile.html'">
+      </a>
+      <a
+        href="profile.html"
+        class="nav-item"
+        data-page="profile"
+        onclick="handleNavClick('profile'); return false;"
+      >
         <span class="nav-icon">👤</span>
-        <span class="nav-label">내정보</span>
-      </div>
-    </div>
+        <span class="nav-label">프로필</span>
+      </a>
+    </nav>
 
+    <!-- JavaScript -->
     <script src="../assets/js/api.js"></script>
-    <script src="../assets/js/cache.js"></script>
+    <script src="../assets/js/navigation.js"></script>
     <script src="../assets/js/history.js"></script>
+    <!-- 페이지 초기화 스크립트 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        // 로그인 정보 체크
+        const loginId = localStorage.getItem('loginId');
+        const userName = localStorage.getItem('userName');
+
+        if (!loginId) {
+          alert('로그인이 필요합니다.');
+          window.location.href = '../login.html';
+          return;
+        }
+
+        // 헤더 정보 업데이트
+        if (userName) {
+          document.getElementById('userName').textContent = userName;
+        }
+
+        // 아바타 업데이트
+        const savedAvatar = localStorage.getItem('userAvatar') || '🦁';
+        document.getElementById('userAvatar').textContent = savedAvatar;
+
+        // 포인트 업데이트
+        if (typeof updateHeaderPoints === 'function') {
+          await updateHeaderPoints();
+        }
+      });
+    </script>
   </body>
 </html>
