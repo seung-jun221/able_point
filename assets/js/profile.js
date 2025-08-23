@@ -1,11 +1,11 @@
-// profile.js - 프로필 페이지 기능 (레벨 시스템 개선)
+// profile.js - 프로필 페이지 기능 (긴급 수정 버전)
 
 // 전역 변수
 let studentData = null;
 let selectedAvatar = null;
 let weeklyChart = null;
 
-// 레벨 시스템 정의 (개선된 버전)
+// 레벨 시스템 정의 (기존 유지)
 const LEVEL_SYSTEM = {
   levels: [
     {
@@ -53,7 +53,7 @@ const LEVEL_SYSTEM = {
   ],
 };
 
-// 배지 정의
+// 배지 정의 (기존 유지)
 const BADGES = [
   { id: 'first_login', name: '첫 발걸음', icon: '👋', condition: '첫 로그인' },
   { id: 'level_sprout', name: '새싹', icon: '🌱', condition: '새싹 레벨 달성' },
@@ -155,8 +155,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('프로필 페이지 초기화');
 
   // 로그인 체크
-  const studentId = localStorage.getItem('loginId');
-  if (!studentId) {
+  const loginId = localStorage.getItem('loginId');
+  if (!loginId) {
     alert('로그인이 필요합니다.');
     window.location.href = '../login.html';
     return;
@@ -178,76 +178,164 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkDarkMode();
 });
 
-// 프로필 데이터 로드
+// 프로필 데이터 로드 - 수정됨
 async function loadProfileData() {
   try {
     showLoading(true);
 
-    const studentId = localStorage.getItem('loginId');
-    const result = await api.getStudentPoints(studentId);
+    const loginId = localStorage.getItem('loginId');
+    const result = await api.getStudentPoints(loginId);
 
     if (result.success) {
       studentData = result.data;
       console.log('프로필 데이터:', studentData);
 
-      // 추가 데이터 계산
+      // 추가 데이터 계산 - 수정됨
       await calculateAdditionalStats();
 
       // UI 업데이트
       updateProfileUI();
       updateBadges();
+
+      // 성공한 데이터 캐시에 저장
+      localStorage.setItem('profileCache', JSON.stringify(studentData));
     } else {
       throw new Error('데이터 로드 실패');
     }
   } catch (error) {
     console.error('프로필 로드 오류:', error);
-    showNotification('데이터를 불러올 수 없습니다.', 'error');
+
+    // 캐시된 데이터 확인
+    const cachedData = localStorage.getItem('profileCache');
+    if (cachedData) {
+      studentData = JSON.parse(cachedData);
+      console.log('캐시된 데이터 사용');
+      updateProfileUI();
+      updateBadges();
+      showNotification('오프라인 모드: 저장된 데이터를 표시합니다.', 'info');
+    } else {
+      showNotification('데이터를 불러올 수 없습니다.', 'error');
+    }
   } finally {
     showLoading(false);
   }
 }
 
-// 추가 통계 계산
+// 추가 통계 계산 - 완전 수정됨
 async function calculateAdditionalStats() {
-  try {
-    // 이번달 포인트 계산
-    const historyResult = await api.getPointHistory(studentData.studentId);
-    if (historyResult.success) {
-      const now = new Date();
-      const thisMonth = now.getMonth();
-      const thisYear = now.getFullYear();
+  const loginId = localStorage.getItem('loginId');
 
-      const monthlyPoints = historyResult.data
+  try {
+    // 1. 이번달 포인트 계산 - loginId 사용!
+    try {
+      const historyResult = await api.getPointHistory(loginId); // 수정: loginId 사용
+      if (historyResult.success && historyResult.data) {
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+
+        const monthlyPoints = historyResult.data
+          .filter((item) => {
+            const date = new Date(item.date);
+            return (
+              date.getMonth() === thisMonth &&
+              date.getFullYear() === thisYear &&
+              parseInt(item.amount) > 0
+            );
+          })
+          .reduce((sum, item) => sum + parseInt(item.amount), 0);
+
+        studentData.monthlyPoints = monthlyPoints;
+
+        // 주간 데이터도 여기서 계산
+        calculateWeeklyDataFromHistory(historyResult.data);
+      } else {
+        studentData.monthlyPoints = 0;
+        studentData.weeklyData = [0, 0, 0, 0, 0, 0, 0];
+      }
+    } catch (error) {
+      console.error('히스토리 로드 오류:', error);
+      studentData.monthlyPoints = 0;
+      studentData.weeklyData = [0, 0, 0, 0, 0, 0, 0];
+    }
+
+    // 2. 랭킹 계산 - API 없으면 스킵
+    try {
+      // api.getRanking이 있는지 확인
+      if (typeof api.getRanking === 'function') {
+        const rankingResult = await api.getRanking();
+        if (rankingResult.success && rankingResult.data) {
+          // loginId로 찾기
+          const myRank =
+            rankingResult.data.findIndex(
+              (s) =>
+                s.loginId === loginId || s.studentId === studentData.studentId
+            ) + 1;
+          studentData.ranking = myRank || '-';
+        } else {
+          studentData.ranking = '-';
+        }
+      } else {
+        // getRanking API가 없으면 기본값
+        console.log('getRanking API 없음 - 기본값 사용');
+        studentData.ranking = '-';
+      }
+    } catch (error) {
+      console.error('랭킹 계산 오류:', error);
+      studentData.ranking = '-';
+    }
+
+    // 3. 출석일수 - 로그인 기록에서 계산 (임시)
+    try {
+      const attendanceDays =
+        parseInt(localStorage.getItem('attendanceDays')) || 0;
+      studentData.attendanceDays = attendanceDays;
+    } catch (error) {
+      studentData.attendanceDays = 0;
+    }
+
+    // 4. 기부 포인트 - 현재는 0 (나중에 구현)
+    studentData.donationPoints = 0;
+  } catch (error) {
+    console.error('추가 통계 전체 오류:', error);
+    // 오류 발생해도 기본값으로 설정
+    studentData.monthlyPoints = studentData.monthlyPoints || 0;
+    studentData.ranking = studentData.ranking || '-';
+    studentData.attendanceDays = studentData.attendanceDays || 0;
+    studentData.donationPoints = studentData.donationPoints || 0;
+    studentData.weeklyData = studentData.weeklyData || [0, 0, 0, 0, 0, 0, 0];
+  }
+}
+
+// 주간 데이터 계산 함수 - 새로 추가
+function calculateWeeklyDataFromHistory(historyData) {
+  try {
+    const now = new Date();
+    const weeklyData = [0, 0, 0, 0, 0, 0, 0]; // 일~토
+
+    // 오늘부터 일주일 전까지 데이터
+    for (let i = 0; i < 7; i++) {
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - i);
+      const dayIndex = targetDate.getDay(); // 0=일요일
+
+      const dayPoints = historyData
         .filter((item) => {
-          const date = new Date(item.date);
+          const itemDate = new Date(item.date);
           return (
-            date.getMonth() === thisMonth &&
-            date.getFullYear() === thisYear &&
+            itemDate.toDateString() === targetDate.toDateString() &&
             parseInt(item.amount) > 0
           );
         })
         .reduce((sum, item) => sum + parseInt(item.amount), 0);
 
-      studentData.monthlyPoints = monthlyPoints;
+      weeklyData[dayIndex] = dayPoints;
     }
 
-    // 랭킹 계산
-    const rankingResult = await api.getRanking();
-    if (rankingResult.success) {
-      const myRank =
-        rankingResult.data.findIndex(
-          (s) => s.studentId === studentData.studentId
-        ) + 1;
-      studentData.ranking = myRank || '-';
-    }
-
-    // 출석일수 (샘플)
-    studentData.attendanceDays = Math.floor(Math.random() * 30) + 1;
-
-    // 기부 포인트 (샘플)
-    studentData.donationPoints = Math.floor(Math.random() * 500);
+    studentData.weeklyData = weeklyData;
   } catch (error) {
-    console.error('추가 통계 계산 오류:', error);
+    console.error('주간 데이터 계산 오류:', error);
+    studentData.weeklyData = [0, 0, 0, 0, 0, 0, 0];
   }
 }
 
@@ -319,78 +407,111 @@ function updateProfileUI() {
   if (!studentData) return;
 
   // 기본 정보
-  document.getElementById('profileName').textContent = studentData.name;
+  const profileName = document.getElementById('profileName');
+  if (profileName) profileName.textContent = studentData.name || '학생';
 
   // 레벨 정보
   const totalPoints = studentData.totalPoints || 0;
   const levelProgress = calculateLevelProgress(totalPoints);
 
   // 레벨 배지
-  document.getElementById(
-    'profileLevel'
-  ).textContent = `${levelProgress.currentLevel.icon} ${levelProgress.currentLevel.name}`;
+  const profileLevel = document.getElementById('profileLevel');
+  if (profileLevel) {
+    profileLevel.textContent = `${levelProgress.currentLevel.icon} ${levelProgress.currentLevel.name}`;
+  }
 
   // 아바타
-  const savedAvatar = localStorage.getItem('userAvatar') || '🦁';
-  document.getElementById('avatarEmoji').textContent = savedAvatar;
+  const savedAvatar =
+    localStorage.getItem('userAvatar') || studentData.avatar || '🦁';
+  const avatarEmoji = document.getElementById('avatarEmoji');
+  if (avatarEmoji) avatarEmoji.textContent = savedAvatar;
 
-  // 레벨 진행률 업데이트 (개선된 버전)
+  // 레벨 진행률 업데이트
   updateLevelProgressDisplay(levelProgress);
 
   // 통계
-  document.getElementById(
-    'totalPointsStat'
-  ).textContent = `${totalPoints.toLocaleString()}P`;
-  document.getElementById('monthlyPointsStat').textContent = `+${(
-    studentData.monthlyPoints || 0
-  ).toLocaleString()}P`;
-  document.getElementById('rankingStat').textContent =
-    studentData.ranking === '-' ? '-' : `${studentData.ranking}위`;
-  document.getElementById('attendanceStat').textContent = `${
-    studentData.attendanceDays || 0
-  }일`;
-  document.getElementById('savingsStat').textContent = `${(
-    studentData.savingsPoints || 0
-  ).toLocaleString()}P`;
-  document.getElementById('donationStat').textContent = `${(
-    studentData.donationPoints || 0
-  ).toLocaleString()}P`;
+  const totalPointsStat = document.getElementById('totalPointsStat');
+  if (totalPointsStat) {
+    totalPointsStat.textContent = `${totalPoints.toLocaleString()}P`;
+  }
+
+  const monthlyPointsStat = document.getElementById('monthlyPointsStat');
+  if (monthlyPointsStat) {
+    monthlyPointsStat.textContent = `+${(
+      studentData.monthlyPoints || 0
+    ).toLocaleString()}P`;
+  }
+
+  const rankingStat = document.getElementById('rankingStat');
+  if (rankingStat) {
+    rankingStat.textContent =
+      studentData.ranking === '-' ? '-' : `${studentData.ranking}위`;
+  }
+
+  const attendanceStat = document.getElementById('attendanceStat');
+  if (attendanceStat) {
+    attendanceStat.textContent = `${studentData.attendanceDays || 0}일`;
+  }
+
+  const savingsStat = document.getElementById('savingsStat');
+  if (savingsStat) {
+    savingsStat.textContent = `${(
+      studentData.savingsPoints || 0
+    ).toLocaleString()}P`;
+  }
+
+  const donationStat = document.getElementById('donationStat');
+  if (donationStat) {
+    donationStat.textContent = `${(
+      studentData.donationPoints || 0
+    ).toLocaleString()}P`;
+  }
 }
 
 // 레벨 진행률 표시 업데이트 (개선된 버전)
 function updateLevelProgressDisplay(levelProgress) {
   // 현재 포인트
-  document.getElementById(
-    'currentTotalPoints'
-  ).textContent = `${levelProgress.currentPoints.toLocaleString()}P`;
+  const currentTotalPoints = document.getElementById('currentTotalPoints');
+  if (currentTotalPoints) {
+    currentTotalPoints.textContent = `${levelProgress.currentPoints.toLocaleString()}P`;
+  }
 
   // 다음 레벨까지 남은 포인트
-  if (levelProgress.pointsToNext > 0) {
-    document.getElementById(
-      'pointsToNext'
-    ).textContent = `${levelProgress.pointsToNext.toLocaleString()}P 남음`;
-  } else {
-    document.getElementById('pointsToNext').textContent = '최고 레벨';
+  const pointsToNext = document.getElementById('pointsToNext');
+  if (pointsToNext) {
+    if (levelProgress.pointsToNext > 0) {
+      pointsToNext.textContent = `${levelProgress.pointsToNext.toLocaleString()}P 남음`;
+    } else {
+      pointsToNext.textContent = '최고 레벨';
+    }
   }
 
   // 프로그레스 바
   const progressBar = document.getElementById('levelProgress');
-  progressBar.style.width = `${Math.min(levelProgress.progress, 100)}%`;
+  if (progressBar) {
+    progressBar.style.width = `${Math.min(levelProgress.progress, 100)}%`;
+  }
 
   // 진행률 텍스트
-  document.getElementById('progressDisplay').textContent =
-    levelProgress.progressDisplay;
-  document.getElementById('progressPercentage').textContent = `${Math.round(
-    levelProgress.progress
-  )}%`;
+  const progressDisplay = document.getElementById('progressDisplay');
+  if (progressDisplay) {
+    progressDisplay.textContent = levelProgress.progressDisplay;
+  }
+
+  const progressPercentage = document.getElementById('progressPercentage');
+  if (progressPercentage) {
+    progressPercentage.textContent = `${Math.round(levelProgress.progress)}%`;
+  }
 
   // 다음 레벨 미리보기
-  document.getElementById('nextLevelPreview').textContent =
-    levelProgress.nextLevelText;
+  const nextLevelPreview = document.getElementById('nextLevelPreview');
+  if (nextLevelPreview) {
+    nextLevelPreview.textContent = levelProgress.nextLevelText;
+  }
 
   // 레벨업 임박 효과
   if (levelProgress.pointsToNext > 0 && levelProgress.pointsToNext < 500) {
-    progressBar.classList.add('pulse');
+    if (progressBar) progressBar.classList.add('pulse');
     showNotification(
       `🎯 다음 레벨까지 ${levelProgress.pointsToNext}P!`,
       'info'
@@ -401,6 +522,8 @@ function updateLevelProgressDisplay(levelProgress) {
 // 배지 업데이트
 function updateBadges() {
   const grid = document.getElementById('achievementGrid');
+  if (!grid) return;
+
   const unlockedBadges = getUnlockedBadges();
 
   grid.innerHTML = BADGES.map((badge) => {
@@ -416,14 +539,17 @@ function updateBadges() {
   }).join('');
 
   // 획득 개수 업데이트
-  document.getElementById('unlockedCount').textContent = unlockedBadges.length;
-  document.getElementById('totalBadges').textContent = BADGES.length;
+  const unlockedCount = document.getElementById('unlockedCount');
+  if (unlockedCount) unlockedCount.textContent = unlockedBadges.length;
+
+  const totalBadges = document.getElementById('totalBadges');
+  if (totalBadges) totalBadges.textContent = BADGES.length;
 }
 
 // 획득한 배지 확인
 function getUnlockedBadges() {
   const unlocked = [];
-  const points = studentData.totalPoints || 0;
+  const points = studentData?.totalPoints || 0;
 
   // 첫 로그인
   unlocked.push('first_login');
@@ -441,36 +567,35 @@ function getUnlockedBadges() {
   if (points >= 10000) unlocked.push('points_10000');
 
   // 저축 배지
-  if (studentData.savingsPoints >= 5000) unlocked.push('saver');
+  if ((studentData?.savingsPoints || 0) >= 5000) unlocked.push('saver');
 
   // 랭킹 배지
-  if (studentData.ranking && studentData.ranking <= 3)
-    unlocked.push('ranker_top3');
-  if (studentData.ranking === 1) unlocked.push('ranker_top1');
+  if (studentData?.ranking && studentData.ranking !== '-') {
+    const rank = parseInt(studentData.ranking);
+    if (rank <= 3) unlocked.push('ranker_top3');
+    if (rank === 1) unlocked.push('ranker_top1');
+  }
 
   return unlocked;
 }
 
-// 차트 초기화
+// 차트 초기화 - 실제 데이터 사용
 function initializeChart() {
   const ctx = document.getElementById('weeklyChart');
   if (!ctx) return;
 
-  // 샘플 데이터
-  const weeklyData = [
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-    Math.floor(Math.random() * 100) + 20,
-  ];
+  // 기존 차트 제거
+  if (weeklyChart) {
+    weeklyChart.destroy();
+  }
+
+  // 주간 데이터 사용 (calculateAdditionalStats에서 계산된 값)
+  const weeklyData = studentData?.weeklyData || [0, 0, 0, 0, 0, 0, 0];
 
   weeklyChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ['월', '화', '수', '목', '금', '토', '일'],
+      labels: ['일', '월', '화', '수', '목', '금', '토'],
       datasets: [
         {
           label: '획득 포인트',
@@ -544,9 +669,9 @@ function initializeChart() {
 // 이벤트 리스너 설정
 function setupEventListeners() {
   // 알림 토글
-  document
-    .getElementById('notificationToggle')
-    ?.addEventListener('change', (e) => {
+  const notificationToggle = document.getElementById('notificationToggle');
+  if (notificationToggle) {
+    notificationToggle.addEventListener('change', (e) => {
       const enabled = e.target.checked;
       localStorage.setItem('notificationsEnabled', enabled);
       showNotification(
@@ -554,12 +679,16 @@ function setupEventListeners() {
         'info'
       );
     });
+  }
 
   // 다크모드 토글
-  document.getElementById('darkModeToggle')?.addEventListener('change', (e) => {
-    const enabled = e.target.checked;
-    toggleDarkMode(enabled);
-  });
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('change', (e) => {
+      const enabled = e.target.checked;
+      toggleDarkMode(enabled);
+    });
+  }
 
   // 배지 클릭
   document.addEventListener('click', (e) => {
@@ -578,7 +707,11 @@ function setupEventListeners() {
 function showAvatarModal() {
   const modal = document.getElementById('avatarModal');
   const grid = document.getElementById('avatarGrid');
-  const currentAvatar = document.getElementById('avatarEmoji').textContent;
+
+  if (!modal || !grid) return;
+
+  const currentAvatar =
+    document.getElementById('avatarEmoji')?.textContent || '🦁';
 
   grid.innerHTML = AVATAR_OPTIONS.map(
     (avatar) => `
@@ -606,10 +739,11 @@ function showAvatarModal() {
 // 아바타 모달 닫기
 function closeAvatarModal() {
   const modal = document.getElementById('avatarModal');
-  modal.classList.remove('active');
+  if (modal) modal.classList.remove('active');
 
   if (selectedAvatar) {
-    document.getElementById('avatarEmoji').textContent = selectedAvatar;
+    const avatarEmoji = document.getElementById('avatarEmoji');
+    if (avatarEmoji) avatarEmoji.textContent = selectedAvatar;
     localStorage.setItem('userAvatar', selectedAvatar);
     showNotification('아바타가 변경되었습니다!', 'success');
     selectedAvatar = null;
@@ -619,25 +753,29 @@ function closeAvatarModal() {
 // 비밀번호 변경
 function changePassword() {
   const modal = document.getElementById('passwordModal');
-  modal.classList.add('active');
+  if (modal) modal.classList.add('active');
 }
 
 // 비밀번호 모달 닫기
 function closePasswordModal() {
   const modal = document.getElementById('passwordModal');
-  modal.classList.remove('active');
+  if (modal) modal.classList.remove('active');
 
   // 입력 초기화
-  document.getElementById('currentPassword').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('confirmPassword').value = '';
+  const currentPassword = document.getElementById('currentPassword');
+  const newPassword = document.getElementById('newPassword');
+  const confirmPassword = document.getElementById('confirmPassword');
+
+  if (currentPassword) currentPassword.value = '';
+  if (newPassword) newPassword.value = '';
+  if (confirmPassword) confirmPassword.value = '';
 }
 
 // 비밀번호 업데이트
 async function updatePassword() {
-  const current = document.getElementById('currentPassword').value;
-  const newPass = document.getElementById('newPassword').value;
-  const confirm = document.getElementById('confirmPassword').value;
+  const current = document.getElementById('currentPassword')?.value;
+  const newPass = document.getElementById('newPassword')?.value;
+  const confirm = document.getElementById('confirmPassword')?.value;
 
   if (!current || !newPass || !confirm) {
     showNotification('모든 필드를 입력해주세요.', 'error');
@@ -674,20 +812,25 @@ function showDataExport() {
 
 // 데이터 내보내기 실행
 function exportData() {
+  if (!studentData) {
+    showNotification('데이터를 불러올 수 없습니다.', 'error');
+    return;
+  }
+
   const data = {
     profile: {
       name: studentData.name,
-      class: studentData.classId,
-      level: studentData.level,
-      totalPoints: studentData.totalPoints,
-      currentPoints: studentData.currentPoints,
-      savingsPoints: studentData.savingsPoints,
+      class: studentData.className || studentData.classId,
+      level: getCurrentLevelInfo(studentData.totalPoints || 0).name,
+      totalPoints: studentData.totalPoints || 0,
+      currentPoints: studentData.currentPoints || 0,
+      savingsPoints: studentData.savingsPoints || 0,
     },
     statistics: {
-      monthlyPoints: studentData.monthlyPoints,
-      ranking: studentData.ranking,
-      attendanceDays: studentData.attendanceDays,
-      donationPoints: studentData.donationPoints,
+      monthlyPoints: studentData.monthlyPoints || 0,
+      ranking: studentData.ranking || '-',
+      attendanceDays: studentData.attendanceDays || 0,
+      donationPoints: studentData.donationPoints || 0,
     },
     badges: getUnlockedBadges(),
     exportDate: new Date().toISOString(),
@@ -720,7 +863,8 @@ function checkDarkMode() {
   const darkMode = localStorage.getItem('darkMode') === 'true';
   if (darkMode) {
     document.body.classList.add('dark-mode');
-    document.getElementById('darkModeToggle').checked = true;
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) darkModeToggle.checked = true;
   }
 }
 
@@ -769,12 +913,15 @@ function showLoading(show) {
   }
 }
 
-// UI 초기화 (계속)
+// UI 초기화
 function initializeUI() {
   // 저장된 설정 불러오기
-  const notificationsEnabled =
-    localStorage.getItem('notificationsEnabled') !== 'false';
-  document.getElementById('notificationToggle').checked = notificationsEnabled;
+  const notificationToggle = document.getElementById('notificationToggle');
+  if (notificationToggle) {
+    const notificationsEnabled =
+      localStorage.getItem('notificationsEnabled') !== 'false';
+    notificationToggle.checked = notificationsEnabled;
+  }
 }
 
 // 모달 외부 클릭 시 닫기
@@ -957,41 +1104,46 @@ function celebrateLevelUp(newLevel) {
 
 // 사운드 재생 (선택사항)
 function playSound(type) {
-  // Web Audio API를 사용한 간단한 사운드
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
+  try {
+    // Web Audio API를 사용한 간단한 사운드
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
 
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
 
-  if (type === 'levelup') {
-    // 레벨업 사운드: 상승하는 음
-    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-    oscillator.frequency.exponentialRampToValueAtTime(
-      1046.5,
-      audioContext.currentTime + 0.2
-    ); // C6
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.01,
-      audioContext.currentTime + 0.5
-    );
+    if (type === 'levelup') {
+      // 레벨업 사운드: 상승하는 음
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator.frequency.exponentialRampToValueAtTime(
+        1046.5,
+        audioContext.currentTime + 0.2
+      ); // C6
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.5
+      );
+    }
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  } catch (error) {
+    console.log('사운드 재생 실패:', error);
   }
-
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 0.5);
 }
 
 // 실시간 포인트 업데이트 체크 (선택사항)
 function checkForUpdates() {
   setInterval(async () => {
-    const studentId = localStorage.getItem('loginId');
-    const result = await api.getStudentPoints(studentId);
+    const loginId = localStorage.getItem('loginId');
+    const result = await api.getStudentPoints(loginId);
 
     if (result.success) {
-      const oldPoints = studentData.totalPoints;
-      const newPoints = result.data.totalPoints;
+      const oldPoints = studentData?.totalPoints || 0;
+      const newPoints = result.data.totalPoints || 0;
 
       if (newPoints > oldPoints) {
         // 포인트 증가 알림
@@ -1019,6 +1171,7 @@ const DEBUG_MODE = false;
 
 if (DEBUG_MODE) {
   window.debugLevelUp = function (points) {
+    if (!studentData) studentData = {};
     studentData.totalPoints = points;
     updateProfileUI();
 
@@ -1027,6 +1180,7 @@ if (DEBUG_MODE) {
   };
 
   window.debugAddPoints = function (points) {
+    if (!studentData) studentData = { totalPoints: 0 };
     studentData.totalPoints += points;
     updateProfileUI();
     showNotification(`+${points}P 추가됨`, 'success');
@@ -1040,3 +1194,442 @@ if (DEBUG_MODE) {
 
 // 초기화 완료 로그
 console.log('프로필 페이지 초기화 완료');
+
+// profile.js에 추가할 배지 보상 시스템
+
+// 배지 상세 정보 (획득 방법 포함)
+const BADGE_DETAILS = {
+  first_login: {
+    name: '첫 발걸음',
+    icon: '👋',
+    condition: '첫 로그인',
+    howTo: '포인트 뱅크에 처음 로그인하면 자동으로 획득됩니다.',
+    points: 50,
+  },
+  level_sprout: {
+    name: '새싹',
+    icon: '🌱',
+    condition: '새싹 레벨 달성',
+    howTo: '총 1,000 포인트를 모으면 새싹 레벨과 함께 획득됩니다.',
+    points: 100,
+  },
+  level_tree: {
+    name: '나무',
+    icon: '🌳',
+    condition: '나무 레벨 달성',
+    howTo: '총 3,000 포인트를 모으면 나무 레벨과 함께 획득됩니다.',
+    points: 200,
+  },
+  level_forest: {
+    name: '큰나무',
+    icon: '🌲',
+    condition: '큰나무 레벨 달성',
+    howTo: '총 5,000 포인트를 모으면 큰나무 레벨과 함께 획득됩니다.',
+    points: 300,
+  },
+  level_star: {
+    name: '별',
+    icon: '⭐',
+    condition: '별 레벨 달성',
+    howTo: '총 30,000 포인트를 모으면 별 레벨과 함께 획득됩니다.',
+    points: 500,
+  },
+  level_diamond: {
+    name: '다이아몬드',
+    icon: '💎',
+    condition: '다이아몬드 레벨 달성',
+    howTo:
+      '총 50,000 포인트를 모으면 최고 레벨인 다이아몬드와 함께 획득됩니다.',
+    points: 1000,
+  },
+  points_1000: {
+    name: '천 포인트',
+    icon: '💰',
+    condition: '누적 1,000P',
+    howTo: '총 누적 포인트가 1,000P를 넘으면 획득됩니다.',
+    points: 50,
+  },
+  points_5000: {
+    name: '오천 포인트',
+    icon: '💵',
+    condition: '누적 5,000P',
+    howTo: '총 누적 포인트가 5,000P를 넘으면 획득됩니다.',
+    points: 100,
+  },
+  points_10000: {
+    name: '만 포인트',
+    icon: '💸',
+    condition: '누적 10,000P',
+    howTo: '총 누적 포인트가 10,000P를 넘으면 획득됩니다.',
+    points: 200,
+  },
+  attendance_7: {
+    name: '주간 개근',
+    icon: '📅',
+    condition: '7일 연속 출석',
+    howTo: '7일 연속으로 로그인하면 획득됩니다. 하루라도 빠지면 다시 시작!',
+    points: 150,
+  },
+  attendance_30: {
+    name: '월간 개근',
+    icon: '🗓️',
+    condition: '30일 연속 출석',
+    howTo: '30일 연속으로 로그인하면 획득됩니다. 꾸준함이 중요해요!',
+    points: 500,
+  },
+  perfect_test: {
+    name: '수학 천재',
+    icon: '💯',
+    condition: '시험 만점',
+    howTo: '퀴즈나 시험에서 100점을 받으면 획득됩니다.',
+    points: 300,
+  },
+  helper: {
+    name: '도우미',
+    icon: '🤝',
+    condition: '친구 5명 도움',
+    howTo: '친구 5명을 도와주면 획득됩니다. 나눔의 기쁨을 느껴보세요!',
+    points: 200,
+  },
+  saver: {
+    name: '저축왕',
+    icon: '🏦',
+    condition: '저축 5,000P 달성',
+    howTo: '저축 계좌에 5,000P 이상 저축하면 획득됩니다.',
+    points: 300,
+  },
+  donor: {
+    name: '기부천사',
+    icon: '😇',
+    condition: '기부 1,000P 달성',
+    howTo: '총 1,000P 이상 기부하면 획득됩니다. 따뜻한 마음!',
+    points: 400,
+  },
+  shopper: {
+    name: '쇼핑왕',
+    icon: '🛍️',
+    condition: '상품 10개 구매',
+    howTo: '상점에서 상품을 10개 이상 구매하면 획득됩니다.',
+    points: 150,
+  },
+  ranker_top3: {
+    name: 'TOP 3',
+    icon: '🥉',
+    condition: '랭킹 3위 이내',
+    howTo: '전체 랭킹에서 3위 안에 들면 획득됩니다. 화이팅!',
+    points: 500,
+  },
+  ranker_top1: {
+    name: '챔피언',
+    icon: '🏆',
+    condition: '랭킹 1위',
+    howTo: '전체 랭킹 1위를 달성하면 획득됩니다. 당신이 최고!',
+    points: 1000,
+  },
+  weekly_star: {
+    name: '주간 스타',
+    icon: '🌟',
+    condition: '주간 최다 포인트',
+    howTo: '한 주 동안 가장 많은 포인트를 획득한 학생에게 주어집니다.',
+    points: 300,
+  },
+  mission_complete: {
+    name: '미션 마스터',
+    icon: '🎯',
+    condition: '미션 10개 완료',
+    howTo: '주어진 미션을 10개 이상 완료하면 획득됩니다.',
+    points: 250,
+  },
+};
+
+// 배지 컬렉션 보상 시스템
+const COLLECTION_REWARDS = {
+  5: { points: 100, message: '5개 달성! 100P 보너스 획득!' },
+  10: { points: 200, message: '10개 달성! 200P 보너스 획득!' },
+  15: { points: 500, message: '15개 달성! 500P 보너스 획득!' },
+  20: { points: 2000, message: '전체 컬렉션 완성! 2000P 대박 보너스!' },
+};
+
+// 배지 클릭 시 상세 정보 팝업
+function showBadgeDetail(badgeId) {
+  const badge = BADGE_DETAILS[badgeId];
+  if (!badge) return;
+
+  // 팝업 HTML 생성
+  const popupHTML = `
+    <div id="badgeDetailPopup" class="badge-popup-overlay" onclick="closeBadgePopup(event)">
+      <div class="badge-popup-content">
+        <button class="popup-close" onclick="closeBadgePopup(event)">×</button>
+        
+        <div class="popup-badge-icon">${badge.icon}</div>
+        
+        <h3 class="popup-badge-name">${badge.name}</h3>
+        
+        <div class="popup-badge-condition">${badge.condition}</div>
+        
+        <div class="popup-section">
+          <h4>🎯 획득 방법</h4>
+          <p>${badge.howTo}</p>
+        </div>
+        
+        <div class="popup-section">
+          <h4>🎁 보상</h4>
+          <p class="popup-reward">+${badge.points}P</p>
+        </div>
+        
+        <div class="popup-footer">
+          ${
+            getUnlockedBadges().includes(badgeId)
+              ? '<span class="badge-status unlocked">✅ 획득 완료!</span>'
+              : '<span class="badge-status locked">🔒 미획득</span>'
+          }
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 팝업 추가
+  document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+  // 애니메이션을 위한 약간의 지연
+  setTimeout(() => {
+    document.getElementById('badgeDetailPopup').classList.add('show');
+  }, 10);
+}
+
+// 팝업 닫기
+function closeBadgePopup(event) {
+  if (event) {
+    event.stopPropagation();
+    // 팝업 내용 클릭 시 닫히지 않도록
+    if (
+      event.target.closest('.badge-popup-content') &&
+      !event.target.classList.contains('popup-close')
+    ) {
+      return;
+    }
+  }
+
+  const popup = document.getElementById('badgeDetailPopup');
+  if (popup) {
+    popup.classList.remove('show');
+    setTimeout(() => {
+      popup.remove();
+    }, 300);
+  }
+}
+
+// 배지 컬렉션 보상 체크 및 지급
+function checkCollectionRewards() {
+  const unlockedCount = getUnlockedBadges().length;
+  const loginId = localStorage.getItem('loginId');
+
+  // 이미 받은 보상 체크
+  const receivedRewards = JSON.parse(
+    localStorage.getItem('receivedBadgeRewards') || '[]'
+  );
+
+  let totalBonus = 0;
+  let messages = [];
+
+  // 각 단계별 보상 체크
+  Object.entries(COLLECTION_REWARDS).forEach(([threshold, reward]) => {
+    const thresholdNum = parseInt(threshold);
+    if (
+      unlockedCount >= thresholdNum &&
+      !receivedRewards.includes(thresholdNum)
+    ) {
+      totalBonus += reward.points;
+      messages.push(reward.message);
+      receivedRewards.push(thresholdNum);
+    }
+  });
+
+  // 새로운 보상이 있으면 지급
+  if (totalBonus > 0) {
+    // 로컬 스토리지 업데이트
+    localStorage.setItem(
+      'receivedBadgeRewards',
+      JSON.stringify(receivedRewards)
+    );
+
+    // 포인트 지급 (실제 API 호출 필요)
+    // api.addPoints(loginId, totalBonus, 'badge_collection', '배지 컬렉션 보상');
+
+    // 축하 메시지 표시
+    showCollectionRewardPopup(messages, totalBonus);
+  }
+
+  // 진행 상황 업데이트
+  updateCollectionProgress(unlockedCount);
+}
+
+// 컬렉션 진행 상황 표시
+function updateCollectionProgress(unlockedCount) {
+  // 다음 목표 찾기
+  let nextThreshold = null;
+  let nextReward = null;
+
+  for (const [threshold, reward] of Object.entries(COLLECTION_REWARDS)) {
+    if (parseInt(threshold) > unlockedCount) {
+      nextThreshold = parseInt(threshold);
+      nextReward = reward;
+      break;
+    }
+  }
+
+  // 진행 상황 HTML 업데이트
+  const progressHTML = `
+    <div class="collection-progress">
+      <div class="progress-header">
+        <span>🏆 배지 컬렉션</span>
+        <span>${unlockedCount}/20</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${
+          (unlockedCount / 20) * 100
+        }%"></div>
+      </div>
+      ${
+        nextThreshold
+          ? `
+        <div class="next-reward">
+          다음 보상: ${nextThreshold}개 달성 시 ${nextReward.points}P
+        </div>
+      `
+          : `
+        <div class="next-reward complete">
+          🎉 모든 배지 획득 완료!
+        </div>
+      `
+      }
+    </div>
+  `;
+
+  // achievement-card 아래에 추가
+  const achievementCard = document.querySelector('.achievement-card');
+  const existingProgress = document.querySelector('.collection-progress');
+
+  if (existingProgress) {
+    existingProgress.outerHTML = progressHTML;
+  } else if (achievementCard) {
+    achievementCard.insertAdjacentHTML('beforeend', progressHTML);
+  }
+}
+
+// 보상 획득 축하 팝업
+function showCollectionRewardPopup(messages, totalPoints) {
+  const popupHTML = `
+    <div id="rewardPopup" class="reward-popup-overlay">
+      <div class="reward-popup-content">
+        <div class="reward-celebration">🎉</div>
+        <h2>배지 컬렉션 보상!</h2>
+        ${messages
+          .map((msg) => `<p class="reward-message">${msg}</p>`)
+          .join('')}
+        <div class="reward-total">
+          총 ${totalPoints}P 획득!
+        </div>
+        <button class="reward-confirm" onclick="closeRewardPopup()">확인</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+  setTimeout(() => {
+    document.getElementById('rewardPopup').classList.add('show');
+  }, 10);
+
+  // 컨페티 효과
+  createConfetti();
+}
+
+// 보상 팝업 닫기
+function closeRewardPopup() {
+  const popup = document.getElementById('rewardPopup');
+  if (popup) {
+    popup.classList.remove('show');
+    setTimeout(() => {
+      popup.remove();
+    }, 300);
+  }
+}
+
+// 간단한 컨페티 효과
+function createConfetti() {
+  const colors = ['#fbbf24', '#f59e0b', '#6366f1', '#ec4899', '#10b981'];
+  for (let i = 0; i < 30; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.style.cssText = `
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      left: ${Math.random() * 100}%;
+      top: -10px;
+      z-index: 10000;
+      animation: confettiFall ${2 + Math.random() * 2}s ease-out;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+    `;
+    document.body.appendChild(confetti);
+
+    setTimeout(() => {
+      confetti.remove();
+    }, 4000);
+  }
+}
+
+// 배지 업데이트 함수 수정 (클릭 이벤트 추가)
+function updateBadgesWithClick() {
+  const grid = document.getElementById('achievementGrid');
+  if (!grid) return;
+
+  const unlockedBadges = getUnlockedBadges();
+
+  grid.innerHTML = Object.keys(BADGE_DETAILS)
+    .map((badgeId) => {
+      const badge = BADGE_DETAILS[badgeId];
+      const isUnlocked = unlockedBadges.includes(badgeId);
+      return `
+      <div class="badge-item ${isUnlocked ? 'unlocked' : 'locked'}" 
+           data-badge="${badgeId}"
+           onclick="showBadgeDetail('${badgeId}')"
+           style="cursor: pointer;">
+        <span>${isUnlocked ? badge.icon : '🔒'}</span>
+      </div>
+    `;
+    })
+    .join('');
+
+  // 획득 개수 업데이트
+  const unlockedCount = document.getElementById('unlockedCount');
+  if (unlockedCount) unlockedCount.textContent = unlockedBadges.length;
+
+  const totalBadges = document.getElementById('totalBadges');
+  if (totalBadges) totalBadges.textContent = Object.keys(BADGE_DETAILS).length;
+
+  // 컬렉션 보상 체크
+  checkCollectionRewards();
+}
+
+// 기존 updateBadges 함수 대체
+window.updateBadges = updateBadgesWithClick;
+
+// 전역 함수로 내보내기
+window.showBadgeDetail = showBadgeDetail;
+window.closeBadgePopup = closeBadgePopup;
+window.closeRewardPopup = closeRewardPopup;
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  // 배지 업데이트 시 컬렉션 체크
+  if (typeof updateBadges === 'function') {
+    const originalUpdateBadges = updateBadges;
+    updateBadges = function () {
+      originalUpdateBadges();
+      updateBadgesWithClick();
+    };
+  }
+});

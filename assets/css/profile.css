@@ -1,3 +1,436 @@
+/* profile.css 수정사항 - 기존 CSS 상단에 추가/수정 */
+
+/* ========================================
+   통일된 헤더/네비 적용 후 레이아웃 조정
+   ======================================== */
+
+/* 기존 profile-header 제거하고 app-header 사용 */
+.profile-header {
+  display: none; /* 구형 헤더 숨김 */
+}
+
+/* 컨테이너 패딩 조정 (헤더/네비 공간 확보) */
+.profile-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: 80px; /* app-header 높이(60px) + 여백(20px) */
+  padding-bottom: 100px; /* app-nav 높이(60px) + 여백(40px) */
+}
+
+/* 헤더 내 아바타와 프로필 카드 아바타 동기화 */
+#headerAvatar {
+  font-size: 18px;
+}
+
+/* 메인 프로필 카드는 기존 스타일 유지 */
+.profile-main-card {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  border-radius: 24px;
+  padding: 30px;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #4a2c2a;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 40px rgba(250, 112, 154, 0.3);
+}
+
+/* 아바타 변경 버튼 스타일 개선 */
+.avatar-change-btn {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: white;
+  color: #fa709a;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.avatar-change-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: #fa709a;
+  color: white;
+}
+
+/* 프로필 이름 텍스트 */
+.profile-name {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 10px 0;
+  color: #4a2c2a;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+/* 통계 카드 호버 효과 */
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: rgba(250, 112, 154, 0.2);
+  background: white;
+}
+
+/* 배지 그리드 반응형 */
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  overflow: visible; /* 툴팁 표시를 위해 */
+}
+
+/* 설정 아이템 호버 */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.setting-item:hover {
+  background: white;
+  border-color: rgba(250, 112, 154, 0.1);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 토글 스위치 스타일 */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+/* 차트 컨테이너 */
+.chart-container {
+  position: relative;
+  height: 200px;
+  padding: 10px;
+}
+
+/* 모달 오버레이 */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #1a1a1a;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #9ca3af;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+/* 아바타 그리드 */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  padding: 10px;
+}
+
+.avatar-option {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 3px solid transparent;
+}
+
+.avatar-option:hover {
+  transform: scale(1.1);
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-option.selected {
+  border-color: #fa709a;
+  background: linear-gradient(
+    135deg,
+    rgba(250, 112, 154, 0.1),
+    rgba(254, 225, 64, 0.1)
+  );
+  transform: scale(1.1);
+}
+
+/* 폼 스타일 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #fa709a;
+  box-shadow: 0 0 0 3px rgba(250, 112, 154, 0.1);
+}
+
+.form-hint {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 버튼 스타일 */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(250, 112, 154, 0.3);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 15px;
+    padding-top: 75px;
+    padding-bottom: 90px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .achievement-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .avatar-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .profile-name {
+    font-size: 24px;
+  }
+
+  /* 작은 화면에서 헤더 이름 숨김 */
+  @media (max-width: 374px) {
+    #headerName {
+      display: none;
+    }
+  }
+}
+
+/* 다크모드 지원 */
+body.dark-mode {
+  background: #1a1a1a;
+}
+
+body.dark-mode .profile-container {
+  background: #1a1a1a;
+}
+
+body.dark-mode .stats-card,
+body.dark-mode .achievement-card,
+body.dark-mode .activity-card,
+body.dark-mode .settings-card {
+  background: #2a2a2a;
+  color: #e5e7eb;
+}
+
+body.dark-mode .stat-item,
+body.dark-mode .setting-item {
+  background: #333;
+  color: #e5e7eb;
+}
+
+body.dark-mode .modal-content {
+  background: #2a2a2a;
+  color: #e5e7eb;
+}
+
+body.dark-mode .form-input {
+  background: #333;
+  border-color: #444;
+  color: #e5e7eb;
+}
+
+/* 로딩 상태 표시 */
+body[style*='opacity: 0.7'] {
+  position: relative;
+}
+
+body[style*='opacity: 0.7']::after {
+  content: '로딩 중...';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 20px 40px;
+  border-radius: 12px;
+  font-size: 16px;
+  z-index: 10000;
+}
 /* profile.css - 프로필 페이지 전용 스타일 (선셋 + 텍스트 개선) */
 
 /* 레이아웃 */
@@ -966,4 +1399,569 @@ body.dark-mode .stat-value {
 
 .progress-bar-fill.pulse {
   animation: pulse 2s infinite, shimmer 2s infinite;
+}
+
+/* 배지 툴팁 z-index 수정 - profile.css에 추가 또는 덮어쓰기 */
+
+/* 배지 아이템 - overflow visible로 변경 */
+.badge-item {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+  overflow: visible; /* hidden에서 visible로 변경 */
+}
+
+/* 배지 툴팁 - z-index 높이고 위치 조정 */
+.badge-tooltip {
+  position: absolute;
+  bottom: 100%; /* 위쪽으로 표시되도록 변경 */
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px); /* 약간 위로 띄움 */
+  background: rgba(0, 0, 0, 0.95); /* 더 진하게 */
+  color: white;
+  padding: 8px 12px; /* 패딩 증가 */
+  border-radius: 8px;
+  font-size: 12px; /* 폰트 크기 살짝 증가 */
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 9999; /* 최상위로 설정 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* 그림자 추가 */
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 툴팁 화살표 추가 */
+.badge-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0, 0, 0, 0.95);
+}
+
+/* 호버 시 툴팁 표시 및 애니메이션 */
+.badge-item:hover .badge-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px); /* 호버 시 더 위로 */
+}
+
+/* 언락된 배지 호버 효과 */
+.badge-item.unlocked {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.badge-item.unlocked:hover {
+  transform: scale(1.15) rotate(5deg); /* 크기 살짝 증가 */
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+  z-index: 100; /* 호버된 아이템을 위로 */
+}
+
+/* 잠긴 배지 스타일 */
+.badge-item.locked {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.badge-item.locked:hover {
+  transform: scale(1.05);
+  background: #d1d5db;
+}
+
+/* achievement-grid 컨테이너에 overflow visible 설정 */
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  overflow: visible; /* 툴팁이 잘리지 않도록 */
+  position: relative;
+  z-index: 10;
+}
+
+/* achievement-card에도 overflow visible 설정 */
+.achievement-card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  overflow: visible; /* 툴팁이 잘리지 않도록 */
+  position: relative;
+}
+
+/* 모바일에서 툴팁 위치 조정 */
+@media (max-width: 480px) {
+  .badge-tooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+    max-width: 150px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* 모바일에서는 4열로 변경 */
+  .achievement-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .badge-item {
+    width: 55px;
+    height: 55px;
+    font-size: 24px;
+  }
+}
+
+/* 배지가 화면 가장자리에 있을 때 툴팁 위치 자동 조정 */
+.badge-item:nth-child(5n + 1) .badge-tooltip {
+  left: 0;
+  transform: translateX(0) translateY(-8px);
+}
+
+.badge-item:nth-child(5n + 1):hover .badge-tooltip {
+  transform: translateX(0) translateY(-12px);
+}
+
+.badge-item:nth-child(5n) .badge-tooltip {
+  left: auto;
+  right: 0;
+  transform: translateX(0) translateY(-8px);
+}
+
+.badge-item:nth-child(5n):hover .badge-tooltip {
+  transform: translateX(0) translateY(-12px);
+}
+
+/* 첫 번째 줄의 배지들은 아래쪽에 툴팁 표시 */
+.badge-item:nth-child(-n + 5) .badge-tooltip {
+  bottom: auto;
+  top: 100%;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.badge-item:nth-child(-n + 5):hover .badge-tooltip {
+  transform: translateX(-50%) translateY(12px);
+}
+
+/* 첫 번째 줄 툴팁의 화살표 위치 변경 */
+.badge-item:nth-child(-n + 5) .badge-tooltip::after {
+  top: auto;
+  bottom: 100%;
+  border-top: none;
+  border-bottom: 6px solid rgba(0, 0, 0, 0.95);
+}
+
+/* 다크모드 지원 */
+body.dark-mode .badge-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .badge-tooltip::after {
+  border-top-color: rgba(255, 255, 255, 0.95);
+}
+
+body.dark-mode .badge-item:nth-child(-n + 5) .badge-tooltip::after {
+  border-bottom-color: rgba(255, 255, 255, 0.95);
+}
+/* 배지 상세 정보 팝업 스타일 */
+.badge-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.badge-popup-overlay.show {
+  opacity: 1;
+}
+
+.badge-popup-content {
+  background: white;
+  border-radius: 24px;
+  padding: 30px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.badge-popup-overlay.show .badge-popup-content {
+  transform: scale(1);
+}
+
+.popup-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.popup-close:hover {
+  background: #ef4444;
+  color: white;
+  transform: rotate(90deg);
+}
+
+.popup-badge-icon {
+  font-size: 80px;
+  text-align: center;
+  margin-bottom: 20px;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.popup-badge-name {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.popup-badge-condition {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.popup-section {
+  margin-bottom: 20px;
+}
+
+.popup-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #374151;
+}
+
+.popup-section p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+.popup-reward {
+  font-size: 24px !important;
+  font-weight: bold;
+  color: #10b981 !important;
+  text-align: center;
+}
+
+.popup-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #f3f4f6;
+  text-align: center;
+}
+
+.badge-status {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.badge-status.unlocked {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.badge-status.locked {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* 컬렉션 진행 상황 */
+.collection-progress {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 20%, #fbbf24 100%);
+  border-radius: 16px;
+  border: 2px solid rgba(251, 191, 36, 0.3);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.progress-bar {
+  height: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid rgba(146, 64, 14, 0.2);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dc2626, #ef4444, #f87171);
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+.next-reward {
+  font-size: 13px;
+  color: #92400e;
+  text-align: center;
+  font-weight: 500;
+}
+
+.next-reward.complete {
+  color: #166534;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* 보상 획득 팝업 */
+.reward-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.reward-popup-overlay.show {
+  opacity: 1;
+}
+
+.reward-popup-content {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.reward-popup-overlay.show .reward-popup-content {
+  transform: scale(1);
+  animation: celebration 0.5s ease;
+}
+
+@keyframes celebration {
+  0% {
+    transform: scale(0.8) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.reward-celebration {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 1s infinite;
+}
+
+.reward-popup-content h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #fa709a, #fee140);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.reward-message {
+  font-size: 16px;
+  color: #4b5563;
+  margin: 10px 0;
+}
+
+.reward-total {
+  font-size: 32px;
+  font-weight: bold;
+  color: #10b981;
+  margin: 20px 0;
+  padding: 15px;
+  background: #f0fdf4;
+  border-radius: 12px;
+  border: 2px solid #10b981;
+}
+
+.reward-confirm {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 12px 40px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.reward-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* 컨페티 애니메이션 */
+@keyframes confettiFall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 배지 호버 효과 개선 */
+.badge-item {
+  transition: all 0.3s ease;
+}
+
+.badge-item:hover {
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 480px) {
+  .badge-popup-content {
+    padding: 25px;
+    width: 95%;
+  }
+
+  .popup-badge-icon {
+    font-size: 60px;
+  }
+
+  .popup-badge-name {
+    font-size: 20px;
+  }
+
+  .reward-popup-content {
+    padding: 30px 20px;
+  }
+
+  .reward-celebration {
+    font-size: 60px;
+  }
+
+  .reward-total {
+    font-size: 24px;
+  }
+}
+
+/* 다크모드 지원 */
+body.dark-mode .badge-popup-content,
+body.dark-mode .reward-popup-content {
+  background: #2a2a2a;
+  color: #e5e7eb;
+}
+
+body.dark-mode .popup-badge-name {
+  color: #e5e7eb;
+}
+
+body.dark-mode .popup-badge-condition {
+  color: #9ca3af;
+}
+
+body.dark-mode .popup-section h4 {
+  color: #d1d5db;
+}
+
+body.dark-mode .popup-section p {
+  color: #9ca3af;
+}
+
+body.dark-mode .popup-close {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .collection-progress {
+  background: linear-gradient(135deg, #7c2d12, #9a3412, #b45309);
+  color: #fed7aa;
 }
