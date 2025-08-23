@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <!-- 필터 탭 -->
+    <!-- 필터 탭 (고정 위치) -->
     <div class="filter-tabs">
       <button class="filter-btn active" data-filter="all">전체</button>
       <button class="filter-btn" data-filter="earn">획득</button>
@@ -52,36 +52,23 @@
       <div class="period-selector">
         <span class="period-label">기간</span>
         <div class="period-buttons">
-          <button class="period-btn" data-period="week">1주일</button>
+          <button class="period-btn" data-period="week">1주</button>
           <button class="period-btn active" data-period="month">1개월</button>
           <button class="period-btn" data-period="3month">3개월</button>
           <button class="period-btn" data-period="all">전체</button>
         </div>
       </div>
 
-      <!-- 통계 카드 -->
-      <div class="stats-card">
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-label">획득 포인트</div>
-            <div class="stat-value positive" id="statEarn">+0P</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-label">사용 포인트</div>
-            <div class="stat-value negative" id="statSpend">0P</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-label">저축 포인트</div>
-            <div class="stat-value" id="statSave">0P</div>
-          </div>
-        </div>
+      <!-- 기간/총계 헤더 -->
+      <div class="summary-header" id="summaryHeader">
+        <div class="summary-period">기간: 2025.07.23 - 2025.08.23</div>
+        <div class="summary-divider">|</div>
+        <div class="summary-total">총 0건 (0원)</div>
       </div>
 
       <!-- 거래 내역 리스트 -->
-      <div id="historyListContainer">
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-        </div>
+      <div class="history-list-container" id="historyListContainer">
+        <!-- 동적으로 생성됨 -->
       </div>
     </div>
 
@@ -102,7 +89,7 @@
         data-page="savings"
         onclick="handleNavClick('savings'); return false;"
       >
-        <span class="nav-icon">🏦</span>
+        <span class="nav-icon">💰</span>
         <span class="nav-label">저축</span>
       </a>
       <a
@@ -135,35 +122,18 @@
     </nav>
 
     <!-- JavaScript -->
-    <script src="../assets/js/api.js"></script>
     <script src="../assets/js/navigation.js"></script>
     <script src="../assets/js/history.js"></script>
+
     <!-- 페이지 초기화 스크립트 -->
     <script>
-      document.addEventListener('DOMContentLoaded', async () => {
-        // 로그인 정보 체크
-        const loginId = localStorage.getItem('loginId');
-        const userName = localStorage.getItem('userName');
-
-        if (!loginId) {
-          alert('로그인이 필요합니다.');
-          window.location.href = '../login.html';
-          return;
-        }
-
-        // 헤더 정보 업데이트
-        if (userName) {
-          document.getElementById('userName').textContent = userName;
-        }
-
-        // 아바타 업데이트
-        const savedAvatar = localStorage.getItem('userAvatar') || '🦁';
-        document.getElementById('userAvatar').textContent = savedAvatar;
-
-        // 포인트 업데이트
-        if (typeof updateHeaderPoints === 'function') {
-          await updateHeaderPoints();
-        }
+      // 현재 페이지는 내역이 아니라, 포인트 카드에서 접근하는 페이지임
+      // 따라서 특별한 active 표시를 하지 않음
+      document.addEventListener('DOMContentLoaded', () => {
+        // 모든 nav-item에서 active 클래스 제거
+        document.querySelectorAll('.nav-item').forEach((item) => {
+          item.classList.remove('active');
+        });
       });
     </script>
   </body>
