@@ -1,4 +1,4 @@
-// student-main.js - 학생 메인 페이지 전용 함수
+// student-main.js - 학생 메인 페이지 전용 함수 (실제 데이터 연동)
 
 // 탭 전환 함수
 function showTab(tabName) {
@@ -17,7 +17,7 @@ function showTab(tabName) {
   if (tabBtn) tabBtn.classList.add('active');
   if (tabContent) tabContent.classList.add('active');
 
-  // 탭별 데이터 로드 (필요시)
+  // 탭별 데이터 로드
   loadTabData(tabName);
 }
 
@@ -25,41 +25,452 @@ function showTab(tabName) {
 function loadTabData(tabName) {
   switch (tabName) {
     case 'overview':
-      // 전체 요약 데이터
+      // 전체 요약 데이터는 이미 로드됨
       break;
     case 'earn':
-      // 획득 내역 요약
       loadEarnSummary();
       break;
     case 'spend':
-      // 사용 내역 요약
       loadSpendSummary();
       break;
     case 'save':
-      // 저축 내역 요약
       loadSaveSummary();
       break;
   }
 }
 
 // 획득 내역 요약 로드
-function loadEarnSummary() {
-  // API 호출하여 최근 획득 내역 3개 가져오기
-  console.log('획득 내역 로드');
-  // 실제 구현 시 API 호출
+async function loadEarnSummary() {
+  try {
+    const loginId = localStorage.getItem('loginId');
+    if (!loginId) return;
+
+    console.log('획득 내역 로드 시작...');
+
+    // API 호출하여 포인트 내역과 거래 내역 가져오기
+    const [pointsResult, transResult] = await Promise.all([
+      api.getPointHistory(loginId),
+      api.getTransactionHistory(loginId),
+    ]);
+
+    // 획득 내역만 필터링 (양수 금액)
+    const earnHistory = [];
+
+    // Points 데이터에서 획득 내역 추출
+    if (pointsResult.success && pointsResult.data) {
+      pointsResult.data.forEach((item) => {
+        if (item.amount > 0) {
+          earnHistory.push({
+            title: item.reason || getDefaultTitle(item.type),
+            amount: item.amount,
+            date: formatDate(item.date),
+            icon: getIconForType(item.type),
+            type: 'earn',
+          });
+        }
+      });
+    }
+
+    // Transactions 데이터에서 획득 내역 추출
+    if (transResult.success && transResult.data) {
+      transResult.data.forEach((item) => {
+        if (item.amount > 0 && item.type !== 'withdraw') {
+          earnHistory.push({
+            title: item.itemName || getDefaultTitle(item.type),
+            amount: item.amount,
+            date: formatDate(item.createdAt),
+            icon: getIconForType(item.type),
+            type: 'earn',
+          });
+        }
+      });
+    }
+
+    // 날짜순 정렬 (최신순)
+    earnHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 최근 3개만 가져오기
+    const recentEarn = earnHistory.slice(0, 3);
+
+    // 이번 달 총 획득 계산
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyTotal = earnHistory
+      .filter((item) => {
+        const itemDate = new Date(item.date);
+        return (
+          itemDate.getMonth() === currentMonth &&
+          itemDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    // DOM 업데이트
+    updateEarnTab(recentEarn, monthlyTotal);
+  } catch (error) {
+    console.error('획득 내역 로드 실패:', error);
+  }
 }
 
 // 사용 내역 요약 로드
-function loadSpendSummary() {
-  // API 호출하여 최근 사용 내역 3개 가져오기
-  console.log('사용 내역 로드');
+async function loadSpendSummary() {
+  try {
+    const loginId = localStorage.getItem('loginId');
+    if (!loginId) return;
+
+    console.log('사용 내역 로드 시작...');
+
+    // API 호출
+    const [pointsResult, transResult] = await Promise.all([
+      api.getPointHistory(loginId),
+      api.getTransactionHistory(loginId),
+    ]);
+
+    // 사용 내역만 필터링 (음수 금액 또는 purchase/transfer 타입)
+    const spendHistory = [];
+
+    // Points 데이터에서 사용 내역 추출
+    if (pointsResult.success && pointsResult.data) {
+      pointsResult.data.forEach((item) => {
+        if (item.amount < 0) {
+          spendHistory.push({
+            title: item.reason || getDefaultTitle(item.type),
+            amount: Math.abs(item.amount),
+            date: formatDate(item.date),
+            icon: getIconForType(item.type),
+            type: 'spend',
+          });
+        }
+      });
+    }
+
+    // Transactions 데이터에서 사용 내역 추출
+    if (transResult.success && transResult.data) {
+      transResult.data.forEach((item) => {
+        if (
+          item.type === 'purchase' ||
+          item.type === 'transfer' ||
+          (item.type === 'deposit' && item.amount > 0)
+        ) {
+          spendHistory.push({
+            title: item.itemName || getDefaultTitle(item.type),
+            amount: Math.abs(item.amount),
+            date: formatDate(item.createdAt),
+            icon: getIconForType(item.type),
+            type: 'spend',
+          });
+        }
+      });
+    }
+
+    // 날짜순 정렬 (최신순)
+    spendHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 최근 3개만 가져오기
+    const recentSpend = spendHistory.slice(0, 3);
+
+    // 이번 달 총 사용 계산
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyTotal = spendHistory
+      .filter((item) => {
+        const itemDate = new Date(item.date);
+        return (
+          itemDate.getMonth() === currentMonth &&
+          itemDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    // DOM 업데이트
+    updateSpendTab(recentSpend, monthlyTotal);
+  } catch (error) {
+    console.error('사용 내역 로드 실패:', error);
+  }
 }
 
 // 저축 내역 요약 로드
-function loadSaveSummary() {
-  // API 호출하여 최근 저축 내역 3개 가져오기
-  console.log('저축 내역 로드');
+async function loadSaveSummary() {
+  try {
+    const loginId = localStorage.getItem('loginId');
+    if (!loginId) return;
+
+    console.log('저축 내역 로드 시작...');
+
+    // 거래 내역 가져오기
+    const transResult = await api.getTransactionHistory(loginId);
+
+    // 저축 관련 내역만 필터링
+    const savingsHistory = [];
+
+    if (transResult.success && transResult.data) {
+      transResult.data.forEach((item) => {
+        if (
+          item.type === 'deposit' ||
+          item.type === 'withdraw' ||
+          item.type === 'interest'
+        ) {
+          savingsHistory.push({
+            title: getDefaultTitle(item.type),
+            amount: item.amount,
+            date: formatDate(item.createdAt),
+            icon: getIconForSavings(item.type),
+            type: item.type,
+          });
+        }
+      });
+    }
+
+    // 날짜순 정렬 (최신순)
+    savingsHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 최근 3개만 가져오기
+    const recentSavings = savingsHistory.slice(0, 3);
+
+    // 현재 저축 잔액 (studentData에서 가져오기)
+    const currentSavings = studentData?.savingsPoints || 0;
+
+    // DOM 업데이트
+    updateSaveTab(recentSavings, currentSavings);
+  } catch (error) {
+    console.error('저축 내역 로드 실패:', error);
+  }
 }
+
+// ========== DOM 업데이트 함수들 ==========
+
+// 획득 탭 업데이트
+function updateEarnTab(recentItems, monthlyTotal) {
+  const tabContent = document.getElementById('earn-content');
+  if (!tabContent) return;
+
+  let html = `
+    <div class="summary-card">
+      <div class="summary-header">
+        <span class="summary-title">이번 달 획득 포인트</span>
+      </div>
+      <div class="summary-value" style="color: #22c55e">+${monthlyTotal.toLocaleString()}P</div>
+      
+      <div class="mini-history">`;
+
+  if (recentItems.length > 0) {
+    recentItems.forEach((item) => {
+      html += `
+        <div class="mini-history-item">
+          <div class="mini-item-left">
+            <div class="mini-icon" style="background: #dcfce7">${
+              item.icon
+            }</div>
+            <div class="mini-item-info">
+              <div class="mini-item-title">${item.title}</div>
+              <div class="mini-item-date">${getRelativeTime(item.date)}</div>
+            </div>
+          </div>
+          <div class="mini-item-amount amount-plus">+${item.amount}P</div>
+        </div>`;
+    });
+  } else {
+    html += `
+      <div style="text-align: center; padding: 20px; color: #94a3b8;">
+        아직 획득 내역이 없습니다.
+      </div>`;
+  }
+
+  html += `
+      </div>
+      <button class="view-more-btn" onclick="location.href='history.html?filter=earn'">
+        전체 획득 내역 보기 →
+      </button>
+    </div>
+  </div>`;
+
+  tabContent.innerHTML = html;
+}
+
+// 사용 탭 업데이트
+function updateSpendTab(recentItems, monthlyTotal) {
+  const tabContent = document.getElementById('spend-content');
+  if (!tabContent) return;
+
+  let html = `
+    <div class="summary-card">
+      <div class="summary-header">
+        <span class="summary-title">이번 달 사용 포인트</span>
+      </div>
+      <div class="summary-value" style="color: #ef4444">-${monthlyTotal.toLocaleString()}P</div>
+      
+      <div class="mini-history">`;
+
+  if (recentItems.length > 0) {
+    recentItems.forEach((item) => {
+      html += `
+        <div class="mini-history-item">
+          <div class="mini-item-left">
+            <div class="mini-icon" style="background: #fee2e2">${
+              item.icon
+            }</div>
+            <div class="mini-item-info">
+              <div class="mini-item-title">${item.title}</div>
+              <div class="mini-item-date">${getRelativeTime(item.date)}</div>
+            </div>
+          </div>
+          <div class="mini-item-amount amount-minus">-${item.amount}P</div>
+        </div>`;
+    });
+  } else {
+    html += `
+      <div style="text-align: center; padding: 20px; color: #94a3b8;">
+        아직 사용 내역이 없습니다.
+      </div>`;
+  }
+
+  html += `
+      </div>
+      <button class="view-more-btn" onclick="location.href='history.html?filter=spend'">
+        전체 사용 내역 보기 →
+      </button>
+    </div>
+  </div>`;
+
+  tabContent.innerHTML = html;
+}
+
+// 저축 탭 업데이트
+function updateSaveTab(recentItems, currentSavings) {
+  const tabContent = document.getElementById('save-content');
+  if (!tabContent) return;
+
+  let html = `
+    <div class="summary-card">
+      <div class="summary-header">
+        <span class="summary-title">저축 계좌 현황</span>
+      </div>
+      <div class="summary-value" style="color: #6366f1">${currentSavings.toLocaleString()}P</div>
+      
+      <div class="mini-history">`;
+
+  if (recentItems.length > 0) {
+    recentItems.forEach((item) => {
+      const bgColor =
+        item.type === 'deposit'
+          ? '#e0e7ff'
+          : item.type === 'withdraw'
+          ? '#dcfce7'
+          : '#fef3c7';
+      const amountClass = item.amount > 0 ? 'amount-plus' : 'amount-minus';
+      const amountText =
+        item.amount > 0 ? `+${item.amount}P` : `${item.amount}P`;
+
+      html += `
+        <div class="mini-history-item">
+          <div class="mini-item-left">
+            <div class="mini-icon" style="background: ${bgColor}">${
+        item.icon
+      }</div>
+            <div class="mini-item-info">
+              <div class="mini-item-title">${item.title}</div>
+              <div class="mini-item-date">${getRelativeTime(item.date)}</div>
+            </div>
+          </div>
+          <div class="mini-item-amount ${amountClass}">${amountText}</div>
+        </div>`;
+    });
+  } else {
+    html += `
+      <div style="text-align: center; padding: 20px; color: #94a3b8;">
+        아직 저축 내역이 없습니다.
+      </div>`;
+  }
+
+  html += `
+      </div>
+      <button class="view-more-btn" onclick="location.href='savings.html'">
+        저축 계좌 관리 →
+      </button>
+    </div>
+  </div>`;
+
+  tabContent.innerHTML = html;
+}
+
+// ========== 유틸리티 함수들 ==========
+
+// 기본 제목 가져오기
+function getDefaultTitle(type) {
+  const titles = {
+    attendance: '출석 보상',
+    homework: '숙제 완료',
+    quiz: '퀴즈 보상',
+    behavior: '행동 보상',
+    purchase: '상품 구매',
+    transfer: '포인트 선물',
+    deposit: '저축 입금',
+    withdraw: '저축 출금',
+    interest: '이자 지급',
+    earn: '포인트 획득',
+    spend: '포인트 사용',
+  };
+  return titles[type] || '포인트 변동';
+}
+
+// 아이콘 가져오기
+function getIconForType(type) {
+  const icons = {
+    attendance: '✅',
+    homework: '📚',
+    quiz: '💯',
+    behavior: '⭐',
+    purchase: '🛍️',
+    transfer: '🎁',
+    deposit: '💰',
+    withdraw: '💸',
+    interest: '💎',
+    earn: '➕',
+    spend: '➖',
+  };
+  return icons[type] || '💳';
+}
+
+// 저축 아이콘 가져오기
+function getIconForSavings(type) {
+  const icons = {
+    deposit: '💰',
+    withdraw: '💸',
+    interest: '💎',
+  };
+  return icons[type] || '🏦';
+}
+
+// 날짜 포맷팅
+function formatDate(dateString) {
+  if (!dateString) return '';
+  return dateString;
+}
+
+// 상대 시간 계산
+function getRelativeTime(dateString) {
+  if (!dateString) return '';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now - date;
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  if (hours < 24) return `${hours}시간 전`;
+  if (days < 1) return '오늘';
+  if (days === 1) return '어제';
+  if (days < 7) return `${days}일 전`;
+  if (days < 30) return `${Math.floor(days / 7)}주 전`;
+
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
+// ========== 기존 함수들 (유지) ==========
 
 // 거래 내역 페이지로 이동 (필터 적용)
 function goToHistory(filter) {
@@ -100,186 +511,25 @@ function showGift() {
 // 친구 목록 로드
 async function loadFriendsList() {
   try {
-    const result = await api.getStudents();
-    if (result.success) {
-      const studentId = localStorage.getItem('loginId');
-      const friends = result.data.filter((s) => s.studentId !== studentId);
+    const loginId = localStorage.getItem('loginId');
+    const result = await api.getStudentList();
 
+    if (result.success) {
       const select = document.getElementById('recipientSelect');
-      if (select) {
-        select.innerHTML = '<option value="">친구를 선택하세요</option>';
-        friends.forEach((friend) => {
-          select.innerHTML += `
-            <option value="${friend.studentId}">
-              ${friend.name} (${friend.classId})
-            </option>
-          `;
-        });
-      }
+      select.innerHTML = '<option value="">친구를 선택하세요</option>';
+
+      result.data.forEach((student) => {
+        if (student.loginId !== loginId) {
+          const option = document.createElement('option');
+          option.value = student.loginId;
+          option.textContent = `${student.name} (${student.avatar})`;
+          select.appendChild(option);
+        }
+      });
     }
   } catch (error) {
-    console.error('친구 목록 로드 오류:', error);
+    console.error('친구 목록 로드 실패:', error);
   }
-}
-
-// 선물 보내기
-async function sendGift() {
-  const recipientId = document.getElementById('recipientSelect').value;
-  const amount = parseInt(document.getElementById('transferAmount').value);
-  const message = document.getElementById('transferMessage').value;
-
-  if (!recipientId) {
-    alert('받는 친구를 선택해주세요.');
-    return;
-  }
-
-  if (!amount || amount <= 0) {
-    alert('올바른 포인트를 입력해주세요.');
-    return;
-  }
-
-  if (amount > studentData.currentPoints) {
-    alert('보유 포인트가 부족합니다.');
-    return;
-  }
-
-  if (confirm(`${amount}P를 선물하시겠습니까?`)) {
-    try {
-      // 실제 API 호출
-      const studentId = localStorage.getItem('loginId');
-      // const result = await api.transferPoints(studentId, recipientId, amount, message);
-
-      // 성공 시
-      const bonusPoints = Math.floor(amount * 0.1);
-      alert(
-        `선물이 전송되었습니다!\n기부천사 포인트 ${bonusPoints}P를 추가로 받았어요!`
-      );
-
-      // 데이터 업데이트
-      studentData.currentPoints -= amount;
-      studentData.currentPoints += bonusPoints;
-
-      closeModal();
-
-      // 화면 새로고침
-      if (typeof loadStudentData === 'function') {
-        loadStudentData();
-      }
-    } catch (error) {
-      console.error('선물 전송 오류:', error);
-      alert('선물 전송 중 오류가 발생했습니다.');
-    }
-  }
-}
-
-// 기부 모달
-function showDonate() {
-  const modal = document.getElementById('donateModal');
-  if (modal) {
-    modal.classList.add('active');
-    // 보유 포인트 업데이트
-    const currentPoints = studentData?.currentPoints || 0;
-    const donatableElement = document.getElementById('donatablePoints');
-    if (donatableElement) {
-      donatableElement.textContent = currentPoints.toLocaleString();
-    }
-  }
-}
-
-// 기부 확인
-async function confirmDonate() {
-  const type = document.getElementById('donationType').value;
-  const amount = parseInt(document.getElementById('donateAmount').value);
-
-  if (!amount || amount <= 0) {
-    alert('기부할 포인트를 입력해주세요.');
-    return;
-  }
-
-  if (amount > studentData.currentPoints) {
-    alert('포인트가 부족합니다.');
-    return;
-  }
-
-  const typeText = {
-    school: '학원 발전',
-    friend: '어려운 친구 돕기',
-    charity: '자선 단체',
-  };
-
-  if (confirm(`${typeText[type]}에 ${amount}P를 기부하시겠습니까?`)) {
-    try {
-      // 실제 API 호출
-      const studentId = localStorage.getItem('loginId');
-      // const result = await api.donate(studentId, type, amount);
-
-      const bonusPoints = Math.floor(amount * 0.1);
-      alert(
-        `기부가 완료되었습니다!\n기부천사 명예 포인트 ${bonusPoints}P를 받았습니다!`
-      );
-
-      // 데이터 업데이트
-      studentData.currentPoints -= amount;
-      studentData.currentPoints += bonusPoints;
-
-      closeDonateModal();
-
-      // 화면 새로고침
-      if (typeof loadStudentData === 'function') {
-        loadStudentData();
-      }
-    } catch (error) {
-      console.error('기부 오류:', error);
-      alert('기부 처리 중 오류가 발생했습니다.');
-    }
-  }
-}
-
-// 마일스톤 보기
-function showMilestone() {
-  const currentTotal = studentData?.totalPoints || 0;
-  const milestones = [
-    { level: '🌱 씨앗', points: 0, reward: '기본' },
-    { level: '🌿 새싹', points: 1000, reward: '배지' },
-    { level: '🌳 나무', points: 3000, reward: '특별 배지' },
-    { level: '🌲 큰나무', points: 5000, reward: '보너스 100P' },
-    { level: '⭐ 별', points: 10000, reward: '보너스 500P' },
-    { level: '💎 다이아몬드', points: 20000, reward: '특별 선물' },
-  ];
-
-  let currentLevel = milestones[0];
-  let nextLevel = milestones[1];
-
-  for (let i = 0; i < milestones.length; i++) {
-    if (currentTotal >= milestones[i].points) {
-      currentLevel = milestones[i];
-      nextLevel = milestones[i + 1] || null;
-    }
-  }
-
-  const message = nextLevel
-    ? `현재 레벨: ${currentLevel.level}\n` +
-      `누적 포인트: ${currentTotal}P\n\n` +
-      `다음 레벨: ${nextLevel.level}\n` +
-      `필요 포인트: ${nextLevel.points - currentTotal}P\n` +
-      `달성 보상: ${nextLevel.reward}`
-    : `최고 레벨 달성! ${currentLevel.level}\n누적 포인트: ${currentTotal}P`;
-
-  alert(message);
-}
-
-// 프로필 보기
-function showProfile() {
-  location.href = 'profile.html';
-}
-
-// 저축 관련 함수들 (savings.html로 이동)
-function deposit() {
-  location.href = 'savings.html';
-}
-
-function withdraw() {
-  location.href = 'savings.html';
 }
 
 // 모달 닫기
@@ -287,46 +537,34 @@ function closeModal() {
   const modal = document.getElementById('transferModal');
   if (modal) {
     modal.classList.remove('active');
-
-    // 폼 초기화
-    document.getElementById('recipientSelect').value = '';
-    document.getElementById('transferAmount').value = '';
-    document.getElementById('transferMessage').value = '';
   }
 }
 
-// 기부 모달 닫기
-function closeDonateModal() {
-  const modal = document.getElementById('donateModal');
-  if (modal) {
-    modal.classList.remove('active');
+// 포인트 선물 전송
+async function sendTransfer() {
+  const recipientId = document.getElementById('recipientSelect').value;
+  const amount = parseInt(document.getElementById('transferAmount').value);
+  const message = document.getElementById('transferMessage').value;
 
-    // 입력 초기화
-    document.getElementById('donationType').value = 'school';
-    document.getElementById('donateAmount').value = '';
+  if (!recipientId || !amount || amount <= 0) {
+    alert('받는 친구와 포인트를 확인해주세요.');
+    return;
   }
-}
 
-// ESC 키로 모달 닫기
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  const loginId = localStorage.getItem('loginId');
+  const result = await api.transferPoints(
+    loginId,
+    recipientId,
+    amount,
+    message
+  );
+
+  if (result.success) {
+    alert('포인트를 성공적으로 선물했습니다!');
     closeModal();
-    closeDonateModal();
+    // 데이터 새로고침
+    loadStudentData();
+  } else {
+    alert(result.error || '선물하기에 실패했습니다.');
   }
-});
-
-// 모달 외부 클릭 시 닫기
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.modal').forEach((modal) => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
-    });
-  });
-});
-
-// student.js와 데이터 공유
-window.addEventListener('studentDataLoaded', (event) => {
-  studentData = event.detail;
-});
+}

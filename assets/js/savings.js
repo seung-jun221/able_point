@@ -1,5 +1,6 @@
 // savings.js - 저축 시스템 핵심 로직 (실제 연동 버전)
-
+// savings.js 맨 위에 추가
+window.skipNavigationUpdate = true; // navigation 업데이트 비활성화
 // 전역 변수
 let studentData = null;
 let cofixRate = 3.52; // 기본 COFIX 금리

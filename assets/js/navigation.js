@@ -2,6 +2,11 @@
 
 // 헤더 포인트 업데이트 함수 (완전한 버전)
 async function updateHeaderPoints() {
+  // 🔴 스킵 플래그 체크
+  if (window.skipNavigationUpdate) {
+    console.log('HeaderPoints 업데이트 스킵됨');
+    return;
+  }
   // ID와 클래스 모두 체크
   const pointsElement =
     document.querySelector('#headerTotalPoints') ||
@@ -213,16 +218,16 @@ function formatPointsShort(points) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Navigation 초기화 시작');
 
-  // 초기화
   initNavigation();
 
-  // 즉시 포인트 업데이트 (페이지 로드 시)
+  // 🔴 특정 페이지에서 스킵 플래그 체크
+  if (window.skipNavigationUpdate) {
+    console.log('Navigation 업데이트 스킵됨');
+    return;
+  }
+
   updateHeaderPoints();
-
-  // 5초마다 포인트 업데이트 (실시간 동기화)
   setInterval(updateHeaderPoints, 5000);
-
-  // 10초마다 알림 체크
   setInterval(checkNotifications, 10000);
 });
 
