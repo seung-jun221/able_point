@@ -157,3 +157,164 @@ async function loadActivityHistory() {
       '<div class="error">데이터를 불러올 수 없습니다.</div>';
   }
 }
+// 레벨 표시 헬퍼 함수
+function getLevelDisplay(level) {
+  const levelIcons = {
+    씨앗: '🌱',
+    새싹: '🌿',
+    나무: '🌳',
+    큰나무: '🌲',
+    별: '⭐',
+    다이아몬드: '💎',
+  };
+  return `${levelIcons[level] || '🌱'} ${level}`;
+}
+
+// 랭킹 로드 함수
+async function loadRanking() {
+  const rankingList = document.getElementById('rankingList');
+  if (!rankingList) return;
+
+  try {
+    const result = await api.getRanking();
+    if (result.success && result.data) {
+      // 상위 5명만 표시
+      const top5 = result.data.slice(0, 5);
+      rankingList.innerHTML = top5
+        .map(
+          (student, index) => `
+        <div class="rank-item ${
+          student.studentId === localStorage.getItem('studentId') ? 'me' : ''
+        }">
+          <div class="rank-number rank-${index + 1}">${index + 1}</div>
+          <div class="rank-info">
+            <div class="rank-name">${student.name}</div>
+            <div class="rank-points">${student.currentPoints.toLocaleString()}P</div>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+    }
+  } catch (error) {
+    console.error('랭킹 로드 오류:', error);
+    rankingList.innerHTML =
+      '<div class="no-data">랭킹을 불러올 수 없습니다</div>';
+  }
+}
+
+// 시간 포맷 함수
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000); // 초 단위
+
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+
+  return date.toLocaleDateString('ko-KR');
+}
+
+// 아이콘 클래스 가져오기
+function getIconClass(type) {
+  const classes = {
+    attendance: 'icon-earn',
+    homework: 'icon-earn',
+    test: 'icon-earn',
+    purchase: 'icon-spend',
+    deposit: 'icon-save',
+    withdraw: 'icon-save',
+    interest: 'icon-earn',
+    gift: 'icon-gift',
+  };
+  return classes[type] || 'icon-earn';
+}
+
+// 아이콘 가져오기
+function getIcon(type) {
+  const icons = {
+    attendance: '✅',
+    homework: '📚',
+    test: '💯',
+    purchase: '🛍️',
+    deposit: '💰',
+    withdraw: '💸',
+    interest: '💎',
+    gift: '🎁',
+  };
+  return icons[type] || '✨';
+}
+
+// 스켈레톤 UI 생성
+function generateSkeletonUI(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="activity-item skeleton">
+        <div class="activity-left">
+          <div class="skeleton-circle"></div>
+          <div class="activity-info">
+            <div class="skeleton-line" style="width: 120px"></div>
+            <div class="skeleton-line" style="width: 80px"></div>
+          </div>
+        </div>
+        <div class="skeleton-line" style="width: 60px"></div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+// setupEventListeners 함수 추가
+function setupEventListeners() {
+  // 네비게이션 이벤트
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    item.addEventListener('click', function (e) {
+      // 현재 페이지가 아닌 경우에만 이동
+      const page = this.dataset.page;
+      if (page && !this.classList.contains('active')) {
+        // 페이지 이동 로직
+        console.log('Navigate to:', page);
+      }
+    });
+  });
+
+  // 이벤트 위임으로 동적 요소 처리
+  document.addEventListener('click', function (e) {
+    // 동적으로 생성된 요소들의 클릭 이벤트 처리
+    if (e.target.closest('.activity-item')) {
+      console.log('Activity item clicked');
+    }
+  });
+}
+
+// 이벤트 카운트다운 시작
+function startEventCountdown() {
+  const updateCountdown = () => {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    nextMonth.setHours(16, 30, 0, 0); // 4:30 PM
+
+    const diff = nextMonth - now;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    const countdownEl = document.getElementById('eventCountdown');
+    const dateEl = document.getElementById('eventDate');
+
+    if (countdownEl) countdownEl.textContent = `D-${days}`;
+    if (dateEl) {
+      dateEl.textContent = nextMonth.toLocaleDateString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+        hour: 'numeric',
+        minute: 'numeric',
+      });
+    }
+  };
+
+  updateCountdown();
+  setInterval(updateCountdown, 60000); // 1분마다 업데이트
+}

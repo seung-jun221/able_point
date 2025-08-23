@@ -26,8 +26,8 @@ const supabase = window.supabase.createClient(
   }
 );
 
-// 디버그 로깅 함수
-const debugLog = window.POINTBANK_CONFIG.debugLog;
+// ✅ debugLog는 이미 config.js에서 전역으로 선언되어 있으므로 직접 사용
+// const debugLog = window.POINTBANK_CONFIG.debugLog;  // 삭제됨!
 
 /**
  * PointBank API 클래스
@@ -36,7 +36,7 @@ const debugLog = window.POINTBANK_CONFIG.debugLog;
 class PointBankAPI {
   constructor() {
     this.currentUser = null;
-    debugLog('PointBank API initialized');
+    window.POINTBANK_CONFIG.debugLog('PointBank API initialized');
   }
 
   // ==================== 인증 관련 ====================
@@ -45,7 +45,7 @@ class PointBankAPI {
    * 현재 세션 체크
    */
   async checkSession() {
-    debugLog('Checking session...');
+    window.POINTBANK_CONFIG.debugLog('Checking session...');
     const userId = localStorage.getItem('userId');
 
     if (userId) {
@@ -57,10 +57,13 @@ class PointBankAPI {
 
       if (data) {
         this.currentUser = data;
-        debugLog('Session valid', { userId: data.user_id, role: data.role });
+        window.POINTBANK_CONFIG.debugLog('Session valid', {
+          userId: data.user_id,
+          role: data.role,
+        });
         return true;
       } else {
-        debugLog('Session invalid', error);
+        window.POINTBANK_CONFIG.debugLog('Session invalid', error);
       }
     }
     return false;
@@ -71,7 +74,7 @@ class PointBankAPI {
    */
   async login(loginId, password) {
     try {
-      debugLog('Login attempt', { loginId });
+      window.POINTBANK_CONFIG.debugLog('Login attempt', { loginId });
 
       // users 테이블에서 사용자 조회
       const { data: user, error } = await supabase
@@ -82,7 +85,7 @@ class PointBankAPI {
         .single();
 
       if (error) {
-        debugLog('Login error', error);
+        window.POINTBANK_CONFIG.debugLog('Login error', error);
         if (error.code === 'PGRST116') {
           return {
             success: false,
@@ -117,7 +120,10 @@ class PointBankAPI {
       }
 
       this.currentUser = user;
-      debugLog('Login successful', { userId: user.user_id, role: user.role });
+      window.POINTBANK_CONFIG.debugLog('Login successful', {
+        userId: user.user_id,
+        role: user.role,
+      });
 
       return {
         success: true,
@@ -132,7 +138,7 @@ class PointBankAPI {
       };
     } catch (error) {
       console.error('Login error:', error);
-      debugLog('Login failed', error);
+      window.POINTBANK_CONFIG.debugLog('Login failed', error);
       return {
         success: false,
         error: error.message || '로그인 처리 중 오류가 발생했습니다.',
@@ -147,7 +153,7 @@ class PointBankAPI {
    */
   async getStudents(classId = null) {
     try {
-      debugLog('Getting students', { classId });
+      window.POINTBANK_CONFIG.debugLog('Getting students', { classId });
 
       // student_details 뷰 활용
       let query = supabase.from('student_details').select('*').order('name');
@@ -159,11 +165,13 @@ class PointBankAPI {
       const { data, error } = await query;
 
       if (error) {
-        debugLog('Get students error', error);
+        window.POINTBANK_CONFIG.debugLog('Get students error', error);
         throw error;
       }
 
-      debugLog('Students loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Students loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -180,7 +188,7 @@ class PointBankAPI {
    */
   async getStudentPoints(loginId) {
     try {
-      debugLog('Getting student points', { loginId });
+      window.POINTBANK_CONFIG.debugLog('Getting student points', { loginId });
 
       // student_details 뷰에서 조회 (login_id 사용)
       const { data, error } = await supabase
@@ -190,11 +198,11 @@ class PointBankAPI {
         .single();
 
       if (error) {
-        debugLog('Get student points error', error);
+        window.POINTBANK_CONFIG.debugLog('Get student points error', error);
         throw error;
       }
 
-      debugLog('Student points loaded', {
+      window.POINTBANK_CONFIG.debugLog('Student points loaded', {
         studentId: data.student_id,
         points: data.current_points,
       });
@@ -227,7 +235,12 @@ class PointBankAPI {
    */
   async addPoints(loginId, amount, type, reason) {
     try {
-      debugLog('Adding points', { loginId, amount, type, reason });
+      window.POINTBANK_CONFIG.debugLog('Adding points', {
+        loginId,
+        amount,
+        type,
+        reason,
+      });
 
       // student_details 뷰에서 직접 조회 (개선됨)
       const { data: studentDetail } = await supabase
@@ -252,7 +265,7 @@ class PointBankAPI {
       });
 
       if (pointsError) {
-        debugLog('Points insert error', pointsError);
+        window.POINTBANK_CONFIG.debugLog('Points insert error', pointsError);
         throw pointsError;
       }
 
@@ -273,11 +286,14 @@ class PointBankAPI {
         .eq('student_id', studentDetail.student_id);
 
       if (updateError) {
-        debugLog('Students update error', updateError);
+        window.POINTBANK_CONFIG.debugLog('Students update error', updateError);
         throw updateError;
       }
 
-      debugLog('Points added successfully', { loginId, amount });
+      window.POINTBANK_CONFIG.debugLog('Points added successfully', {
+        loginId,
+        amount,
+      });
       return { success: true };
     } catch (error) {
       console.error('Add points error:', error);
@@ -290,7 +306,7 @@ class PointBankAPI {
    */
   async getPointHistory(loginId) {
     try {
-      debugLog('Getting point history', { loginId });
+      window.POINTBANK_CONFIG.debugLog('Getting point history', { loginId });
 
       // student_details에서 student_id 조회
       const { data: student } = await supabase
@@ -310,11 +326,13 @@ class PointBankAPI {
         .limit(100);
 
       if (error) {
-        debugLog('Point history error', error);
+        window.POINTBANK_CONFIG.debugLog('Point history error', error);
         throw error;
       }
 
-      debugLog('Point history loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Point history loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -338,7 +356,10 @@ class PointBankAPI {
    */
   async deposit(loginId, amount) {
     try {
-      debugLog('Processing deposit', { loginId, amount });
+      window.POINTBANK_CONFIG.debugLog('Processing deposit', {
+        loginId,
+        amount,
+      });
 
       // 1. 학생 정보 조회
       const { data: student } = await supabase
@@ -397,7 +418,7 @@ class PointBankAPI {
       });
 
       if (transError) {
-        debugLog('Transaction error', transError);
+        window.POINTBANK_CONFIG.debugLog('Transaction error', transError);
         throw transError;
       }
 
@@ -412,11 +433,15 @@ class PointBankAPI {
         .eq('student_id', student.student_id);
 
       if (updateError) {
-        debugLog('Students update error', updateError);
+        window.POINTBANK_CONFIG.debugLog('Students update error', updateError);
         throw updateError;
       }
 
-      debugLog('Deposit successful', { loginId, amount, newBalance });
+      window.POINTBANK_CONFIG.debugLog('Deposit successful', {
+        loginId,
+        amount,
+        newBalance,
+      });
       return { success: true };
     } catch (error) {
       console.error('Deposit error:', error);
@@ -429,7 +454,10 @@ class PointBankAPI {
    */
   async withdraw(loginId, amount) {
     try {
-      debugLog('Processing withdrawal', { loginId, amount });
+      window.POINTBANK_CONFIG.debugLog('Processing withdrawal', {
+        loginId,
+        amount,
+      });
 
       // 1. 학생 정보 조회
       const { data: student } = await supabase
@@ -477,7 +505,7 @@ class PointBankAPI {
       });
 
       if (transError) {
-        debugLog('Transaction error', transError);
+        window.POINTBANK_CONFIG.debugLog('Transaction error', transError);
         throw transError;
       }
 
@@ -492,11 +520,15 @@ class PointBankAPI {
         .eq('student_id', student.student_id);
 
       if (updateError) {
-        debugLog('Students update error', updateError);
+        window.POINTBANK_CONFIG.debugLog('Students update error', updateError);
         throw updateError;
       }
 
-      debugLog('Withdrawal successful', { loginId, amount, newBalance });
+      window.POINTBANK_CONFIG.debugLog('Withdrawal successful', {
+        loginId,
+        amount,
+        newBalance,
+      });
       return { success: true };
     } catch (error) {
       console.error('Withdraw error:', error);
@@ -509,7 +541,7 @@ class PointBankAPI {
    */
   async getSavingsHistory(loginId) {
     try {
-      debugLog('Getting savings history', { loginId });
+      window.POINTBANK_CONFIG.debugLog('Getting savings history', { loginId });
 
       // student_details에서 student_id 조회
       const { data: student } = await supabase
@@ -530,7 +562,7 @@ class PointBankAPI {
         .limit(50);
 
       if (error) {
-        debugLog('Savings history error', error);
+        window.POINTBANK_CONFIG.debugLog('Savings history error', error);
         throw error;
       }
 
@@ -541,7 +573,9 @@ class PointBankAPI {
         .eq('student_id', student.student_id)
         .single();
 
-      debugLog('Savings history loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Savings history loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -565,7 +599,7 @@ class PointBankAPI {
    */
   async getShopItems() {
     try {
-      debugLog('Getting shop items');
+      window.POINTBANK_CONFIG.debugLog('Getting shop items');
 
       const { data, error } = await supabase
         .from('shop_items')
@@ -574,11 +608,13 @@ class PointBankAPI {
         .order('category, price');
 
       if (error) {
-        debugLog('Shop items error', error);
+        window.POINTBANK_CONFIG.debugLog('Shop items error', error);
         throw error;
       }
 
-      debugLog('Shop items loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Shop items loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -595,7 +631,10 @@ class PointBankAPI {
    */
   async purchaseItem(loginId, itemId) {
     try {
-      debugLog('Processing purchase', { loginId, itemId });
+      window.POINTBANK_CONFIG.debugLog('Processing purchase', {
+        loginId,
+        itemId,
+      });
 
       // 1. 학생 정보 조회
       const { data: student } = await supabase
@@ -636,7 +675,10 @@ class PointBankAPI {
         });
 
       if (purchaseError) {
-        debugLog('Purchase insert error', purchaseError);
+        window.POINTBANK_CONFIG.debugLog(
+          'Purchase insert error',
+          purchaseError
+        );
         throw purchaseError;
       }
 
@@ -650,7 +692,7 @@ class PointBankAPI {
         .eq('student_id', student.student_id);
 
       if (pointError) {
-        debugLog('Points update error', pointError);
+        window.POINTBANK_CONFIG.debugLog('Points update error', pointError);
         throw pointError;
       }
 
@@ -663,11 +705,15 @@ class PointBankAPI {
         .eq('item_id', item.item_id);
 
       if (stockError) {
-        debugLog('Stock update error', stockError);
+        window.POINTBANK_CONFIG.debugLog('Stock update error', stockError);
         throw stockError;
       }
 
-      debugLog('Purchase successful', { loginId, itemId, price: item.price });
+      window.POINTBANK_CONFIG.debugLog('Purchase successful', {
+        loginId,
+        itemId,
+        price: item.price,
+      });
       return { success: true };
     } catch (error) {
       console.error('Purchase item error:', error);
@@ -682,7 +728,9 @@ class PointBankAPI {
    */
   async getTransactionHistory(loginId) {
     try {
-      debugLog('Getting transaction history', { loginId });
+      window.POINTBANK_CONFIG.debugLog('Getting transaction history', {
+        loginId,
+      });
 
       // student_details에서 student_id 조회
       const { data: student } = await supabase
@@ -701,7 +749,7 @@ class PointBankAPI {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      debugLog('Transaction history loaded', {
+      window.POINTBANK_CONFIG.debugLog('Transaction history loaded', {
         count: transactions?.length || 0,
       });
 
@@ -728,7 +776,7 @@ class PointBankAPI {
    */
   async getRanking(classId = null) {
     try {
-      debugLog('Getting ranking', { classId });
+      window.POINTBANK_CONFIG.debugLog('Getting ranking', { classId });
 
       // student_ranking 뷰 활용
       let query = supabase
@@ -744,11 +792,13 @@ class PointBankAPI {
       const { data, error } = await query;
 
       if (error) {
-        debugLog('Ranking error', error);
+        window.POINTBANK_CONFIG.debugLog('Ranking error', error);
         throw error;
       }
 
-      debugLog('Ranking loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Ranking loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -774,7 +824,7 @@ class PointBankAPI {
    */
   async getWeeklyRanking() {
     try {
-      debugLog('Getting weekly ranking');
+      window.POINTBANK_CONFIG.debugLog('Getting weekly ranking');
 
       // weekly_ranking 뷰 활용
       const { data, error } = await supabase
@@ -784,11 +834,13 @@ class PointBankAPI {
         .limit(50);
 
       if (error) {
-        debugLog('Weekly ranking error', error);
+        window.POINTBANK_CONFIG.debugLog('Weekly ranking error', error);
         throw error;
       }
 
-      debugLog('Weekly ranking loaded', { count: data?.length || 0 });
+      window.POINTBANK_CONFIG.debugLog('Weekly ranking loaded', {
+        count: data?.length || 0,
+      });
 
       return {
         success: true,
@@ -863,7 +915,10 @@ class PointBankAPI {
       error.message ||
       '처리 중 오류가 발생했습니다.';
 
-    debugLog('Error handled', { code: error.code, message });
+    window.POINTBANK_CONFIG.debugLog('Error handled', {
+      code: error.code,
+      message,
+    });
     return message;
   }
 }
@@ -871,9 +926,11 @@ class PointBankAPI {
 // API 인스턴스 생성
 const api = new PointBankAPI();
 
-// 개발 환경에서만 전역 객체로 노출 (디버깅용)
+// ✅ window.api는 항상 설정 (프로덕션/개발 모두)
+window.api = api;
+
+// 개발 환경에서만 추가 디버깅 도구 노출
 if (window.POINTBANK_CONFIG.env === 'development') {
-  window.api = api;
   window.supabase = supabase;
   console.log('🔧 Development mode: api and supabase available in console');
 
@@ -925,7 +982,7 @@ if (window.POINTBANK_CONFIG.env === 'development') {
 
 // 전역 에러 핸들러
 window.addEventListener('unhandledrejection', (event) => {
-  debugLog('Unhandled API error', event.reason);
+  window.POINTBANK_CONFIG.debugLog('Unhandled API error', event.reason);
 
   // 프로덕션에서는 사용자에게 친화적인 메시지 표시
   if (window.POINTBANK_CONFIG.env === 'production') {
@@ -935,11 +992,11 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // 네트워크 상태 체크
 window.addEventListener('online', () => {
-  debugLog('Network online');
+  window.POINTBANK_CONFIG.debugLog('Network online');
   // 필요시 재연결 로직
 });
 
 window.addEventListener('offline', () => {
-  debugLog('Network offline');
+  window.POINTBANK_CONFIG.debugLog('Network offline');
   console.warn('네트워크 연결이 끊어졌습니다.');
 });

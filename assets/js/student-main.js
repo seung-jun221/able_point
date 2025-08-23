@@ -1,8 +1,5 @@
 // student-main.js - 학생 메인 페이지 전용 함수
 
-// 전역 변수 (student.js와 공유)
-let studentData = window.studentData || null;
-
 // 탭 전환 함수
 function showTab(tabName) {
   // 모든 탭 버튼과 콘텐츠 숨기기
