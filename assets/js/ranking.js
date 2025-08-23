@@ -1,4 +1,4 @@
-// ranking.js - 랭킹 페이지 로직 (실제 주간 데이터 연동 버전)
+// ranking.js - 랭킹 페이지 로직 (헤더/네비 통합 버전)
 
 // 전역 변수
 let currentTab = 'accumulated';
@@ -10,7 +10,7 @@ let rankingData = {
 let allStudentsData = [];
 let isLoading = false;
 
-// 초기화
+// ========== 초기화 ==========
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('랭킹 페이지 초기화');
 
@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '../login.html';
     return;
   }
+
+  // 헤더 정보 업데이트 (app-header와 연동) - 추가된 부분
+  updateHeaderInfo();
 
   // 로딩 표시
   showLoadingState();
@@ -37,7 +40,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// 로딩 상태 표시
+// ========== 헤더 정보 업데이트 함수 (새로 추가) ==========
+function updateHeaderInfo() {
+  // localStorage에서 사용자 정보 가져오기
+  const userName = localStorage.getItem('userName');
+  const userAvatar = localStorage.getItem('userAvatar') || '🦁';
+
+  // 헤더 요소 업데이트
+  const headerName = document.getElementById('userName');
+  const headerAvatar = document.getElementById('userAvatar');
+
+  if (headerName && userName) {
+    headerName.textContent = userName;
+  }
+
+  if (headerAvatar) {
+    headerAvatar.textContent = userAvatar;
+  }
+}
+
+// ========== 로딩 상태 표시 ==========
 function showLoadingState() {
   isLoading = true;
   const container = document.getElementById('rankingContent');
@@ -73,12 +95,12 @@ function showLoadingState() {
   }
 }
 
-// 로딩 상태 숨기기
+// ========== 로딩 상태 숨기기 ==========
 function hideLoadingState() {
   isLoading = false;
 }
 
-// 에러 상태 표시
+// ========== 에러 상태 표시 ==========
 function showErrorState() {
   const container = document.getElementById('rankingContent');
   if (container) {
@@ -95,7 +117,7 @@ function showErrorState() {
   }
 }
 
-// 학생 데이터 로드
+// ========== 학생 데이터 로드 (헤더 업데이트 추가) ==========
 async function loadStudentData() {
   try {
     const studentId = localStorage.getItem('loginId');
@@ -103,6 +125,25 @@ async function loadStudentData() {
 
     if (result.success) {
       studentData = result.data;
+
+      // 헤더 포인트 업데이트 (app-header와 연동) - 추가된 부분
+      const headerPoints = document.getElementById('headerTotalPoints');
+      if (headerPoints && studentData.totalPoints) {
+        headerPoints.textContent =
+          studentData.totalPoints.toLocaleString() + 'P';
+
+        // localStorage에도 저장 (다른 페이지에서 사용)
+        localStorage.setItem('totalPoints', studentData.totalPoints);
+      }
+
+      // 헤더 아바타 업데이트 (데이터에 있으면) - 추가된 부분
+      if (studentData.avatar) {
+        const headerAvatar = document.getElementById('userAvatar');
+        if (headerAvatar) {
+          headerAvatar.textContent = studentData.avatar;
+          localStorage.setItem('userAvatar', studentData.avatar);
+        }
+      }
 
       // 주간 포인트 계산 (실제 데이터 기반)
       await calculateMyWeeklyPoints();
@@ -114,7 +155,7 @@ async function loadStudentData() {
   }
 }
 
-// 내 주간 포인트 계산 (실제 거래 내역 기반)
+// ========== 내 주간 포인트 계산 (실제 거래 내역 기반) ==========
 async function calculateMyWeeklyPoints() {
   try {
     const studentId = localStorage.getItem('loginId');
@@ -152,7 +193,7 @@ async function calculateMyWeeklyPoints() {
   }
 }
 
-// 랭킹 데이터 로드 (실제 API 사용)
+// ========== 랭킹 데이터 로드 (실제 API 사용) ==========
 async function loadRankingData() {
   try {
     console.log('랭킹 데이터 로드 시작');
@@ -193,7 +234,7 @@ async function loadRankingData() {
   }
 }
 
-// 실제 주간 랭킹 로드 (핵심 개선 부분)
+// ========== 실제 주간 랭킹 로드 ==========
 async function loadWeeklyRanking() {
   try {
     console.log('주간 랭킹 API 호출');
@@ -237,7 +278,7 @@ async function loadWeeklyRanking() {
   }
 }
 
-// 주간 랭킹 대체 계산 (API 실패 시)
+// ========== 주간 랭킹 대체 계산 (API 실패 시) ==========
 async function calculateWeeklyRankingFallback() {
   try {
     console.log('주간 랭킹 대체 계산 시작');
@@ -321,7 +362,7 @@ async function calculateWeeklyRankingFallback() {
   }
 }
 
-// 내 주간 순위 업데이트
+// ========== 내 주간 순위 업데이트 ==========
 function updateMyWeeklyRank() {
   if (!studentData || studentData.weeklyPoints === undefined) return;
 
@@ -359,7 +400,7 @@ function updateMyWeeklyRank() {
   }
 }
 
-// 이벤트 리스너 설정
+// ========== 이벤트 리스너 설정 ==========
 function setupEventListeners() {
   // 탭 전환
   document.querySelectorAll('.ranking-tab').forEach((tab) => {
@@ -379,20 +420,9 @@ function setupEventListeners() {
       content.classList.toggle('show');
     }
   });
-
-  // 새로고침 버튼 애니메이션
-  const refreshBtn = document.getElementById('refreshBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      refreshBtn.style.transform = 'rotate(360deg)';
-      setTimeout(() => {
-        refreshBtn.style.transform = 'rotate(0deg)';
-      }, 500);
-    });
-  }
 }
 
-// 탭 전환
+// ========== 탭 전환 ==========
 function switchTab(tabName) {
   if (isLoading) return;
 
@@ -408,7 +438,7 @@ function switchTab(tabName) {
   updateDisplay();
 }
 
-// 화면 업데이트
+// ========== 화면 업데이트 ==========
 function updateDisplay() {
   updateMyStatus();
 
@@ -419,7 +449,7 @@ function updateDisplay() {
   }
 }
 
-// 내 현황 업데이트
+// ========== 내 현황 업데이트 ==========
 function updateMyStatus() {
   const statusCard = document.getElementById('myStatusCard');
   const myId = localStorage.getItem('loginId');
@@ -510,7 +540,7 @@ function updateMyStatus() {
   }
 }
 
-// 주간 메시지
+// ========== 주간 메시지 ==========
 function getWeeklyMessage(rank) {
   if (rank === '측정중') return '순위 계산 중...';
   const num = typeof rank === 'number' ? rank : parseInt(rank);
@@ -521,7 +551,7 @@ function getWeeklyMessage(rank) {
   return '💪 다음주엔 더 높이!';
 }
 
-// 누적 랭킹 표시
+// ========== 누적 랭킹 표시 ==========
 function displayAccumulatedRanking() {
   const container = document.getElementById('rankingContent');
   const myId = localStorage.getItem('loginId');
@@ -570,7 +600,7 @@ function displayAccumulatedRanking() {
   `;
 }
 
-// 주간 랭킹 표시
+// ========== 주간 랭킹 표시 ==========
 function displayWeeklyRanking() {
   const container = document.getElementById('rankingContent');
   const myId = localStorage.getItem('loginId');
@@ -634,7 +664,7 @@ function displayWeeklyRanking() {
   `;
 }
 
-// 이번 주 기간 표시
+// ========== 이번 주 기간 표시 ==========
 function getWeekPeriod() {
   const now = new Date();
   const dayOfWeek = now.getDay();
@@ -655,7 +685,7 @@ function getWeekPeriod() {
   return `${formatDate(monday)} ~ ${formatDate(sunday)} 주간 획득 포인트`;
 }
 
-// 포디움 표시
+// ========== 포디움 표시 ==========
 function displayPodium(top3) {
   if (!top3 || top3.length === 0) return '<div>데이터가 없습니다</div>';
 
@@ -688,7 +718,7 @@ function displayPodium(top3) {
     .join('');
 }
 
-// 랭킹 아이템 표시
+// ========== 랭킹 아이템 표시 ==========
 function displayRankingItem(user, type, isMe) {
   const rankClass = user.rank <= 3 ? `rank-${user.rank}` : 'rank-other';
 
@@ -713,7 +743,7 @@ function displayRankingItem(user, type, isMe) {
   `;
 }
 
-// 그룹 표시
+// ========== 그룹 표시 ==========
 function displayGroups(groups) {
   const myId = localStorage.getItem('loginId');
   const groupIcons = {
@@ -762,7 +792,7 @@ function displayGroups(groups) {
     .join('');
 }
 
-// 이름 마스킹 (개인정보 보호)
+// ========== 이름 마스킹 (개인정보 보호) ==========
 function maskName(name, studentId) {
   if (!name) return '이름없음';
 
@@ -783,7 +813,7 @@ function maskName(name, studentId) {
   return `${first}${middle}${last}`;
 }
 
-// 새로고침
+// ========== 새로고침 (헤더 통합 후 수정) ==========
 window.refreshRanking = async function () {
   if (isLoading) return;
 
@@ -801,6 +831,9 @@ window.refreshRanking = async function () {
     await loadStudentData();
     await loadRankingData();
 
+    // 헤더 정보도 업데이트 - 추가된 부분
+    updateHeaderInfo();
+
     // 화면 업데이트
     updateDisplay();
 
@@ -814,7 +847,7 @@ window.refreshRanking = async function () {
   }
 };
 
-// 토스트 메시지 (선택사항)
+// ========== 토스트 메시지 ==========
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast-message ${type}`;
@@ -844,7 +877,44 @@ function showToast(message, type = 'info') {
   }, 2000);
 }
 
-// 애니메이션 스타일 추가
+// ========== 네비게이션 헬퍼 함수 (navigation.js가 없을 경우 대비) - 추가된 부분 ==========
+if (typeof handleNavClick === 'undefined') {
+  window.handleNavClick = function (page) {
+    event.preventDefault();
+    const navItem = event.currentTarget;
+
+    // 로딩 애니메이션
+    navItem.classList.add('nav-loading');
+
+    // 페이지 이동
+    setTimeout(() => {
+      switch (page) {
+        case 'home':
+          window.location.href = 'index.html';
+          break;
+        case 'savings':
+          window.location.href = 'savings.html';
+          break;
+        case 'shop':
+          window.location.href = 'shop.html';
+          break;
+        case 'profile':
+          window.location.href = 'profile.html';
+          break;
+      }
+    }, 200);
+  };
+}
+
+// ========== 알림 클릭 헬퍼 - 추가된 부분 ==========
+if (typeof handleNotificationClick === 'undefined') {
+  window.handleNotificationClick = function () {
+    // 간단한 알림 토스트 메시지
+    showToast('새로운 알림이 없습니다', 'info');
+  };
+}
+
+// ========== 애니메이션 스타일 추가 ==========
 if (!document.getElementById('rankingAnimations')) {
   const style = document.createElement('style');
   style.id = 'rankingAnimations';
@@ -911,4 +981,4 @@ if (!document.getElementById('rankingAnimations')) {
   document.head.appendChild(style);
 }
 
-console.log('ranking.js 로드 완료 - 실제 주간 데이터 연동 버전');
+console.log('ranking.js 로드 완료 - 헤더/네비 통합 버전');

@@ -4,52 +4,44 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>랭킹 - 포인트 뱅크</title>
-    <!-- student 폴더 안의 파일들 -->
+
+    <!-- Supabase & Config -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/js/config.js"></script>
-    <!-- ../ 주의! -->
     <script src="../assets/js/api.js"></script>
-    <!-- ../ 주의! -->
+
+    <!-- CSS (순서 중요!) -->
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/student.css" />
+    <link rel="stylesheet" href="../assets/css/navigation.css" />
+    <!-- 통일된 네비게이션 CSS 추가 -->
     <link rel="stylesheet" href="../assets/css/ranking.css" />
   </head>
-  <body>
-    <!-- 상단 헤더 -->
-    <div class="profile-header">
-      <div class="profile-left">
-        <button
-          onclick="history.back()"
-          style="
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-          "
-        >
-          ‹
-        </button>
-        <h2 style="margin: 0 0 0 15px">랭킹</h2>
+  <body class="with-both-nav">
+    <!-- 상하단 네비 클래스 추가 -->
+
+    <!-- 통일된 상단 헤더 (app-header) -->
+    <div class="app-header">
+      <div class="header-user">
+        <div class="header-avatar">
+          <div class="header-avatar-inner" id="userAvatar">🦁</div>
+        </div>
+        <div class="header-name" id="userName">학생 이름</div>
       </div>
-      <div class="daily-points">
-        <button
-          id="refreshBtn"
-          onclick="refreshRanking()"
-          style="
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            transition: transform 0.5s;
-          "
-          title="새로고침"
-        >
-          🔄
-        </button>
+      <div class="header-spacer"></div>
+      <div class="header-actions">
+        <div class="header-points" onclick="location.href='history.html'">
+          <span class="header-points-icon">P</span>
+          <span class="header-points-value" id="headerTotalPoints">0P</span>
+        </div>
+        <div class="header-notification" onclick="handleNotificationClick()">
+          <span class="notification-icon">🔔</span>
+          <span class="notification-badge"></span>
+        </div>
       </div>
     </div>
 
-    <!-- 랭킹 탭 -->
+    <!-- 랭킹 탭 (기존 유지) -->
     <div class="ranking-tabs">
       <button class="ranking-tab active" data-tab="accumulated">
         <span>💰</span>
@@ -61,7 +53,7 @@
       </button>
     </div>
 
-    <!-- 메인 컨테이너 -->
+    <!-- 메인 컨테이너 (기존 유지) -->
     <div class="ranking-container">
       <!-- 내 현황 카드 -->
       <div class="my-status-card" id="myStatusCard">
@@ -74,31 +66,88 @@
       </div>
     </div>
 
-    <!-- 하단 네비게이션 -->
-    <div class="bottom-nav">
-      <div class="nav-item" onclick="location.href='index.html'">
+    <!-- 하단 네비게이션 (다른 페이지와 통일) -->
+    <nav class="app-nav">
+      <a href="index.html" class="nav-item" data-page="home">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">홈</span>
-      </div>
-      <div class="nav-item" onclick="location.href='savings.html'">
+      </a>
+      <a href="savings.html" class="nav-item" data-page="savings">
         <span class="nav-icon">💰</span>
         <span class="nav-label">저축</span>
-      </div>
-      <div class="nav-item" onclick="location.href='shop.html'">
+      </a>
+      <a href="shop.html" class="nav-item" data-page="shop">
         <span class="nav-icon">🛍️</span>
         <span class="nav-label">상점</span>
-      </div>
-      <div class="nav-item active">
+      </a>
+      <a href="ranking.html" class="nav-item active" data-page="ranking">
         <span class="nav-icon">🏆</span>
         <span class="nav-label">랭킹</span>
-      </div>
-      <div class="nav-item" onclick="location.href='profile.html'">
+      </a>
+      <a href="profile.html" class="nav-item" data-page="profile">
         <span class="nav-icon">👤</span>
-        <span class="nav-label">내정보</span>
-      </div>
-    </div>
+        <span class="nav-label">프로필</span>
+      </a>
+    </nav>
 
-    <script src="../assets/js/api.js"></script>
+    <!-- JavaScript -->
+    <script src="../assets/js/navigation.js"></script>
+    <!-- 네비게이션 공통 JS 추가 -->
     <script src="../assets/js/ranking.js"></script>
+
+    <!-- 네비게이션 헬퍼 함수 (navigation.js가 없을 경우 대비) -->
+    <script>
+      // handleNavClick 함수가 없으면 정의
+      if (typeof handleNavClick === 'undefined') {
+        function handleNavClick(page) {
+          event.currentTarget.classList.add('nav-loading');
+
+          setTimeout(() => {
+            switch (page) {
+              case 'home':
+                window.location.href = 'index.html';
+                break;
+              case 'savings':
+                window.location.href = 'savings.html';
+                break;
+              case 'shop':
+                window.location.href = 'shop.html';
+                break;
+              case 'profile':
+                window.location.href = 'profile.html';
+                break;
+            }
+          }, 200);
+        }
+      }
+
+      // handleNotificationClick 함수가 없으면 정의
+      if (typeof handleNotificationClick === 'undefined') {
+        function handleNotificationClick() {
+          // 알림 페이지로 이동 (또는 알림 모달 표시)
+          console.log('알림 클릭');
+        }
+      }
+
+      // 헤더 정보 업데이트 (기존 ranking.js와 연동)
+      document.addEventListener('DOMContentLoaded', () => {
+        // 로그인 정보 확인
+        const userName = localStorage.getItem('userName');
+        const userAvatar = localStorage.getItem('userAvatar');
+        const totalPoints = localStorage.getItem('totalPoints');
+
+        // 헤더 업데이트
+        if (userName) {
+          document.getElementById('userName').textContent = userName;
+        }
+        if (userAvatar) {
+          document.getElementById('userAvatar').textContent = userAvatar;
+        }
+        if (totalPoints) {
+          document.getElementById('headerTotalPoints').textContent =
+            parseInt(totalPoints).toLocaleString() + 'P';
+        }
+      });
+    </script>
   </body>
 </html>
