@@ -12,20 +12,29 @@
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/student.css" />
     <link rel="stylesheet" href="../assets/css/student-main.css" />
+    <!-- 🆕 네비게이션 CSS 추가 -->
+    <link rel="stylesheet" href="../assets/css/navigation.css" />
   </head>
-  <body>
+  <body class="with-both-nav">
     <!-- 상단 프로필 헤더 -->
-    <div class="profile-header">
-      <div class="profile-left">
-        <div class="avatar" id="userAvatar">🦁</div>
-        <div class="profile-info">
-          <h2 id="userName">학생 이름</h2>
-          <span class="level-badge" id="userLevel">🌱 씨앗</span>
+    <div class="app-header">
+      <div class="header-user">
+        <div class="header-avatar">
+          <div class="header-avatar-inner" id="userAvatar">🦁</div>
         </div>
+        <div class="header-name" id="userName">학생 이름</div>
       </div>
-      <div class="daily-points">
-        <div class="daily-label">오늘 획득</div>
-        <div class="daily-value" id="todayPoints">+0P</div>
+      <div class="header-spacer"></div>
+      <div class="header-actions">
+        <div class="header-points" onclick="location.href='history.html'">
+          <span class="header-points-icon">P</span>
+          <span class="header-points-value" id="headerTotalPoints">0P</span>
+          <!-- id 변경 -->
+        </div>
+        <div class="header-notification" onclick="handleNotificationClick()">
+          <span class="notification-icon">🔔</span>
+          <span class="notification-badge"></span>
+        </div>
       </div>
     </div>
 
@@ -335,7 +344,7 @@
     </div>
 
     <!-- 하단 네비게이션 -->
-    <div class="bottom-nav">
+    <div class="app-nav">
       <div class="nav-item active" data-page="home">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">홈</span>
@@ -474,5 +483,7 @@
     <script src="../assets/js/cache.js"></script>
     <script src="../assets/js/student.js"></script>
     <script src="../assets/js/student-main.js"></script>
+    <!-- 🆕 네비게이션 JS 추가 -->
+    <script src="../assets/js/navigation.js"></script>
   </body>
 </html>

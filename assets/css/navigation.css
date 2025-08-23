@@ -1,0 +1,517 @@
+/* ========================================
+   UNIFIED NAVIGATION SYSTEM
+   최소 변경으로 모든 페이지 네비게이션 통일
+   ======================================== */
+
+/* ========================================
+   1. 공통 변수 (기존 프로젝트와 호환)
+   ======================================== */
+:root {
+  --nav-height: 60px;
+  --nav-bg: #ffffff;
+  --nav-border: #f0f0f0;
+  --nav-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --nav-text: #333333;
+  --nav-text-secondary: #999999;
+  --nav-active-color: #fa709a; /* Sunset 테마 포인트 색상 */
+  --nav-safe-area: env(safe-area-inset-bottom, 0px);
+}
+
+/* ========================================
+   2. 상단 헤더 - app-header
+   ======================================== */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  box-shadow: var(--nav-shadow);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+/* 헤더 왼쪽: 아바타 + 이름 */
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.header-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fa709a, #fee140);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-avatar-inner {
+  width: 32px;
+  height: 32px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.header-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nav-text);
+  white-space: nowrap;
+}
+
+/* 헤더 중앙: 빈 공간 (flex-grow) */
+.header-spacer {
+  flex: 1;
+}
+
+/* 헤더 오른쪽: 포인트 + 알림 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.header-points {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(250, 112, 154, 0.08);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.header-points:hover {
+  background: rgba(250, 112, 154, 0.15);
+  transform: scale(1.02);
+}
+
+.header-points-icon {
+  font-size: 16px;
+}
+
+.header-points-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--nav-active-color);
+}
+
+.header-notification {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.header-notification:hover {
+  transform: scale(1.1);
+}
+
+.notification-icon {
+  font-size: 20px;
+  color: var(--nav-text);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* ========================================
+   3. 하단 네비게이션 - app-nav (Simplified)
+   ======================================== */
+.app-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  z-index: 1000;
+  display: flex;
+  justify-content: space-evenly; /* 균등 분배 */
+  align-items: center;
+  padding: 6px 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  height: calc(54px + env(safe-area-inset-bottom, 0px));
+}
+
+.nav-item {
+  flex: 0 0 auto;
+  width: 64px; /* 고정 너비 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  color: var(--nav-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  background: none;
+  border: none;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent; /* 모바일 탭 하이라이트 제거 */
+}
+
+/* 활성 상태 표시 바 */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 35%;
+  right: 35%;
+  height: 2px;
+  background: linear-gradient(90deg, #fa709a, #fee140);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+.nav-item:hover {
+  color: var(--nav-active-color);
+}
+
+.nav-item.active {
+  color: var(--nav-active-color);
+}
+
+.nav-item.active::before {
+  transform: scaleX(1);
+}
+
+.nav-icon {
+  font-size: 20px;
+  transition: transform 0.3s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.nav-item:hover .nav-icon {
+  transform: translateY(-1px);
+}
+
+.nav-item.active .nav-icon {
+  transform: scale(1.05);
+  filter: drop-shadow(0 2px 4px rgba(250, 112, 154, 0.3));
+}
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* ========================================
+   4. 페이지별 헤더 변형
+   ======================================== */
+
+/* 뒤로가기 버튼이 있는 헤더 */
+.app-header.with-back {
+  padding-left: 8px;
+}
+
+.header-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: var(--nav-text);
+  transition: all 0.3s;
+}
+
+.header-back:hover {
+  transform: translateX(-2px);
+  color: var(--nav-active-color);
+}
+
+/* 페이지 제목이 있는 헤더 */
+.header-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--nav-text);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* 액션 버튼이 있는 헤더 */
+.header-action-btn {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--nav-active-color);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.header-action-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+/* ========================================
+   5. 콘텐츠 영역 패딩 조정
+   ======================================== */
+
+/* 상단 헤더가 있는 페이지 */
+.with-app-header {
+  padding-top: var(--nav-height);
+}
+
+/* 하단 네비가 있는 페이지 */
+.with-app-nav {
+  padding-bottom: calc(var(--nav-height) + var(--nav-safe-area));
+}
+
+/* 둘 다 있는 페이지 */
+.with-both-nav {
+  padding-top: var(--nav-height);
+  padding-bottom: calc(var(--nav-height) + var(--nav-safe-area));
+}
+
+/* ========================================
+   6. 반응형 처리 (Simplified)
+   ======================================== */
+
+/* 작은 화면 - 헤더 조정 */
+@media (max-width: 374px) {
+  .header-name {
+    display: none; /* 이름 숨기고 아바타만 표시 */
+  }
+
+  .header-points {
+    padding: 6px 8px;
+  }
+
+  .header-points-icon {
+    display: none; /* 아이콘 숨기고 숫자만 */
+  }
+}
+
+/* 태블릿 이상 (768px+) */
+@media (min-width: 768px) {
+  .app-header {
+    padding: 0 24px;
+  }
+
+  /* 태블릿/데스크톱에서 하단 네비 중앙 정렬 */
+  .app-nav {
+    justify-content: center;
+    padding: 8px 0;
+    gap: 8px; /* 아이템 간 간격 */
+  }
+
+  .nav-item {
+    width: 72px; /* 약간 더 큰 너비 */
+    padding: 6px;
+  }
+
+  .nav-item:hover {
+    background: rgba(250, 112, 154, 0.05);
+    border-radius: 12px;
+  }
+
+  .nav-icon {
+    font-size: 22px;
+    height: 26px;
+  }
+
+  .nav-label {
+    font-size: 11px;
+  }
+
+  .header-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header-avatar-inner {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+}
+
+/* 데스크톱 (1024px+) */
+@media (min-width: 1024px) {
+  .app-nav {
+    gap: 12px; /* 더 넓은 간격 */
+  }
+
+  .nav-item {
+    width: 80px; /* 데스크톱에서 더 큰 터치 영역 */
+  }
+}
+
+/* ========================================
+   7. 다크모드 지원 (선택)
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nav-bg: #1a1a1a;
+    --nav-border: #333333;
+    --nav-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --nav-text: #ffffff;
+    --nav-text-secondary: #999999;
+  }
+
+  .notification-badge {
+    border-color: var(--nav-bg);
+  }
+}
+
+/* ========================================
+   8. 애니메이션 & 트랜지션
+   ======================================== */
+
+/* 페이지 전환 시 부드러운 등장 */
+.app-header {
+  animation: slideDown 0.3s ease-out;
+}
+
+.app-nav {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 포인트 변경 애니메이션 */
+.header-points-value.updated {
+  animation: pointsUpdate 0.6s ease-out;
+}
+
+@keyframes pointsUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: #10b981;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ========================================
+   9. 특수 상태
+   ======================================== */
+
+/* 스크롤 시 헤더 축소 (선택적) */
+.app-header.scrolled {
+  height: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.app-header.scrolled .header-avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.app-header.scrolled .header-avatar-inner {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+
+/* 로딩 상태 */
+.nav-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.nav-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--nav-active-color);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
