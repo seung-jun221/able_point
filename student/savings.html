@@ -148,6 +148,9 @@
       </div>
     </div>
 
+    <!-- savings.html 하단 스크립트 부분 수정 -->
+
+    <!-- 하단 네비게이션 전체 부분 -->
     <!-- 하단 네비게이션 -->
     <nav class="app-nav">
       <a
@@ -196,6 +199,46 @@
         <span class="nav-label">프로필</span>
       </a>
     </nav>
+
+    <!-- JavaScript 파일들 추가 (⭐ 중요: 순서대로 추가) -->
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/navigation.js"></script>
+    <script src="../assets/js/savings.js"></script>
+
+    <!-- 페이지 초기화 스크립트 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        console.log('저축 페이지 초기화');
+
+        // 로그인 체크
+        const loginId = localStorage.getItem('loginId');
+        const userName = localStorage.getItem('userName');
+
+        if (!loginId) {
+          alert('로그인이 필요합니다.');
+          window.location.href = '../login.html';
+          return;
+        }
+
+        // 사용자 이름 표시
+        if (userName) {
+          const userNameElement = document.getElementById('userName');
+          if (userNameElement) {
+            userNameElement.textContent = userName;
+          }
+        }
+
+        // ⭐ 헤더 포인트 업데이트 (navigation.js의 함수 호출)
+        if (typeof updateHeaderPoints === 'function') {
+          await updateHeaderPoints();
+        }
+
+        // 저축 페이지 초기화 (savings.js의 함수)
+        if (typeof initializeSavingsPage === 'function') {
+          await initializeSavingsPage();
+        }
+      });
+    </script>
 
     <!-- 입금 모달 -->
     <div id="depositModal" class="modal">
