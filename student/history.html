@@ -7,9 +7,7 @@
     <!-- student 폴더 안의 파일들 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/js/config.js"></script>
-    <!-- ../ 주의! -->
     <script src="../assets/js/api.js"></script>
-    <!-- ../ 주의! -->
 
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/student.css" />
@@ -52,71 +50,48 @@
 
         <!-- 기간 선택 -->
         <div class="period-selector">
-          <!-- 기존 내용 유지 -->
+          <span class="period-label">기간</span>
+          <div class="period-buttons">
+            <button class="period-btn" data-period="today">오늘</button>
+            <button class="period-btn" data-period="week">1주</button>
+            <button class="period-btn active" data-period="month">1개월</button>
+            <button class="period-btn" data-period="3month">3개월</button>
+            <button class="period-btn" data-period="all">전체</button>
+          </div>
         </div>
 
         <!-- 기간/총계 헤더 -->
         <div class="summary-header" id="summaryHeader">
-          <!-- 기존 내용 유지 -->
+          <div class="summary-period">기간: 2025.07.24 - 2025.08.23</div>
+          <div class="summary-total">총 7건 (2,450원)</div>
         </div>
       </div>
 
-      <!-- 스페이서 (고정 영역 높이만큼) -->
-      <div class="history-spacer"></div>
-
-      <!-- 스크롤 영역 -->
-      <div class="history-scroll-area">
-        <!-- 거래 내역 리스트 -->
-        <div class="history-list-container" id="historyListContainer">
-          <!-- 동적으로 생성됨 -->
-        </div>
+      <!-- 거래 내역 리스트 -->
+      <div class="history-list-container" id="historyListContainer">
+        <!-- 동적으로 생성됨 -->
       </div>
     </div>
 
     <!-- 하단 네비게이션 -->
     <nav class="app-nav">
-      <a
-        href="index.html"
-        class="nav-item"
-        data-page="home"
-        onclick="handleNavClick('home'); return false;"
-      >
+      <a href="index.html" class="nav-item" data-page="home">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">홈</span>
       </a>
-      <a
-        href="savings.html"
-        class="nav-item"
-        data-page="savings"
-        onclick="handleNavClick('savings'); return false;"
-      >
+      <a href="savings.html" class="nav-item" data-page="savings">
         <span class="nav-icon">💰</span>
         <span class="nav-label">저축</span>
       </a>
-      <a
-        href="shop.html"
-        class="nav-item"
-        data-page="shop"
-        onclick="handleNavClick('shop'); return false;"
-      >
+      <a href="shop.html" class="nav-item" data-page="shop">
         <span class="nav-icon">🛍️</span>
         <span class="nav-label">상점</span>
       </a>
-      <a
-        href="ranking.html"
-        class="nav-item"
-        data-page="ranking"
-        onclick="handleNavClick('ranking'); return false;"
-      >
+      <a href="ranking.html" class="nav-item" data-page="ranking">
         <span class="nav-icon">🏆</span>
         <span class="nav-label">랭킹</span>
       </a>
-      <a
-        href="profile.html"
-        class="nav-item"
-        data-page="profile"
-        onclick="handleNavClick('profile'); return false;"
-      >
+      <a href="profile.html" class="nav-item" data-page="profile">
         <span class="nav-icon">👤</span>
         <span class="nav-label">프로필</span>
       </a>
@@ -128,10 +103,7 @@
 
     <!-- 페이지 초기화 스크립트 -->
     <script>
-      // 현재 페이지는 내역이 아니라, 포인트 카드에서 접근하는 페이지임
-      // 따라서 특별한 active 표시를 하지 않음
       document.addEventListener('DOMContentLoaded', () => {
-        // 모든 nav-item에서 active 클래스 제거
         document.querySelectorAll('.nav-item').forEach((item) => {
           item.classList.remove('active');
         });
