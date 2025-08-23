@@ -1,4 +1,4 @@
-// student-main.js - 학생 메인 페이지 전용 함수 (실제 데이터 연동)
+// student-main.js - 학생 메인 페이지 전용 함수 (저축 분류 수정 버전)
 
 // 탭 전환 함수
 function showTab(tabName) {
@@ -39,7 +39,7 @@ function loadTabData(tabName) {
   }
 }
 
-// 획득 내역 요약 로드
+// 획득 내역 요약 로드 - 🔥 수정됨
 async function loadEarnSummary() {
   try {
     const loginId = localStorage.getItem('loginId');
@@ -53,13 +53,19 @@ async function loadEarnSummary() {
       api.getTransactionHistory(loginId),
     ]);
 
-    // 획득 내역만 필터링 (양수 금액)
+    // 획득 내역만 필터링 (양수 금액, 저축 제외)
     const earnHistory = [];
 
     // Points 데이터에서 획득 내역 추출
     if (pointsResult.success && pointsResult.data) {
       pointsResult.data.forEach((item) => {
-        if (item.amount > 0) {
+        // 🔥 저축 관련 제외
+        if (
+          item.amount > 0 &&
+          item.type !== 'deposit' &&
+          item.type !== 'withdraw' &&
+          item.type !== 'interest'
+        ) {
           earnHistory.push({
             title: item.reason || getDefaultTitle(item.type),
             amount: item.amount,
@@ -74,7 +80,13 @@ async function loadEarnSummary() {
     // Transactions 데이터에서 획득 내역 추출
     if (transResult.success && transResult.data) {
       transResult.data.forEach((item) => {
-        if (item.amount > 0 && item.type !== 'withdraw') {
+        // 🔥 저축 관련 완전 제외
+        if (
+          item.amount > 0 &&
+          item.type !== 'deposit' &&
+          item.type !== 'withdraw' &&
+          item.type !== 'interest'
+        ) {
           earnHistory.push({
             title: item.itemName || getDefaultTitle(item.type),
             amount: item.amount,
@@ -112,7 +124,7 @@ async function loadEarnSummary() {
   }
 }
 
-// 사용 내역 요약 로드
+// 사용 내역 요약 로드 - 🔥 수정됨
 async function loadSpendSummary() {
   try {
     const loginId = localStorage.getItem('loginId');
@@ -126,13 +138,18 @@ async function loadSpendSummary() {
       api.getTransactionHistory(loginId),
     ]);
 
-    // 사용 내역만 필터링 (음수 금액 또는 purchase/transfer 타입)
+    // 사용 내역만 필터링 (음수 금액 또는 purchase/transfer 타입, 저축 제외)
     const spendHistory = [];
 
     // Points 데이터에서 사용 내역 추출
     if (pointsResult.success && pointsResult.data) {
       pointsResult.data.forEach((item) => {
-        if (item.amount < 0) {
+        // 🔥 저축 관련 제외
+        if (
+          item.amount < 0 &&
+          item.type !== 'deposit' &&
+          item.type !== 'withdraw'
+        ) {
           spendHistory.push({
             title: item.reason || getDefaultTitle(item.type),
             amount: Math.abs(item.amount),
@@ -147,10 +164,12 @@ async function loadSpendSummary() {
     // Transactions 데이터에서 사용 내역 추출
     if (transResult.success && transResult.data) {
       transResult.data.forEach((item) => {
+        // 🔥 deposit 조건 제거, 저축 관련 제외
         if (
-          item.type === 'purchase' ||
-          item.type === 'transfer' ||
-          (item.type === 'deposit' && item.amount > 0)
+          (item.type === 'purchase' || item.type === 'transfer') &&
+          item.type !== 'deposit' &&
+          item.type !== 'withdraw' &&
+          item.type !== 'interest'
         ) {
           spendHistory.push({
             title: item.itemName || getDefaultTitle(item.type),
