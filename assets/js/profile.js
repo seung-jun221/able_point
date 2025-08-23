@@ -403,6 +403,32 @@ function calculateLevelProgress(totalPoints) {
 }
 
 // UI 업데이트
+
+// UI 업데이트
+function updateProfileUI() {
+  if (!studentData) return;
+
+  // 기본 정보
+  const profileName = document.getElementById('profileName');
+  if (profileName) profileName.textContent = studentData.name || '학생';
+
+  // ✅ 헤더 정보 업데이트 추가!
+  const headerName = document.getElementById('headerName');
+  if (headerName) headerName.textContent = studentData.name || '학생';
+
+  // ✅ 헤더 아바타도 업데이트
+  const headerAvatar = document.getElementById('headerAvatar');
+  const savedAvatar =
+    localStorage.getItem('userAvatar') || studentData.avatar || '🦁';
+  if (headerAvatar) headerAvatar.textContent = savedAvatar;
+
+  // ✅ 헤더 포인트도 업데이트
+  const headerTotalPoints = document.getElementById('headerTotalPoints');
+  const totalPoints = studentData.totalPoints || 0;
+  if (headerTotalPoints) {
+    headerTotalPoints.textContent = `${totalPoints.toLocaleString()}P`;
+  }
+}
 function updateProfileUI() {
   if (!studentData) return;
 

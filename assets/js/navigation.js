@@ -245,3 +245,44 @@ window.debugUpdatePoints = function (points) {
   updateHeaderPoints();
   console.log('포인트가 ' + points + '로 설정되었습니다');
 };
+
+// 헤더 정보 업데이트 함수 (새로 추가)
+async function updateHeaderInfo() {
+  const loginId = localStorage.getItem('loginId');
+  if (!loginId) return;
+
+  try {
+    if (typeof api !== 'undefined' && api.getStudentPoints) {
+      const result = await api.getStudentPoints(loginId);
+
+      if (result.success && result.data) {
+        // 이름 업데이트
+        const headerName =
+          document.getElementById('headerName') ||
+          document.getElementById('userName');
+        if (headerName) {
+          headerName.textContent = result.data.name || '학생';
+        }
+
+        // 아바타 업데이트
+        const headerAvatar =
+          document.getElementById('headerAvatar') ||
+          document.getElementById('userAvatar');
+        const savedAvatar = localStorage.getItem('userAvatar') || '🦁';
+        if (headerAvatar) {
+          headerAvatar.textContent = savedAvatar;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('헤더 정보 업데이트 실패:', error);
+  }
+}
+
+// DOMContentLoaded에 추가
+document.addEventListener('DOMContentLoaded', () => {
+  initNavigation();
+  updateHeaderInfo(); // 추가!
+  updateHeaderPoints();
+  // ...
+});
