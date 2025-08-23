@@ -418,6 +418,7 @@ function getDefaultTitle(type) {
 }
 
 // 거래 내역 표시
+// 거래 내역 표시 - 수정된 버전
 function displayHistory() {
   const historyList = document.getElementById('historyList');
   if (!historyList) return;
@@ -433,23 +434,44 @@ function displayHistory() {
 
   historyList.innerHTML = savingsHistory
     .map((item) => {
+      // 아이콘 설정
       const icon =
         item.type === 'deposit' ? '💰' : item.type === 'withdraw' ? '💸' : '💎';
+
+      // 아이콘 클래스
       const iconClass =
         item.type === 'deposit'
           ? 'icon-deposit'
           : item.type === 'withdraw'
           ? 'icon-withdraw'
           : 'icon-interest';
+
+      // ⭐ 중요: 사용자 관점에서 수정
+      // deposit(입금): 사용 가능 포인트가 줄어듦 → negative (빨간색)
+      // withdraw(출금): 사용 가능 포인트가 늘어남 → positive (초록색)
+      // interest(이자): 저축 계좌에 추가됨 → positive (초록색)
       const amountClass =
-        item.type === 'withdraw' ? 'amount-negative' : 'amount-positive';
-      const amountSign = item.type === 'withdraw' ? '-' : '+';
+        item.type === 'deposit'
+          ? 'amount-negative' // 입금은 빨간색
+          : item.type === 'withdraw'
+          ? 'amount-positive' // 출금은 초록색
+          : 'amount-positive'; // 이자는 초록색
+
+      // 금액 표시 부호
+      const amountSign =
+        item.type === 'deposit'
+          ? '-' // 입금은 마이너스
+          : item.type === 'withdraw'
+          ? '+' // 출금은 플러스
+          : '+'; // 이자는 플러스
+
+      // 타입 텍스트
       const typeText =
         item.type === 'deposit'
-          ? '입금'
+          ? '저축 입금'
           : item.type === 'withdraw'
-          ? '출금'
-          : '이자';
+          ? '저축 출금'
+          : '이자 지급';
 
       return `
       <div class="history-item">

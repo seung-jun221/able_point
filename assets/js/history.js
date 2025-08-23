@@ -106,29 +106,27 @@ function getTransactionType(type, amount) {
   return 'spend';
 }
 
-// 설명 포맷 함수
+// formatDescription 함수 수정
 function formatDescription(item) {
-  const typeDescriptions = {
+  if (item.description === 'deposit') {
+    return '저축 입금 (사용 가능 포인트 감소)';
+  } else if (item.description === 'withdraw') {
+    return '저축 출금 (사용 가능 포인트 증가)';
+  } else if (item.description === 'interest') {
+    return '이자 지급';
+  }
+
+  // 기타 설명
+  const descriptions = {
     attendance: '출석 체크',
-    homework: '과제 완료',
-    test: '시험 성적',
+    homework: '과제 제출',
+    test: '시험 응시',
     purchase: '상품 구매',
-    deposit: '포인트 저축',
-    withdraw: '포인트 인출',
-    interest: '주간 이자',
-    gift: '친구 선물',
+    gift: '포인트 선물',
     manual: '수동 지급',
   };
 
-  // 시간 정보 추가
-  const time = item.date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  const desc =
-    typeDescriptions[item.description] || item.description || item.type;
-  return `${desc} • ${time}`;
+  return descriptions[item.description] || item.description || '';
 }
 
 // 스켈레톤 리스트 생성
@@ -275,52 +273,97 @@ async function loadHistory(loadMore = false) {
   }
 }
 
-// 거래 내역 표시
-function displayHistory() {
-  console.log('📍 displayHistory 호출 - 데이터 개수:', filteredHistory.length);
-
-  const container = document.getElementById('historyListContainer');
-  if (!container) {
-    console.error('❌ historyListContainer를 찾을 수 없습니다');
-    return;
+// 거래 타이틀 생성 (간단하게)
+function getTransactionTitle(item) {
+  // 저축 관련 특별 처리
+  if (item.type === 'save') {
+    if (item.description === 'deposit') {
+      return '저축 입금';
+    } else if (item.description === 'withdraw') {
+      return '저축 출금';
+    } else if (item.description === 'interest') {
+      return '이자 지급';
+    }
   }
+
+  // 기타 거래는 기존 타이틀 사용
+  return item.title || getDefaultTitle(item.description || item.type);
+}
+
+// displayHistory 함수 수정 - 간소화 버전
+function displayHistory() {
+  const container = document.getElementById('historyListContainer');
+  if (!container) return;
 
   if (filteredHistory.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <div class="empty-title">거래 내역이 없습니다</div>
-        <div class="empty-desc">선택한 기간에 거래가 없어요</div>
+        <div class="empty-icon">📝</div>
+        <div class="empty-message">거래 내역이 없습니다</div>
       </div>
     `;
     return;
   }
 
   // 날짜별 그룹화
-  const grouped = {};
+  const groupedHistory = {};
   filteredHistory.forEach((item) => {
     const dateKey = formatDateKey(item.date);
-    if (!grouped[dateKey]) {
-      grouped[dateKey] = [];
+    if (!groupedHistory[dateKey]) {
+      groupedHistory[dateKey] = [];
     }
-    grouped[dateKey].push(item);
+    groupedHistory[dateKey].push(item);
   });
 
-  // HTML 생성
   let html = '<div class="history-list">';
 
-  Object.keys(grouped).forEach((dateKey) => {
-    html += `<div class="date-group">${dateKey}</div>`;
+  Object.entries(groupedHistory).forEach(([dateKey, items]) => {
+    html += `
+      <div class="date-group">
+        <div class="date-header">${dateKey}</div>
+    `;
 
-    grouped[dateKey].forEach((item) => {
+    items.forEach((item) => {
       const iconClass = getIconClass(item.type);
-      const amountClass =
-        item.amount > 0 ? 'amount-positive' : 'amount-negative';
-      const amountText =
-        item.amount > 0
-          ? `+${Math.abs(item.amount).toLocaleString()}P`
-          : `-${Math.abs(item.amount).toLocaleString()}P`;
 
+      // ⭐ 저축 관련 금액 표시 수정
+      let amountClass, amountText;
+
+      if (item.type === 'save') {
+        // 저축 관련 거래
+        if (item.description === 'deposit') {
+          // 입금: 사용 가능 포인트 감소 → 빨간색 마이너스
+          amountClass = 'amount-negative';
+          amountText = `-${Math.abs(item.amount).toLocaleString()}P`;
+        } else if (item.description === 'withdraw') {
+          // 출금: 사용 가능 포인트 증가 → 초록색 플러스
+          amountClass = 'amount-positive';
+          amountText = `+${Math.abs(item.amount).toLocaleString()}P`;
+        } else if (item.description === 'interest') {
+          // 이자: 저축 계좌에 추가 → 노란색/중립 표시
+          amountClass = 'amount-interest';
+          amountText = `+${Math.abs(item.amount).toLocaleString()}P`;
+        } else {
+          // 기타 저축 관련
+          amountClass = item.amount > 0 ? 'amount-positive' : 'amount-negative';
+          amountText =
+            item.amount > 0
+              ? `+${Math.abs(item.amount).toLocaleString()}P`
+              : `-${Math.abs(item.amount).toLocaleString()}P`;
+        }
+      } else {
+        // 일반 거래 (기존 로직)
+        amountClass = item.amount > 0 ? 'amount-positive' : 'amount-negative';
+        amountText =
+          item.amount > 0
+            ? `+${Math.abs(item.amount).toLocaleString()}P`
+            : `-${Math.abs(item.amount).toLocaleString()}P`;
+      }
+
+      // 타이틀 가져오기 (간단하게)
+      const title = getTransactionTitle(item);
+
+      // ⭐ 간소화된 HTML - 한 줄 표시
       html += `
         <div class="history-item">
           <div class="item-left">
@@ -328,8 +371,7 @@ function displayHistory() {
               ${item.icon}
             </div>
             <div class="item-info">
-              <div class="item-title">${item.title}</div>
-              <div class="item-desc">${formatDescription(item)}</div>
+              <div class="item-title">${title}</div>
             </div>
           </div>
           <div class="item-right">
@@ -338,11 +380,111 @@ function displayHistory() {
         </div>
       `;
     });
+
+    html += '</div>';
   });
 
   html += '</div>';
   container.innerHTML = html;
   console.log('✅ 거래 내역 표시 완료');
+}
+
+// 전체 거래 내역 로드 함수도 수정
+async function loadHistory(loadMore = false) {
+  if (isLoading) return;
+  isLoading = true;
+
+  try {
+    const loginId = localStorage.getItem('loginId');
+    const container = document.getElementById('historyListContainer');
+
+    if (!loadMore) {
+      container.innerHTML = generateSkeletonList(10);
+    }
+
+    console.log('📍 거래 내역 조회 시작 - loginId:', loginId);
+
+    // API 호출
+    const [pointsResult, transResult] = await Promise.all([
+      api.getPointHistory(loginId),
+      api.getTransactionHistory(loginId),
+    ]);
+
+    console.log('📍 API 응답:', { pointsResult, transResult });
+
+    const tempHistory = [];
+
+    // Points 데이터 처리
+    if (pointsResult.success && pointsResult.data) {
+      console.log('Points 데이터 개수:', pointsResult.data.length);
+
+      pointsResult.data.forEach((item) => {
+        const parsedDate = parseDate(item.date);
+        if (parsedDate) {
+          tempHistory.push({
+            date: parsedDate,
+            type: getTransactionType(item.type, item.amount),
+            title: item.reason || getDefaultTitle(item.type),
+            amount: parseInt(item.amount) || 0,
+            icon: getIconForType(item.type),
+            description: item.type,
+            source: 'points',
+          });
+        }
+      });
+    }
+
+    // Transactions 데이터 처리
+    if (transResult.success && transResult.data) {
+      console.log('Transactions 데이터 개수:', transResult.data.length);
+
+      transResult.data.forEach((item) => {
+        const parsedDate = parseDate(item.createdAt);
+        if (parsedDate) {
+          // 저축 관련 타이틀 간단하게 설정
+          let title = item.itemName || getDefaultTitle(item.type);
+          if (item.type === 'deposit') {
+            title = '저축 입금';
+          } else if (item.type === 'withdraw') {
+            title = '저축 출금';
+          } else if (item.type === 'interest') {
+            title = '이자 지급';
+          }
+
+          tempHistory.push({
+            date: parsedDate,
+            type: getTransactionType(item.type, item.amount),
+            title: title,
+            amount: parseInt(item.amount) || 0,
+            icon: getIconForType(item.type),
+            description: item.type,
+            source: 'transactions',
+          });
+        }
+      });
+    }
+
+    // 날짜순 정렬
+    tempHistory.sort((a, b) => b.date - a.date);
+
+    allHistory = tempHistory;
+    console.log('📍 전체 거래 내역:', allHistory.length, '건');
+
+    // 필터 적용 및 표시
+    applyFilters();
+  } catch (error) {
+    console.error('거래 내역 로드 오류:', error);
+    const container = document.getElementById('historyListContainer');
+    container.innerHTML = `
+      <div class="error-state">
+        <div class="error-icon">⚠️</div>
+        <div class="error-message">데이터를 불러올 수 없습니다</div>
+        <button class="retry-btn" onclick="loadHistory()">다시 시도</button>
+      </div>
+    `;
+  } finally {
+    isLoading = false;
+  }
 }
 
 // 통계 업데이트

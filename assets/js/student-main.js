@@ -335,7 +335,7 @@ function updateSpendTab(recentItems, monthlyTotal) {
   tabContent.innerHTML = html;
 }
 
-// 저축 탭 업데이트
+// 저축 탭 업데이트 - 수정된 버전
 function updateSaveTab(recentItems, currentSavings) {
   const tabContent = document.getElementById('save-content');
   if (!tabContent) return;
@@ -351,15 +351,33 @@ function updateSaveTab(recentItems, currentSavings) {
 
   if (recentItems.length > 0) {
     recentItems.forEach((item) => {
+      // 배경색 설정
       const bgColor =
         item.type === 'deposit'
-          ? '#e0e7ff'
+          ? '#fee2e2' // 입금은 빨간 계열 (사용 가능 포인트 감소)
           : item.type === 'withdraw'
-          ? '#dcfce7'
-          : '#fef3c7';
-      const amountClass = item.amount > 0 ? 'amount-plus' : 'amount-minus';
-      const amountText =
-        item.amount > 0 ? `+${item.amount}P` : `${item.amount}P`;
+          ? '#dcfce7' // 출금은 초록 계열 (사용 가능 포인트 증가)
+          : '#fef3c7'; // 이자는 노란 계열
+
+      // ⭐ 중요: 사용자 관점에서 표시
+      // deposit: 사용 가능 포인트에서 빠져나감 → minus (빨간색) → -500P
+      // withdraw: 사용 가능 포인트로 들어옴 → plus (초록색) → +500P
+      // interest: 저축 계좌에 추가 (직접적인 영향 없음) → 노란색 → +40P
+      let amountClass, amountText;
+
+      if (item.type === 'deposit') {
+        // 입금: 사용 가능 포인트 감소
+        amountClass = 'amount-minus';
+        amountText = `-${Math.abs(item.amount)}P`;
+      } else if (item.type === 'withdraw') {
+        // 출금: 사용 가능 포인트 증가
+        amountClass = 'amount-plus';
+        amountText = `+${Math.abs(item.amount)}P`;
+      } else {
+        // 이자: 저축 계좌에 추가 (중립적 표시)
+        amountClass = 'amount-plus';
+        amountText = `+${Math.abs(item.amount)}P`;
+      }
 
       html += `
         <div class="mini-history-item">
