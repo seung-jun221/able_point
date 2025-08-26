@@ -49,56 +49,92 @@
           <div class="logo-icon">🏦</div>
           <span>포인트 뱅크</span>
         </div>
-        <!-- HTML 부분 (teacher/index.html) -->
-        <!-- 기존의 하드코딩된 select를 아래로 교체 -->
-
         <select class="class-selector" id="classSelector">
           <option value="">전체 반</option>
-          <!-- 옵션은 JavaScript에서 동적으로 로드됨 -->
         </select>
       </div>
 
       <nav class="nav-menu">
-        <a href="#" class="nav-item active" data-page="dashboard">
-          <span class="nav-icon">📊</span>
+        <a href="index.html" class="nav-item active" data-page="dashboard">
+          <span>📊</span>
           <span>대시보드</span>
         </a>
-        <a href="#" class="nav-item" data-page="students">
-          <span class="nav-icon">👥</span>
-          <span>학생 관리</span>
-        </a>
-        <a href="#" class="nav-item" data-page="points">
-          <span class="nav-icon">💰</span>
-          <span>포인트 지급</span>
-        </a>
-        <a href="#" class="nav-item" data-page="shop">
-          <span class="nav-icon">🛍️</span>
-          <span>포인트샵 관리</span>
-        </a>
-        <a href="#" class="nav-item" data-page="events">
-          <span class="nav-icon">🎯</span>
-          <span>이벤트 관리</span>
-        </a>
-        <a href="#" class="nav-item" data-page="ranking">
-          <span class="nav-icon">🏆</span>
-          <span>랭킹 관리</span>
-        </a>
-        <a href="#" class="nav-item" data-page="reports">
-          <span class="nav-icon">📈</span>
-          <span>리포트</span>
-        </a>
+
+        <!-- 원장 전용 관리 메뉴 섹션 -->
+        <div
+          class="nav-section admin-only"
+          id="adminSection"
+          style="display: none"
+        >
+          <div class="nav-section-title">관리 메뉴</div>
+
+          <!-- onclick 이벤트로 직접 이동 -->
+          <div
+            class="nav-item"
+            onclick="location.href='manage.html'"
+            style="cursor: pointer"
+          >
+            <span>👨‍🏫</span>
+            <span>선생님 관리</span>
+          </div>
+
+          <div
+            class="nav-item"
+            onclick="location.href='classes.html'"
+            style="cursor: pointer"
+          >
+            <span>🏫</span>
+            <span>클래스 관리</span>
+          </div>
+
+          <div
+            class="nav-item"
+            onclick="location.href='students.html'"
+            style="cursor: pointer"
+          >
+            <span>🎓</span>
+            <span>학생 관리</span>
+          </div>
+        </div>
+
+        <!-- 일반 메뉴 -->
+        <div class="nav-section">
+          <div class="nav-section-title">포인트 관리</div>
+
+          <a href="#" class="nav-item" data-page="point">
+            <span>💰</span>
+            <span>포인트 지급</span>
+          </a>
+
+          <a href="#" class="nav-item" data-page="history">
+            <span>📜</span>
+            <span>포인트 내역</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">리포트</div>
+
+          <a href="#" class="nav-item" data-page="report">
+            <span>📊</span>
+            <span>통계</span>
+          </a>
+
+          <a href="#" class="nav-item" data-page="ranking">
+            <span>🏆</span>
+            <span>랭킹</span>
+          </a>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="teacher-profile">
-          <div class="teacher-avatar">👩‍🏫</div>
-          <div class="teacher-info">
-            <div class="teacher-name" id="teacherName">선생님</div>
-            <div class="teacher-role">담임 선생님</div>
-          </div>
+        <div class="user-info">
+          <span class="user-name" id="teacherName">선생님</span>
+          <span class="user-role" id="userRole">Teacher</span>
         </div>
         <button class="logout-btn" onclick="logout()">
-          <span>🚪</span> 로그아웃
+          <span>🚪</span>
+          <span>로그아웃</span>
         </button>
       </div>
     </div>
@@ -142,22 +178,6 @@
         </div>
       </div>
 
-      <!-- 빠른 액션 그리드 -->
-      <div class="quick-actions-grid">
-        <div class="quick-action" onclick="showPointModal()">
-          <div class="quick-action-icon">💰</div>
-          <div class="quick-action-label">포인트 지급</div>
-        </div>
-        <div class="quick-action" onclick="showBulkActions()">
-          <div class="quick-action-icon">👥</div>
-          <div class="quick-action-label">일괄 처리</div>
-        </div>
-        <div class="quick-action" onclick="showReports()">
-          <div class="quick-action-icon">📊</div>
-          <div class="quick-action-label">리포트 생성</div>
-        </div>
-      </div>
-
       <!-- 일괄 액션 영역 -->
       <div
         id="bulkActionArea"
@@ -174,9 +194,9 @@
               type="text"
               id="searchInput"
               class="search-box"
-              placeholder="학생 검색..."
+              placeholder="학생 이름 검색..."
             />
-            <button class="btn-primary" onclick="showPointModal()">
+            <button class="btn-point-add" onclick="showPointModal()">
               <span>➕</span> 포인트 지급
             </button>
           </div>
@@ -230,8 +250,11 @@
                 type="number"
                 id="modalPointAmount"
                 class="form-control"
-                placeholder="포인트를 입력하세요"
+                placeholder="0"
+                min="-9999"
+                max="9999"
               />
+              <div class="form-hint">양수는 지급, 음수는 차감</div>
             </div>
 
             <div class="form-group">

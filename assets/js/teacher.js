@@ -153,14 +153,19 @@ function updateClassSelector() {
 }
 // ==================== 페이지 초기화 ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  // 로그인 체크
+  const loginId = localStorage.getItem('loginId');
   const userRole = localStorage.getItem('userRole');
   const userName = localStorage.getItem('userName');
 
-  if (userRole !== 'teacher') {
-    alert('선생님만 접근 가능합니다.');
-    window.location.href = '../login.html';
-    return;
+  // 사용자 정보 표시
+  document.getElementById('teacherName').textContent = userName || '선생님';
+
+  // 원장 권한 체크
+  if (loginId === 'ablemaster' || userRole === 'principal') {
+    document.getElementById('adminSection').style.display = 'block';
+    document.getElementById('userRole').textContent = '원장';
+  } else {
+    document.getElementById('userRole').textContent = '선생님';
   }
 
   // 선생님 이름 표시
@@ -766,7 +771,7 @@ function printClassList() {
 async function submitPoints() {
   const studentSelect = document.getElementById('modalStudentSelect');
   const pointType = document.getElementById('modalPointType');
-  const pointValue = document.getElementById('modalPointValue');
+  const pointValue = document.getElementById('modalPointAmount');
   const pointReason = document.getElementById('modalPointReason');
 
   if (!studentSelect.value) {
@@ -896,7 +901,7 @@ function closeModal() {
     modal.classList.remove('active');
     // 입력 필드 초기화
     document.getElementById('modalStudentSelect').value = '';
-    document.getElementById('modalPointValue').value = '';
+    document.getElementById('modalPointAmount').value = '';
     document.getElementById('modalPointReason').value = '';
   }
 }

@@ -1710,6 +1710,84 @@ body.dark-mode .badge-item:nth-child(-n + 5) .badge-tooltip::after {
   color: #9ca3af;
 }
 
+/* 기존 .badge-item 스타일 뒤에 추가 */
+
+/* 배지 3단계 상태 */
+.badge-item.locked {
+  background: #e5e7eb;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.badge-item.unlocked {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  animation: pulse 2s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+}
+
+.badge-item.claimed {
+  background: linear-gradient(135deg, #86efac, #22c55e);
+  opacity: 0.8;
+  cursor: default;
+  position: relative;
+}
+
+.badge-item.claimed::after {
+  content: '✓';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: white;
+  color: #22c55e;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* 수령 가능 알림 */
+.claim-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
 /* 컬렉션 진행 상황 */
 .collection-progress {
   margin-top: 20px;

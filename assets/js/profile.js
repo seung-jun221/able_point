@@ -53,6 +53,22 @@ const LEVEL_SYSTEM = {
   ],
 };
 
+// 배지 상태 확인
+function getBadgeStatus(badgeId) {
+  const unlockedBadges = getUnlockedBadges();
+  const claimedBadges = JSON.parse(
+    localStorage.getItem('claimedBadges') || '[]'
+  );
+
+  if (claimedBadges.includes(badgeId)) {
+    return 'claimed';
+  } else if (unlockedBadges.includes(badgeId)) {
+    return 'unlocked';
+  } else {
+    return 'locked';
+  }
+}
+
 // 배지 정의 (기존 유지)
 const BADGES = [
   { id: 'first_login', name: '첫 발걸음', icon: '👋', condition: '첫 로그인' },
@@ -176,6 +192,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 다크모드 체크
   checkDarkMode();
+
+  // 배지 업데이트 함수 설정 추가!
+  updateBadges = updateBadgesWithStatus;
 });
 
 // 프로필 데이터 로드 - 수정됨
@@ -405,30 +424,7 @@ function calculateLevelProgress(totalPoints) {
 // UI 업데이트
 
 // UI 업데이트
-function updateProfileUI() {
-  if (!studentData) return;
 
-  // 기본 정보
-  const profileName = document.getElementById('profileName');
-  if (profileName) profileName.textContent = studentData.name || '학생';
-
-  // ✅ 헤더 정보 업데이트 추가!
-  const headerName = document.getElementById('headerName');
-  if (headerName) headerName.textContent = studentData.name || '학생';
-
-  // ✅ 헤더 아바타도 업데이트
-  const headerAvatar = document.getElementById('headerAvatar');
-  const savedAvatar =
-    localStorage.getItem('userAvatar') || studentData.avatar || '🦁';
-  if (headerAvatar) headerAvatar.textContent = savedAvatar;
-
-  // ✅ 헤더 포인트도 업데이트
-  const headerTotalPoints = document.getElementById('headerTotalPoints');
-  const totalPoints = studentData.totalPoints || 0;
-  if (headerTotalPoints) {
-    headerTotalPoints.textContent = `${totalPoints.toLocaleString()}P`;
-  }
-}
 function updateProfileUI() {
   if (!studentData) return;
 
@@ -603,6 +599,56 @@ function getUnlockedBadges() {
   }
 
   return unlocked;
+}
+
+// 컬렉션 진행 상황 표시 함수 추가
+function updateCollectionProgress(unlockedCount) {
+  let nextThreshold = null;
+  let nextReward = null;
+
+  for (const [threshold, reward] of Object.entries(COLLECTION_REWARDS)) {
+    if (parseInt(threshold) > unlockedCount) {
+      nextThreshold = parseInt(threshold);
+      nextReward = reward;
+      break;
+    }
+  }
+
+  const progressHTML = `
+    <div class="collection-progress">
+      <div class="progress-header">
+        <span>🏆 배지 컬렉션</span>
+        <span>${unlockedCount}/20</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${
+          (unlockedCount / 20) * 100
+        }%"></div>
+      </div>
+      ${
+        nextThreshold
+          ? `
+        <div class="next-reward">
+          다음 보상: ${nextThreshold}개 달성 시 ${nextReward.points}P
+        </div>
+      `
+          : `
+        <div class="next-reward complete">
+          🎉 모든 배지 획득 완료!
+        </div>
+      `
+      }
+    </div>
+  `;
+
+  const achievementCard = document.querySelector('.achievement-card');
+  const existingProgress = document.querySelector('.collection-progress');
+
+  if (existingProgress) {
+    existingProgress.outerHTML = progressHTML;
+  } else if (achievementCard) {
+    achievementCard.insertAdjacentHTML('beforeend', progressHTML);
+  }
 }
 
 // 차트 초기화 - 실제 데이터 사용
@@ -1445,12 +1491,52 @@ function closeBadgePopup(event) {
   }
 }
 
-// 배지 컬렉션 보상 체크 및 지급
-function checkCollectionRewards() {
-  const unlockedCount = getUnlockedBadges().length;
-  const loginId = localStorage.getItem('loginId');
+// profile.js에 추가/수정
 
-  // 이미 받은 보상 체크
+// 1. 개별 배지 획득 포인트
+async function checkAndRewardBadges() {
+  const userId = localStorage.getItem('userId');
+  const unlockedBadges = getUnlockedBadges();
+  const rewardedBadges = JSON.parse(
+    localStorage.getItem('rewardedBadges') || '[]'
+  );
+
+  for (const badgeId of unlockedBadges) {
+    if (!rewardedBadges.includes(badgeId)) {
+      const badge = BADGE_DETAILS[badgeId];
+      if (!badge) continue;
+
+      try {
+        const { error } = await supabase.from('points').insert({
+          transaction_id: 'TRX' + Date.now(),
+          student_id: userId,
+          amount: badge.points,
+          type: 'badge',
+          reason: `${badge.name} 배지 획득`,
+          created_at: new Date().toISOString(),
+        });
+
+        if (!error) {
+          rewardedBadges.push(badgeId);
+          showNotification(
+            `🎖️ ${badge.name} 배지 획득! +${badge.points}P`,
+            'success'
+          );
+        }
+      } catch (error) {
+        console.error('배지 포인트 지급 실패:', error);
+      }
+    }
+  }
+
+  localStorage.setItem('rewardedBadges', JSON.stringify(rewardedBadges));
+}
+
+// 2. 컬렉션 보상 (5, 10, 15, 20개 단계) - 기존 함수 수정
+async function checkCollectionRewards() {
+  const unlockedCount = getUnlockedBadges().length;
+  const userId = localStorage.getItem('userId');
+
   const receivedRewards = JSON.parse(
     localStorage.getItem('receivedBadgeRewards') || '[]'
   );
@@ -1458,7 +1544,7 @@ function checkCollectionRewards() {
   let totalBonus = 0;
   let messages = [];
 
-  // 각 단계별 보상 체크
+  // 각 단계별 보상 체크 (5개, 10개, 15개, 20개)
   Object.entries(COLLECTION_REWARDS).forEach(([threshold, reward]) => {
     const thresholdNum = parseInt(threshold);
     if (
@@ -1471,77 +1557,165 @@ function checkCollectionRewards() {
     }
   });
 
-  // 새로운 보상이 있으면 지급
   if (totalBonus > 0) {
-    // 로컬 스토리지 업데이트
-    localStorage.setItem(
-      'receivedBadgeRewards',
-      JSON.stringify(receivedRewards)
-    );
+    try {
+      // 컬렉션 보상 실제 지급
+      const { error } = await supabase.from('points').insert({
+        transaction_id: 'TRX' + Date.now(),
+        student_id: userId,
+        amount: totalBonus,
+        type: 'collection',
+        reason: `배지 ${
+          receivedRewards[receivedRewards.length - 1]
+        }개 컬렉션 달성`,
+        created_at: new Date().toISOString(),
+      });
 
-    // 포인트 지급 (실제 API 호출 필요)
-    // api.addPoints(loginId, totalBonus, 'badge_collection', '배지 컬렉션 보상');
+      if (!error) {
+        localStorage.setItem(
+          'receivedBadgeRewards',
+          JSON.stringify(receivedRewards)
+        );
+        showCollectionRewardPopup(messages, totalBonus);
 
-    // 축하 메시지 표시
-    showCollectionRewardPopup(messages, totalBonus);
-  }
-
-  // 진행 상황 업데이트
-  updateCollectionProgress(unlockedCount);
-}
-
-// 컬렉션 진행 상황 표시
-function updateCollectionProgress(unlockedCount) {
-  // 다음 목표 찾기
-  let nextThreshold = null;
-  let nextReward = null;
-
-  for (const [threshold, reward] of Object.entries(COLLECTION_REWARDS)) {
-    if (parseInt(threshold) > unlockedCount) {
-      nextThreshold = parseInt(threshold);
-      nextReward = reward;
-      break;
+        // 포인트 총합 업데이트
+        await updateStudentPoints();
+      }
+    } catch (error) {
+      console.error('컬렉션 보상 지급 실패:', error);
     }
   }
 
-  // 진행 상황 HTML 업데이트
-  const progressHTML = `
-    <div class="collection-progress">
-      <div class="progress-header">
-        <span>🏆 배지 컬렉션</span>
-        <span>${unlockedCount}/20</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: ${
-          (unlockedCount / 20) * 100
-        }%"></div>
-      </div>
-      ${
-        nextThreshold
-          ? `
-        <div class="next-reward">
-          다음 보상: ${nextThreshold}개 달성 시 ${nextReward.points}P
-        </div>
-      `
-          : `
-        <div class="next-reward complete">
-          🎉 모든 배지 획득 완료!
-        </div>
-      `
+  updateCollectionProgress(unlockedCount);
+}
+
+// 3. 학생 포인트 업데이트 함수
+async function updateStudentPoints() {
+  const userId = localStorage.getItem('userId');
+
+  try {
+    // 총 포인트 재계산
+    const { data, error } = await supabase
+      .from('points')
+      .select('amount')
+      .eq('student_id', userId);
+
+    if (data) {
+      const total = data.reduce((sum, p) => sum + p.amount, 0);
+
+      // student_ranking 업데이트
+      await supabase
+        .from('student_ranking')
+        .update({ total_points: total })
+        .eq('student_id', userId);
+
+      // 화면 업데이트
+      if (studentData) {
+        studentData.totalPoints = total;
+        updateProfileUI();
       }
+    }
+  } catch (error) {
+    console.error('포인트 업데이트 실패:', error);
+  }
+}
+
+// 배지 보상 수령 함수
+// claimBadgeReward 함수 수정
+async function claimBadgeReward(badgeId) {
+  const badge = BADGE_DETAILS[badgeId];
+  const userId = localStorage.getItem('userId');
+
+  if (!badge || !userId) return;
+
+  // 수령 확인 팝업 - 스타일 개선
+  const confirmHTML = `
+    <div id="claimModal" class="modal active">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+          <h2 style="font-size: 20px; font-weight: 600;">배지 보상 수령</h2>
+          <button class="modal-close" onclick="document.getElementById('claimModal').remove()" 
+                  style="background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer;">×</button>
+        </div>
+        <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+          <div style="font-size: 72px; margin: 20px 0;">${badge.icon}</div>
+          <h3 style="margin: 10px 0; font-size: 24px; font-weight: 600;">${badge.name}</h3>
+          <p style="color: #6b7280; margin: 10px 0; font-size: 14px;">${badge.condition}</p>
+          <div style="background: #fef3c7; padding: 20px; border-radius: 16px; margin: 25px 0;">
+            <div style="font-size: 32px; color: #f59e0b; font-weight: bold;">
+              +${badge.points}P
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top: none; padding: 0 20px 20px; gap: 10px; display: flex;">
+          <button onclick="document.getElementById('claimModal').remove()" 
+                  style="flex: 1; padding: 14px 24px; background: #f3f4f6; color: #6b7280; border: none; 
+                         border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; 
+                         transition: all 0.2s;">
+            나중에
+          </button>
+          <button onclick="confirmClaim('${badgeId}')" 
+                  style="flex: 2; padding: 14px 24px; background: linear-gradient(135deg, #fa709a, #fee140); 
+                         color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; 
+                         cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);">
+            수령하기
+          </button>
+        </div>
+      </div>
     </div>
   `;
 
-  // achievement-card 아래에 추가
-  const achievementCard = document.querySelector('.achievement-card');
-  const existingProgress = document.querySelector('.collection-progress');
+  document.body.insertAdjacentHTML('beforeend', confirmHTML);
+}
 
-  if (existingProgress) {
-    existingProgress.outerHTML = progressHTML;
-  } else if (achievementCard) {
-    achievementCard.insertAdjacentHTML('beforeend', progressHTML);
+// 수령 확인 함수 수정
+async function confirmClaim(badgeId) {
+  const badge = BADGE_DETAILS[badgeId];
+  const loginId = localStorage.getItem('loginId');
+
+  try {
+    // supabase 대신 api 사용
+    const result = await api.addPoints(
+      loginId,
+      badge.points,
+      `${badge.name} 배지 보상`
+    );
+
+    if (result.success) {
+      // 수령 완료 처리
+      const claimedBadges = JSON.parse(
+        localStorage.getItem('claimedBadges') || '[]'
+      );
+      claimedBadges.push(badgeId);
+      localStorage.setItem('claimedBadges', JSON.stringify(claimedBadges));
+
+      // 모달 닫기
+      document.getElementById('claimModal')?.remove();
+
+      // UI 업데이트
+      updateBadgesWithStatus();
+
+      // 성공 알림
+      showNotification(`🎉 ${badge.points}P가 지급되었습니다!`, 'success');
+
+      // 컨페티 효과
+      createConfetti();
+
+      // 포인트 총합 업데이트
+      await loadProfileData();
+    } else {
+      throw new Error('포인트 지급 실패');
+    }
+  } catch (error) {
+    console.error('배지 수령 실패:', error);
+    showNotification('수령 중 오류가 발생했습니다.', 'error');
   }
 }
+// 함수 정의 직후에 바로 전역 등록
+window.confirmClaim = confirmClaim;
+
+// 전역 함수로 내보내기
+window.handleBadgeClick = handleBadgeClick;
 
 // 보상 획득 축하 팝업
 function showCollectionRewardPopup(messages, totalPoints) {
@@ -1608,54 +1782,65 @@ function createConfetti() {
 }
 
 // 배지 업데이트 함수 수정 (클릭 이벤트 추가)
-function updateBadgesWithClick() {
+// 현재 문제: unlockedBadges가 정의되지 않음
+function updateBadgesWithStatus() {
   const grid = document.getElementById('achievementGrid');
   if (!grid) return;
 
-  const unlockedBadges = getUnlockedBadges();
+  const unlockedBadges = getUnlockedBadges(); // 추가!
 
   grid.innerHTML = Object.keys(BADGE_DETAILS)
     .map((badgeId) => {
       const badge = BADGE_DETAILS[badgeId];
-      const isUnlocked = unlockedBadges.includes(badgeId);
+      const status = getBadgeStatus(badgeId);
+
       return `
-      <div class="badge-item ${isUnlocked ? 'unlocked' : 'locked'}" 
+      <div class="badge-item ${status}" 
            data-badge="${badgeId}"
-           onclick="showBadgeDetail('${badgeId}')"
-           style="cursor: pointer;">
-        <span>${isUnlocked ? badge.icon : '🔒'}</span>
+           onclick="handleBadgeClick('${badgeId}')"
+           title="${badge.name}">
+        <span>${status === 'locked' ? '🔒' : badge.icon}</span>
+        ${status === 'unlocked' ? '<div class="claim-indicator">!</div>' : ''}
       </div>
     `;
     })
     .join('');
 
-  // 획득 개수 업데이트
-  const unlockedCount = document.getElementById('unlockedCount');
-  if (unlockedCount) unlockedCount.textContent = unlockedBadges.length;
-
-  const totalBadges = document.getElementById('totalBadges');
-  if (totalBadges) totalBadges.textContent = Object.keys(BADGE_DETAILS).length;
-
-  // 컬렉션 보상 체크
-  checkCollectionRewards();
+  updateBadgeCounter();
+  updateCollectionProgress(unlockedBadges.length); // 이제 작동
 }
 
-// 기존 updateBadges 함수 대체
-window.updateBadges = updateBadgesWithClick;
+// 배지 클릭 핸들러
+async function handleBadgeClick(badgeId) {
+  const status = getBadgeStatus(badgeId);
+
+  if (status === 'locked') {
+    showBadgeDetail(badgeId);
+  } else if (status === 'unlocked') {
+    await claimBadgeReward(badgeId);
+  } else if (status === 'claimed') {
+    showBadgeDetail(badgeId);
+  }
+}
+
+// 배지 카운터
+function updateBadgeCounter() {
+  const unlocked = getUnlockedBadges().length;
+  const claimed = JSON.parse(
+    localStorage.getItem('claimedBadges') || '[]'
+  ).length;
+  const available = unlocked - claimed;
+
+  const unlockedCount = document.getElementById('unlockedCount');
+  if (unlockedCount) {
+    unlockedCount.innerHTML = `${unlocked} <span style="color: #f59e0b;">(${available} 수령가능)</span>`;
+  }
+}
+
+// 기존 updateBadgesWithClick 대신 새 함수 사용
+window.updateBadges = updateBadgesWithStatus;
 
 // 전역 함수로 내보내기
 window.showBadgeDetail = showBadgeDetail;
 window.closeBadgePopup = closeBadgePopup;
 window.closeRewardPopup = closeRewardPopup;
-
-// 페이지 로드 시 초기화
-document.addEventListener('DOMContentLoaded', () => {
-  // 배지 업데이트 시 컬렉션 체크
-  if (typeof updateBadges === 'function') {
-    const originalUpdateBadges = updateBadges;
-    updateBadges = function () {
-      originalUpdateBadges();
-      updateBadgesWithClick();
-    };
-  }
-});

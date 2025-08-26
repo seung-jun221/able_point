@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>학생 관리 - 포인트 뱅크</title>
+
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/teacher.css" />
+    <link rel="stylesheet" href="../assets/css/manage.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/api.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">🏦</div>
+            <span>포인트 뱅크 관리</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="index.html" class="nav-item">
+            <span>📊</span>
+            <span>대시보드</span>
+          </a>
+          <a href="manage.html" class="nav-item">
+            <span>👥</span>
+            <span>선생님 관리</span>
+          </a>
+          <a href="classes.html" class="nav-item">
+            <span>🏫</span>
+            <span>클래스 관리</span>
+          </a>
+          <a href="students.html" class="nav-item active">
+            <span>🎓</span>
+            <span>학생 관리</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="logout-btn" onclick="logout()">
+            <span>🚪</span>
+            <span>로그아웃</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 메인 컨텐츠 -->
+      <div class="main-content">
+        <div class="page-header">
+          <h1 class="page-title">학생 관리</h1>
+          <div class="page-subtitle">학생을 등록하고 클래스를 배정합니다</div>
+        </div>
+
+        <!-- 통계 카드 -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🎓</div>
+            <div class="stat-info">
+              <div class="stat-label">전체 학생</div>
+              <div class="stat-value" id="totalStudents">0명</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-label">활성 학생</div>
+              <div class="stat-value" id="activeStudents">0명</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-info">
+              <div class="stat-label">이번 달 신규</div>
+              <div class="stat-value" id="newStudents">0명</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 학생 목록 -->
+        <div class="table-section">
+          <div class="table-header">
+            <h3 class="table-title">학생 목록</h3>
+            <div class="table-actions">
+              <select
+                id="classFilter"
+                class="form-control"
+                style="width: 150px"
+              >
+                <option value="">전체 클래스</option>
+              </select>
+              <input
+                type="text"
+                id="searchInput"
+                class="search-box"
+                placeholder="학생 검색..."
+              />
+              <button class="btn-add" onclick="showAddStudentModal()">
+                <span>➕</span> 학생 등록
+              </button>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>이름</th>
+                <th>아이디</th>
+                <th>클래스</th>
+                <th>포인트</th>
+                <th>연락처</th>
+                <th>등록일</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody">
+              <!-- 동적 생성 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 학생 등록/수정 모달 -->
+    <div id="studentModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">학생 등록</h2>
+          <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>이름 *</label>
+              <input
+                type="text"
+                id="studentName"
+                class="form-control"
+                placeholder="홍길동"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>아이디 *</label>
+              <input
+                type="text"
+                id="studentLoginId"
+                class="form-control"
+                placeholder="S001"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>초기 비밀번호 *</label>
+              <input
+                type="text"
+                id="studentPassword"
+                class="form-control"
+                value="1234"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>클래스 *</label>
+              <select id="studentClass" class="form-control">
+                <option value="">선택</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>학생 연락처</label>
+              <input
+                type="tel"
+                id="studentPhone"
+                class="form-control"
+                placeholder="010-0000-0000"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>부모님 연락처</label>
+              <input
+                type="tel"
+                id="parentPhone"
+                class="form-control"
+                placeholder="010-0000-0000"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>초기 포인트</label>
+            <input
+              type="number"
+              id="initialPoints"
+              class="form-control"
+              value="0"
+              min="0"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal()">취소</button>
+          <button class="btn-primary" onclick="saveStudent()">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/js/students.js"></script>
+  </body>
+</html>

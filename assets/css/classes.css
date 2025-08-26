@@ -1,0 +1,139 @@
+/* ==================== 클래스 관리 페이지 스타일 ==================== */
+
+/* 클래스 그리드 */
+/* 클래스 그리드 - 더 많은 카드 표시 */
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(200px, 1fr)
+  ); /* 280px → 200px */
+  gap: 15px; /* 20px → 15px */
+  padding: 10px;
+}
+
+/* 클래스 카드 - 컴팩트하게 */
+.class-card {
+  background: white;
+  border-radius: 12px; /* 16px → 12px */
+  padding: 15px; /* 20px → 15px */
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s;
+  cursor: pointer;
+  position: relative;
+}
+
+.class-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #fa709a;
+}
+
+.class-title {
+  font-size: 16px; /* 18px → 16px */
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.class-info {
+  font-size: 13px; /* 14px → 13px */
+}
+
+.class-stats {
+  display: flex;
+  gap: 20px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.stat-value {
+  font-size: 16px; /* 20px → 16px */
+}
+/* 클래스 상태 배지 */
+.class-status {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.class-status.inactive {
+  background: #ef4444;
+}
+
+/* 클래스 액션 버튼 */
+.class-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-class-edit,
+.btn-class-delete {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-class-edit:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #f0f1ff;
+}
+
+.btn-class-delete:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* 폼 행 */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* 빈 상태 */
+.empty-classes {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-text {
+  font-size: 18px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.empty-subtext {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* 학년별 색상 */
+.grade-elementary {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.grade-middle {
+  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+}
