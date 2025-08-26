@@ -855,6 +855,93 @@ class PointBankAPI {
     });
     return message;
   }
+
+  /**
+   * 반 목록 조회
+   * students 테이블에서 고유한 class_id 목록을 가져옴
+   */
+  async getClassList() {
+    try {
+      window.POINTBANK_CONFIG.debugLog('Getting class list');
+
+      // students 테이블에서 고유한 class_id 가져오기
+      const { data: students, error } = await supabase
+        .from('students')
+        .select('class_id')
+        .not('class_id', 'is', null)
+        .order('class_id');
+
+      if (error) throw error;
+
+      // 중복 제거 및 반 목록 생성
+      const uniqueClasses = [...new Set(students.map((s) => s.class_id))];
+
+      // 반 정보 구조화
+      const classList = {
+        elementary: [],
+        middle: [],
+      };
+
+      uniqueClasses.forEach((classId) => {
+        if (!classId || classId.length < 2) return;
+
+        // 첫 글자로 초등/중등 구분
+        const isElementary = classId[0] === 'E';
+        const isMiddle = classId[0] === 'M';
+
+        // 두 번째 글자로 요일 구분
+        const dayCode = classId[1];
+        const dayText =
+          dayCode === 'M' ? '월수' : dayCode === 'F' ? '화목' : '';
+
+        // 반 번호
+        const classNumber = classId.substring(2) || '';
+
+        // 반 정보 객체 생성
+        const classInfo = {
+          value: classId,
+          label: `${classId}반${dayText ? ` (${dayText})` : ''}`,
+          dayType: dayCode, // M 또는 F
+          classNumber: classNumber,
+        };
+
+        if (isElementary) {
+          classList.elementary.push(classInfo);
+        } else if (isMiddle) {
+          classList.middle.push(classInfo);
+        }
+      });
+
+      // 정렬 (요일 -> 반 번호 순)
+      const sortClasses = (classes) => {
+        return classes.sort((a, b) => {
+          // 월수(M)를 화목(F)보다 먼저
+          if (a.dayType !== b.dayType) {
+            return a.dayType === 'M' ? -1 : 1;
+          }
+          // 같은 요일이면 반 번호순
+          return a.classNumber.localeCompare(b.classNumber);
+        });
+      };
+
+      classList.elementary = sortClasses(classList.elementary);
+      classList.middle = sortClasses(classList.middle);
+
+      window.POINTBANK_CONFIG.debugLog('Class list loaded', classList);
+
+      return {
+        success: true,
+        data: classList,
+      };
+    } catch (error) {
+      console.error('반 목록 조회 오류:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: { elementary: [], middle: [] },
+      };
+    }
+  }
 }
 
 // API 인스턴스 생성

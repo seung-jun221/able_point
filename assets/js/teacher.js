@@ -1,11 +1,11 @@
-// teacher.js - 포인트 정책이 반영된 선생님 페이지
+// teacher.js - 포인트 정책이 반영된 선생님 페이지 (개선 버전)
 
 // ==================== 포인트 정책 설정 ====================
 const POINT_POLICY = {
   elementary: {
     earn: {
       mathPerfect: 50, // 연산 만점
-      tamdalSite: 1, // 탐달 사고력 사이트 (실제 획득 포인트 그대로)
+      tamdalSite: 1, // 탐달 사고력 사이트
       homework: 100, // 과제 완료
       levelTest: 200, // 등급유지테스트 통과
       writingExcellent: 300, // 서술형 우수자
@@ -44,35 +44,113 @@ const POINT_POLICY = {
   },
 };
 
-// ==================== 상품 목록 ====================
-const SHOP_ITEMS = [
-  // 츄파춥스
-  { name: '츄파춥스', category: 'snack', price: 200, icon: '🍭' },
-
-  // 초코파이
-  { name: '초코파이', category: 'snack', price: 500, icon: '🍫' },
-
-  // 아이스크림
-  { name: '아이스크림', category: 'snack', price: 1000, icon: '🍦' },
-
-  // 삼각김밥
-  { name: '삼각김밥', category: 'snack', price: 1200, icon: '🍙' },
-
-  // 컵라면
-  { name: '컵라면', category: 'snack', price: 1500, icon: '🍜' },
-
-  // 문화상품권 5000원
-  { name: '문상 5000권', category: 'voucher', price: 10000, icon: '💳' },
-
-  // 에어팟
-  { name: '에어팟', category: 'special', price: 300000, icon: '🎧' },
-];
-
 // ==================== 전역 변수 ====================
 let allStudents = [];
 let currentClass = '';
-let currentGrade = 'elementary'; // 'elementary' or 'middle'
+let currentGrade = 'elementary';
+let selectedStudents = new Set(); // 선택된 학생 ID 저장
 
+// 🔽 여기에 추가
+let CLASS_LIST = {
+  elementary: [],
+  middle: [],
+};
+
+// ==================== Supabase에서 반 목록 가져오기 ====================
+async function loadClassListFromDB() {
+  try {
+    const result = await api.getClassList();
+
+    if (result.success && result.data) {
+      CLASS_LIST = result.data;
+      updateClassSelector();
+
+      const totalClasses =
+        CLASS_LIST.elementary.length + CLASS_LIST.middle.length;
+      console.log(`✅ ${totalClasses}개 반 로드 완료`);
+
+      if (CLASS_LIST.elementary.length > 0) {
+        console.log(
+          `초등부: ${CLASS_LIST.elementary.map((c) => c.value).join(', ')}`
+        );
+      }
+      if (CLASS_LIST.middle.length > 0) {
+        console.log(
+          `중등부: ${CLASS_LIST.middle.map((c) => c.value).join(', ')}`
+        );
+      }
+
+      return true;
+    } else {
+      console.warn('반 목록을 가져올 수 없음');
+      return false;
+    }
+  } catch (error) {
+    console.error('반 목록 로드 실패:', error);
+    toastr.warning('반 목록을 불러올 수 없습니다.', '경고');
+    return false;
+  }
+}
+
+// ==================== 반 선택 옵션 업데이트 ====================
+function updateClassSelector() {
+  const selector = document.getElementById('classSelector');
+  if (!selector) return;
+
+  const currentValue = selector.value;
+
+  // 기존 옵션 초기화
+  selector.innerHTML = '<option value="">전체 반</option>';
+
+  // 초등부 그룹 추가
+  if (CLASS_LIST.elementary && CLASS_LIST.elementary.length > 0) {
+    const elementaryGroup = document.createElement('optgroup');
+    elementaryGroup.label = '🎒 초등부';
+
+    CLASS_LIST.elementary.forEach((cls) => {
+      const option = document.createElement('option');
+      option.value = cls.value;
+      option.textContent = cls.label;
+      elementaryGroup.appendChild(option);
+    });
+
+    selector.appendChild(elementaryGroup);
+  }
+
+  // 중등부 그룹 추가
+  if (CLASS_LIST.middle && CLASS_LIST.middle.length > 0) {
+    const middleGroup = document.createElement('optgroup');
+    middleGroup.label = '📚 중등부';
+
+    CLASS_LIST.middle.forEach((cls) => {
+      const option = document.createElement('option');
+      option.value = cls.value;
+      option.textContent = cls.label;
+      middleGroup.appendChild(option);
+    });
+
+    selector.appendChild(middleGroup);
+  }
+
+  // 이전 선택값 복원
+  if (
+    currentValue &&
+    Array.from(selector.options).some((opt) => opt.value === currentValue)
+  ) {
+    selector.value = currentValue;
+  } else {
+    const lastSelectedClass = localStorage.getItem('lastSelectedClass');
+    if (
+      lastSelectedClass &&
+      Array.from(selector.options).some(
+        (opt) => opt.value === lastSelectedClass
+      )
+    ) {
+      selector.value = lastSelectedClass;
+      currentClass = lastSelectedClass;
+    }
+  }
+}
 // ==================== 페이지 초기화 ====================
 document.addEventListener('DOMContentLoaded', async () => {
   // 로그인 체크
@@ -109,12 +187,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     showMethod: 'fadeIn',
     hideMethod: 'fadeOut',
   };
+  // 🔽 여기에 추가 (loadStudents() 전에)
+  await loadClassListFromDB();
 
   // 학생 데이터 로드
   await loadStudents();
 
   // 이벤트 리스너 설정
   setupEventListeners();
+  setupBulkActionButtons();
 
   // 환영 메시지
   toastr.info(`안녕하세요, ${userName} 선생님!`, '환영합니다', {
@@ -132,9 +213,7 @@ async function loadStudents() {
       displayStudents(allStudents);
       updateSummary();
       updateStudentSelect();
-
-      // DataTable 초기화
-      initDataTable();
+      updateBulkActionUI();
     } else {
       console.error('학생 데이터 로드 실패:', result.error);
       toastr.error('학생 데이터를 불러올 수 없습니다.', '오류');
@@ -145,45 +224,14 @@ async function loadStudents() {
   }
 }
 
-// DataTable 초기화
-function initDataTable() {
-  if ($.fn.DataTable.isDataTable('#studentTable')) {
-    $('#studentTable').DataTable().destroy();
-  }
-
-  setTimeout(() => {
-    $('#studentTable').DataTable({
-      language: {
-        lengthMenu: '_MENU_ 명씩 보기',
-        zeroRecords: '데이터가 없습니다',
-        info: '전체 _TOTAL_명 중 _START_~_END_',
-        infoEmpty: '데이터가 없습니다',
-        infoFiltered: '(전체 _MAX_명 중 검색)',
-        search: '검색:',
-        paginate: {
-          first: '처음',
-          last: '마지막',
-          next: '다음',
-          previous: '이전',
-        },
-      },
-      pageLength: 10,
-      order: [[3, 'desc']],
-      responsive: true,
-    });
-
-    document.getElementById('searchInput').style.display = 'none';
-  }, 100);
-}
-
-// 학생 목록 표시
+// ==================== 체크박스가 포함된 학생 목록 표시 ====================
 function displayStudents(students) {
   const tbody = document.getElementById('studentTableBody');
 
   if (students.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 40px;">
+        <td colspan="7" style="text-align: center; padding: 40px;">
           학생이 없습니다.
         </td>
       </tr>
@@ -191,34 +239,66 @@ function displayStudents(students) {
     return;
   }
 
+  // 헤더에 전체선택 체크박스 추가
+  const thead = document.getElementById('studentTableHead');
+  if (thead && !thead.querySelector('#selectAllCheckbox')) {
+    const headerRow = thead.querySelector('tr');
+    const checkHeader = document.createElement('th');
+    checkHeader.innerHTML = `
+      <input type="checkbox" id="selectAllCheckbox" 
+             onchange="toggleAllStudents(this)">
+    `;
+    headerRow.insertBefore(checkHeader, headerRow.firstChild);
+  }
+
   tbody.innerHTML = students
     .map((student) => {
-      // 학급으로 학년 판단 (초등: 4-6, 중등: 1-3)
-      const grade =
-        student.classId && student.classId[0] >= '4' ? 'elementary' : 'middle';
+      // 학급으로 학년 판단 (E로 시작하면 초등, 나머지는 중등)
+      const isElementary = student.classId && student.classId.startsWith('E');
+      const grade = isElementary ? 'elementary' : 'middle';
       const policy = POINT_POLICY[grade];
 
       return `
-        <tr>
+        <tr data-student-id="${student.studentId}" data-grade="${grade}">
+          <td>
+            <input type="checkbox" 
+                   class="student-checkbox" 
+                   data-id="${student.studentId}"
+                   data-name="${student.name}"
+                   data-grade="${grade}"
+                   onchange="toggleStudent('${student.studentId}')">
+          </td>
           <td>
             <div class="student-name">
               <div class="student-avatar">${student.avatar || '👤'}</div>
               <span>${student.name}</span>
             </div>
           </td>
-          <td>${student.classId}</td>
-          <td><span class="level-tag">${student.level}</span></td>
+          <td>${student.classId || '-'}</td>
+          <td><span class="level-tag">${student.level || '씨앗'}</span></td>
           <td><strong>${student.currentPoints.toLocaleString()}P</strong></td>
           <td>${student.savingsPoints.toLocaleString()}P</td>
           <td>
             <div class="quick-points">
-              ${policy.earn.teacherSpecial
-                .slice(0, 3)
-                .map(
-                  (points) =>
-                    `<button class="point-btn" onclick="quickPoint('${student.studentId}', ${points}, '${student.name}')">+${points}</button>`
-                )
-                .join('')}
+              <button class="point-btn action-math" 
+                      onclick="quickPoint('${student.studentId}', 50, '${
+        student.name
+      }', '연산')"
+                      ${!isElementary ? 'disabled style="opacity:0.3"' : ''}>
+                연산
+              </button>
+              <button class="point-btn action-homework"
+                      onclick="quickPoint('${student.studentId}', ${
+        policy.earn.homework
+      }, '${student.name}', '과제')">
+                과제
+              </button>
+              <button class="point-btn action-penalty"
+                      onclick="quickPoint('${student.studentId}', ${
+        policy.penalty.noBook
+      }, '${student.name}', '책미지참')">
+                -책
+              </button>
             </div>
           </td>
         </tr>
@@ -227,264 +307,323 @@ function displayStudents(students) {
     .join('');
 }
 
-// ==================== 포인트 정책 기반 액션 ====================
-async function policyBasedAction(actionType, studentId = null) {
-  const grade = detectGradeFromClass();
-  const policy = POINT_POLICY[grade];
+// ==================== 체크박스 관리 ====================
+function toggleStudent(studentId) {
+  if (selectedStudents.has(studentId)) {
+    selectedStudents.delete(studentId);
+  } else {
+    selectedStudents.add(studentId);
+  }
+  updateBulkActionUI();
+}
 
-  switch (actionType) {
-    case 'mathPerfect':
-      if (grade === 'elementary') {
-        await givePointsToStudent(
-          studentId,
-          policy.earn.mathPerfect,
-          '연산 만점'
-        );
-      } else {
-        toastr.warning('연산 만점은 초등학생만 해당됩니다.', '알림');
-      }
-      break;
+function toggleAllStudents(checkbox) {
+  const studentCheckboxes = document.querySelectorAll('.student-checkbox');
 
-    case 'homework':
-      await givePointsToStudent(studentId, policy.earn.homework, '과제 완료');
-      break;
+  selectedStudents.clear();
 
-    case 'levelTest':
-      await givePointsToStudent(
-        studentId,
-        policy.earn.levelTest,
-        '등급유지테스트 통과'
-      );
-      break;
+  if (checkbox.checked) {
+    studentCheckboxes.forEach((cb) => {
+      cb.checked = true;
+      selectedStudents.add(cb.dataset.id);
+    });
+  } else {
+    studentCheckboxes.forEach((cb) => {
+      cb.checked = false;
+    });
+  }
 
-    case 'noBook':
-      await givePointsToStudent(studentId, policy.penalty.noBook, '책 미지참');
-      break;
+  updateBulkActionUI();
+}
 
-    case 'noHomework':
-      await givePointsToStudent(
-        studentId,
-        policy.penalty.noHomework,
-        '과제 미제출'
-      );
-      break;
+// ==================== 일괄 처리 UI 업데이트 ====================
+function updateBulkActionUI() {
+  const selectedCount = selectedStudents.size;
+  const bulkActionArea = document.getElementById('bulkActionArea');
+
+  if (!bulkActionArea) return;
+
+  if (selectedCount > 0) {
+    bulkActionArea.innerHTML = `
+      <div class="bulk-action-container">
+        <div class="selected-info">
+          <span class="selected-count">${selectedCount}명 선택</span>
+        </div>
+        <div class="bulk-action-buttons">
+          <button class="bulk-btn bulk-math" onclick="bulkAction('mathPerfect')">
+            연산 만점 (+50P)
+          </button>
+          <button class="bulk-btn bulk-homework" onclick="bulkAction('homework')">
+            과제 완료 (+100/200P)
+          </button>
+          <button class="bulk-btn bulk-level" onclick="bulkAction('levelTest')">
+            등급테스트 (+200/500P)
+          </button>
+          <button class="bulk-btn bulk-penalty" onclick="bulkAction('noBook')">
+            책 미지참 (-200/300P)
+          </button>
+          <button class="bulk-btn bulk-no-homework" onclick="bulkAction('noHomework')">
+            과제 미제출 (-500P)
+          </button>
+        </div>
+      </div>
+    `;
+    bulkActionArea.style.display = 'block';
+  } else {
+    bulkActionArea.style.display = 'none';
   }
 }
 
-// 학급으로 학년 감지
-function detectGradeFromClass() {
-  // 현재 선택된 반 기준으로 초등/중등 구분
-  if (currentClass && currentClass[0] >= '4') {
-    return 'elementary';
-  }
-  return 'middle';
-}
-
-// 개별 학생 포인트 지급
-async function givePointsToStudent(studentId, amount, reason) {
-  if (!studentId) {
+// ==================== 일괄 처리 실행 ====================
+async function bulkAction(actionType) {
+  if (selectedStudents.size === 0) {
     toastr.warning('학생을 선택해주세요.', '알림');
     return;
   }
 
-  try {
-    const result = await api.addPoints(studentId, amount, 'manual', reason);
+  const students = Array.from(selectedStudents).map((id) => {
+    const student = allStudents.find((s) => s.studentId === id);
+    const isElementary = student.classId && student.classId.startsWith('E');
+    const grade = isElementary ? 'elementary' : 'middle';
+    return { ...student, grade };
+  });
 
-    if (result.success) {
-      const student = allStudents.find((s) => s.studentId === studentId);
-      const action = amount > 0 ? '지급' : '차감';
+  // 초등/중등 분리
+  const elementaryStudents = students.filter((s) => s.grade === 'elementary');
+  const middleStudents = students.filter((s) => s.grade === 'middle');
 
-      toastr.success(
-        `${student?.name || '학생'}님께 ${Math.abs(amount)}P ${action}`,
-        '완료'
+  let successCount = 0;
+  let failCount = 0;
+
+  // 액션별 포인트 설정 및 사유
+  const getPointsAndReason = (grade, actionType) => {
+    const policy = POINT_POLICY[grade];
+
+    switch (actionType) {
+      case 'mathPerfect':
+        return grade === 'elementary'
+          ? { points: policy.earn.mathPerfect, reason: '연산 만점' }
+          : null;
+      case 'homework':
+        return { points: policy.earn.homework, reason: '과제 완료' };
+      case 'levelTest':
+        return { points: policy.earn.levelTest, reason: '등급테스트 통과' };
+      case 'noBook':
+        return { points: policy.penalty.noBook, reason: '책 미지참' };
+      case 'noHomework':
+        return { points: policy.penalty.noHomework, reason: '과제 미제출' };
+      default:
+        return null;
+    }
+  };
+
+  // 로딩 표시
+  const loadingToast = toastr.info('일괄 처리 중...', '처리중', {
+    timeOut: 0,
+    extendedTimeOut: 0,
+    closeButton: false,
+  });
+
+  // 처리 실행
+  for (const student of students) {
+    const pointInfo = getPointsAndReason(student.grade, actionType);
+
+    if (!pointInfo) {
+      // 해당 학년에 적용되지 않는 액션
+      if (actionType === 'mathPerfect' && student.grade === 'middle') {
+        continue; // 중등생은 연산 만점 제외
+      }
+      failCount++;
+      continue;
+    }
+
+    try {
+      // ✅ 수정: api.addPoints 호출 순서 변경
+      const result = await api.addPoints(
+        student.loginId || student.studentId, // loginId 사용
+        pointInfo.points,
+        pointInfo.points >= 0 ? 'earn' : 'penalty', // type
+        pointInfo.reason // reason
       );
 
-      await loadStudents();
-      updateCharts(amount);
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch (error) {
+      failCount++;
+    }
+  }
+
+  toastr.clear(loadingToast);
+
+  // 결과 표시
+  if (successCount > 0) {
+    toastr.success(
+      `${successCount}명 처리 완료${
+        failCount > 0 ? `, ${failCount}명 실패` : ''
+      }`,
+      '일괄 처리 완료'
+    );
+  } else {
+    toastr.error('일괄 처리에 실패했습니다.', '오류');
+  }
+
+  // 데이터 새로고침
+  await loadStudents();
+
+  // 선택 초기화
+  selectedStudents.clear();
+  document.getElementById('selectAllCheckbox').checked = false;
+  updateBulkActionUI();
+}
+
+// ==================== 빠른 포인트 지급 (개별) ====================
+async function quickPoint(studentId, amount, studentName, type = '빠른 지급') {
+  try {
+    const loadingToast = toastr.info('포인트 지급 중...', '처리중', {
+      timeOut: 0,
+      extendedTimeOut: 0,
+      closeButton: false,
+    });
+
+    // ✅ 수정: studentId를 loginId로 사용 (또는 student 객체에서 loginId 찾기)
+    const student = allStudents.find((s) => s.studentId === studentId);
+    const result = await api.addPoints(
+      student.loginId || studentId, // loginId 사용
+      amount,
+      amount >= 0 ? 'earn' : 'penalty', // type
+      type // reason
+    );
+
+    toastr.clear(loadingToast);
+
+    if (result.success) {
+      const action = amount > 0 ? '지급' : '차감';
+      toastr.success(
+        `${studentName} 학생 ${Math.abs(amount)}P ${action} (${type})`,
+        '처리 완료',
+        { timeOut: 2000, progressBar: true }
+      );
+
+      loadStudents();
+    } else {
+      toastr.error('처리 실패: ' + result.error, '오류');
     }
   } catch (error) {
-    toastr.error('처리 중 오류가 발생했습니다.', '오류');
+    console.error('포인트 지급 오류:', error);
+    toastr.error('포인트 처리 중 오류가 발생했습니다.', '오류');
   }
 }
 
-// ==================== 빠른 액션 개선 ====================
-async function quickAction(type) {
-  const grade = detectGradeFromClass();
-  const policy = POINT_POLICY[grade];
-
-  switch (type) {
-    case 'attendance':
-      // 초등: 주2회 과제, 중등: 주3회 과제
-      const confirmMsg =
-        grade === 'elementary'
-          ? '초등학생 전체에게 과제 포인트 100P를 지급하시겠습니까?'
-          : '중학생 전체에게 과제 포인트 200P를 지급하시겠습니까?';
-
-      if (confirm(confirmMsg)) {
-        const points = policy.earn.homework;
-        await batchGivePoints(points, '과제 완료');
-      }
-      break;
-
-    case 'test':
-      showPolicyModal('test');
-      break;
-
-    case 'homework':
-      showPolicyModal('homework');
-      break;
-
-    case 'interest':
-      // COFIX 기준 이자 계산
-      const cofixRate = 3.5; // 연 3.5%
-      const monthlyRate = cofixRate / 12 / 100;
-
-      if (
-        confirm(
-          `이번 달 이자율은 ${(monthlyRate * 100).toFixed(
-            2
-          )}%입니다. 정산하시겠습니까?`
+// ==================== 포인트 지급 모달 ====================
+function showPointModal() {
+  // 선택된 학생이 있으면 해당 학생들만, 없으면 전체
+  const targetStudents =
+    selectedStudents.size > 0
+      ? Array.from(selectedStudents).map((id) =>
+          allStudents.find((s) => s.studentId === id)
         )
-      ) {
-        await calculateAndGiveInterest(monthlyRate);
-      }
-      break;
-  }
-}
+      : allStudents;
 
-// 일괄 포인트 지급
-async function batchGivePoints(amount, reason) {
-  let successCount = 0;
-  const totalCount = allStudents.length;
-
-  const progressToast = toastr.info(
-    `0/${totalCount}명 처리 중...`,
-    '포인트 지급',
-    { timeOut: 0, extendedTimeOut: 0 }
-  );
-
-  for (const student of allStudents) {
-    await api.addPoints(student.studentId, amount, 'batch', reason);
-    successCount++;
-
-    progressToast
-      .find('.toast-message')
-      .text(`${successCount}/${totalCount}명 처리 중...`);
-  }
-
-  toastr.clear(progressToast);
-  toastr.success(
-    `전체 ${successCount}명에게 ${amount}P를 지급했습니다!`,
-    '완료'
-  );
-
-  await loadStudents();
-}
-
-// 이자 계산 및 지급
-async function calculateAndGiveInterest(rate) {
-  let totalInterest = 0;
-
-  for (const student of allStudents) {
-    if (student.savingsPoints > 0) {
-      const interest = Math.floor(student.savingsPoints * rate);
-      if (interest > 0) {
-        await api.addPoints(student.studentId, interest, 'interest', '월 이자');
-        totalInterest += interest;
-      }
-    }
-  }
-
-  toastr.success(
-    `총 ${totalInterest}P의 이자가 지급되었습니다.`,
-    '이자 정산 완료'
-  );
-
-  await loadStudents();
-}
-
-// ==================== 정책 기반 모달 ====================
-function showPolicyModal(type) {
   const modal = document.getElementById('pointModal');
+  const studentSelect = document.getElementById('modalStudentSelect');
+
+  // 학생 선택 옵션 업데이트
+  studentSelect.innerHTML = `
+    <option value="">학생을 선택하세요</option>
+    <option value="all">전체 학생 (${targetStudents.length}명)</option>
+    ${targetStudents
+      .map(
+        (s) => `
+      <option value="${s.studentId}">${s.name} (${s.classId})</option>
+    `
+      )
+      .join('')}
+  `;
+
+  // 포인트 타입 선택 업데이트
+  const typeSelect = document.getElementById('modalPointType');
   const grade = detectGradeFromClass();
   const policy = POINT_POLICY[grade];
 
-  // 모달 타입에 따라 옵션 설정
-  const typeSelect = document.getElementById('modalPointType');
-  typeSelect.innerHTML = '';
-
-  if (type === 'homework') {
-    // 과제 관련 옵션
-    typeSelect.innerHTML = `
-      <option value="homework" data-points="${policy.earn.homework}">과제 완료 (+${policy.earn.homework}P)</option>
-      <option value="noHomework" data-points="${policy.penalty.noHomework}">과제 미제출 (${policy.penalty.noHomework}P)</option>
-      <option value="badHomework" data-points="${policy.penalty.badHomework}">과제 불성실 (${policy.penalty.badHomework}P)</option>
-    `;
-  } else if (type === 'test') {
-    // 테스트 관련 옵션
-    typeSelect.innerHTML = `
-      <option value="levelTest" data-points="${
-        policy.earn.levelTest
-      }">등급테스트 통과 (+${policy.earn.levelTest}P)</option>
-      <option value="writingExcellent" data-points="${
-        policy.earn.writingExcellent
-      }">서술형 우수자 (+${policy.earn.writingExcellent}P)</option>
+  typeSelect.innerHTML = `
+    <optgroup label="획득">
       ${
         grade === 'elementary'
-          ? `<option value="mathPerfect" data-points="${policy.earn.mathPerfect}">연산 만점 (+${policy.earn.mathPerfect}P)</option>
-         <option value="mathTimeout" data-points="${policy.penalty.mathTimeout}">연산 시간초과 (${policy.penalty.mathTimeout}P)</option>`
+          ? `<option value="mathPerfect" data-points="${policy.earn.mathPerfect}">
+          연산 만점 (+${policy.earn.mathPerfect}P)
+        </option>`
           : ''
       }
-    `;
-  }
+      <option value="homework" data-points="${policy.earn.homework}">
+        과제 완료 (+${policy.earn.homework}P)
+      </option>
+      <option value="levelTest" data-points="${policy.earn.levelTest}">
+        등급테스트 통과 (+${policy.earn.levelTest}P)
+      </option>
+      <option value="writingExcellent" data-points="${
+        policy.earn.writingExcellent
+      }">
+        서술형 우수자 (+${policy.earn.writingExcellent}P)
+      </option>
+      <option value="onlineComplete" data-points="${
+        policy.earn.onlineComplete
+      }">
+        온라인 문제풀이 (+${policy.earn.onlineComplete}P)
+      </option>
+    </optgroup>
+    <optgroup label="차감">
+      <option value="noBook" data-points="${policy.penalty.noBook}">
+        책 미지참 (${policy.penalty.noBook}P)
+      </option>
+      <option value="noHomework" data-points="${policy.penalty.noHomework}">
+        과제 미제출 (${policy.penalty.noHomework}P)
+      </option>
+      ${
+        grade === 'elementary'
+          ? `<option value="mathTimeout" data-points="${policy.penalty.mathTimeout}">
+          연산 시간초과 (${policy.penalty.mathTimeout}P)
+        </option>`
+          : ''
+      }
+    </optgroup>
+    <optgroup label="기타">
+      <option value="custom">직접 입력</option>
+    </optgroup>
+  `;
 
   // 포인트 자동 설정
   typeSelect.addEventListener('change', (e) => {
     const selectedOption = e.target.options[e.target.selectedIndex];
     const points = selectedOption.getAttribute('data-points');
-    document.getElementById('modalPointAmount').value = Math.abs(points);
+    if (points) {
+      document.getElementById('modalPointAmount').value = Math.abs(points);
+    } else {
+      document.getElementById('modalPointAmount').value = '';
+    }
   });
 
   modal.classList.add('active');
 }
 
-// ==================== 기존 함수 유지 ====================
-function updateSummary() {
-  document.getElementById('totalStudents').textContent =
-    allStudents.length + '명';
-
-  const todayPoints = Math.floor(Math.random() * 1000) + 500;
-  document.getElementById('todayPoints').textContent = todayPoints + 'P';
-
-  if (allStudents.length > 0) {
-    const topStudent = allStudents.reduce((prev, current) =>
-      prev.currentPoints > current.currentPoints ? prev : current
-    );
-    document.getElementById('weeklyTop').textContent = topStudent.name;
-    document.getElementById('weeklyTopPoints').textContent =
-      topStudent.currentPoints.toLocaleString() + 'P 획득';
-  }
-}
-
-function updateStudentSelect() {
-  const select = document.getElementById('modalStudentSelect');
-  select.innerHTML = '<option value="">학생을 선택하세요</option>';
-
-  allStudents.forEach((student) => {
-    select.innerHTML += `
-      <option value="${student.studentId}">
-        ${student.name} (${student.classId})
-      </option>
-    `;
-  });
-}
-
+// ==================== 이벤트 리스너 설정 ====================
 function setupEventListeners() {
-  // 반 선택
+  // 반 선택 - 이 부분 수정
   document.getElementById('classSelector').addEventListener('change', (e) => {
     currentClass = e.target.value;
     currentGrade = detectGradeFromClass();
-    toastr.info(`${e.target.value || '전체'} 반 데이터를 불러옵니다.`, '알림');
+
+    // 선택한 반 저장
+    localStorage.setItem('lastSelectedClass', currentClass);
+
+    // 반 이름 표시 개선
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const className = selectedOption ? selectedOption.textContent : '전체';
+
+    toastr.info(`${className} 데이터를 불러옵니다.`, '알림');
+    selectedStudents.clear();
     loadStudents();
   });
 
@@ -504,136 +643,76 @@ function setupEventListeners() {
   });
 }
 
-// 빠른 포인트 지급
-async function quickPoint(studentId, amount, studentName) {
-  try {
-    const loadingToast = toastr.info('포인트 지급 중...', '처리중', {
-      timeOut: 0,
-      extendedTimeOut: 0,
-      closeButton: false,
-    });
-
-    const result = await api.addPoints(
-      studentId,
-      amount,
-      'manual',
-      '빠른 지급'
+// ==================== 일괄 액션 버튼 설정 ====================
+function setupBulkActionButtons() {
+  // 일괄 액션 영역 생성
+  const quickActionsGrid = document.querySelector('.quick-actions-grid');
+  if (quickActionsGrid) {
+    const bulkActionDiv = document.createElement('div');
+    bulkActionDiv.id = 'bulkActionArea';
+    bulkActionDiv.style.display = 'none';
+    bulkActionDiv.className = 'bulk-action-area';
+    quickActionsGrid.parentElement.insertBefore(
+      bulkActionDiv,
+      quickActionsGrid.nextSibling
     );
-
-    toastr.clear(loadingToast);
-
-    if (result.success) {
-      toastr.success(
-        `${studentName} 학생에게 ${amount}P를 지급했습니다!`,
-        '지급 완료',
-        { timeOut: 2000, progressBar: true }
-      );
-
-      updateCharts(amount);
-      loadStudents();
-    } else {
-      toastr.error('지급 실패: ' + result.error, '오류');
-    }
-  } catch (error) {
-    console.error('포인트 지급 오류:', error);
-    toastr.error('포인트 지급 중 오류가 발생했습니다.', '오류');
   }
 }
 
-// 모달 관련
-function showPointModal(studentId = null) {
-  const modal = document.getElementById('pointModal');
-  modal.classList.add('active');
+// ==================== 학년 감지 개선 ====================
+function detectGradeFromClass() {
+  if (!currentClass) return 'elementary';
 
-  if (studentId) {
-    document.getElementById('modalStudentSelect').value = studentId;
+  // 첫 글자로 판단
+  if (currentClass[0] === 'E') {
+    return 'elementary';
+  } else if (currentClass[0] === 'M') {
+    return 'middle';
   }
+
+  return 'elementary';
+}
+
+// ==================== 기존 함수들 유지 ====================
+function updateSummary() {
+  document.getElementById('totalStudents').textContent =
+    allStudents.length + '명';
+
+  const todayPoints = Math.floor(Math.random() * 1000) + 500;
+  document.getElementById('todayPoints').textContent = todayPoints + 'P';
+
+  if (allStudents.length > 0) {
+    const topStudent = allStudents.reduce((prev, current) =>
+      prev.currentPoints > current.currentPoints ? prev : current
+    );
+    document.getElementById('weeklyTop').textContent = topStudent.name;
+    document.getElementById('weeklyTopPoints').textContent =
+      topStudent.currentPoints.toLocaleString() + 'P 획득';
+  }
+}
+
+function updateStudentSelect() {
+  const select = document.getElementById('modalStudentSelect');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">학생을 선택하세요</option>';
+
+  allStudents.forEach((student) => {
+    select.innerHTML += `
+      <option value="${student.studentId}">
+        ${student.name} (${student.classId})
+      </option>
+    `;
+  });
 }
 
 function closeModal() {
-  document.getElementById('pointModal').classList.remove('active');
-
-  document.getElementById('modalStudentSelect').value = '';
-  document.getElementById('modalPointType').value = 'attendance';
-  document.getElementById('modalPointAmount').value = '';
-  document.getElementById('modalPointReason').value = '';
-}
-
-async function submitPoints() {
-  const studentId = document.getElementById('modalStudentSelect').value;
-  const type = document.getElementById('modalPointType').value;
-  const amount = document.getElementById('modalPointAmount').value;
-  const reason = document.getElementById('modalPointReason').value;
-
-  if (!studentId) {
-    toastr.warning('학생을 선택해주세요.', '알림');
-    return;
-  }
-
-  if (!amount || amount === 0) {
-    toastr.warning('올바른 포인트를 입력해주세요.', '알림');
-    return;
-  }
-
-  try {
-    const submitBtn = document.querySelector('.modal-footer .btn-primary');
-    submitBtn.innerHTML = '<span class="loading"></span> 처리중...';
-    submitBtn.disabled = true;
-
-    const result = await api.addPoints(studentId, amount, type, reason);
-
-    if (result.success) {
-      const student = allStudents.find((s) => s.studentId === studentId);
-      const studentName = student ? student.name : '학생';
-
-      toastr.success(
-        `${studentName}에게 ${amount}P를 지급했습니다!`,
-        '지급 완료',
-        { timeOut: 3000 }
-      );
-
-      closeModal();
-      loadStudents();
-      updateCharts(parseInt(amount));
-    } else {
-      toastr.error('지급 실패: ' + result.error, '오류');
-    }
-  } catch (error) {
-    console.error('포인트 지급 오류:', error);
-    toastr.error('포인트 지급 중 오류가 발생했습니다.', '오류');
-  } finally {
-    const submitBtn = document.querySelector('.modal-footer .btn-primary');
-    submitBtn.innerHTML = '지급하기';
-    submitBtn.disabled = false;
+  const modal = document.getElementById('pointModal');
+  if (modal) {
+    modal.classList.remove('active');
   }
 }
 
-// 차트 업데이트
-function updateCharts(amount) {
-  const chartInstances = Chart.instances;
-
-  if (chartInstances && chartInstances.length > 0) {
-    const weeklyChart = chartInstances[0];
-    if (weeklyChart) {
-      const today = new Date().getDay();
-      const dayIndex = today === 0 ? 4 : today === 6 ? 4 : today - 1;
-
-      if (dayIndex >= 0 && dayIndex < 5) {
-        weeklyChart.data.datasets[0].data[dayIndex] += amount;
-        weeklyChart.update('active');
-      }
-    }
-
-    const categoryChart = chartInstances[2];
-    if (categoryChart) {
-      const categoryIndex = 4;
-      categoryChart.data.datasets[0].data[categoryIndex] += amount;
-      categoryChart.update('active');
-    }
-  }
-}
-
-// 로그아웃
 function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
     toastr.info('로그아웃 되었습니다.', '안녕히 가세요', {
@@ -659,3 +738,165 @@ document.getElementById('pointModal')?.addEventListener('click', (e) => {
     closeModal();
   }
 });
+
+// ==================== 디버깅용 ====================
+function printClassList() {
+  console.group('📚 현재 반 목록');
+
+  if (CLASS_LIST.elementary.length > 0) {
+    console.group('🎒 초등부');
+    CLASS_LIST.elementary.forEach((cls) => {
+      console.log(`${cls.value}: ${cls.label}`);
+    });
+    console.groupEnd();
+  }
+
+  if (CLASS_LIST.middle.length > 0) {
+    console.group('📚 중등부');
+    CLASS_LIST.middle.forEach((cls) => {
+      console.log(`${cls.value}: ${cls.label}`);
+    });
+    console.groupEnd();
+  }
+
+  console.groupEnd();
+}
+
+// ==================== 포인트 지급 처리 (모달) ====================
+async function submitPoints() {
+  const studentSelect = document.getElementById('modalStudentSelect');
+  const pointType = document.getElementById('modalPointType');
+  const pointValue = document.getElementById('modalPointValue');
+  const pointReason = document.getElementById('modalPointReason');
+
+  if (!studentSelect.value) {
+    alert('학생을 선택해주세요.');
+    return;
+  }
+
+  if (!pointValue.value) {
+    alert('포인트를 입력해주세요.');
+    return;
+  }
+
+  try {
+    // 선택된 학생들 확인
+    let targetStudents = [];
+    if (studentSelect.value === 'all') {
+      targetStudents = allStudents;
+    } else {
+      const student = allStudents.find(
+        (s) => s.studentId === studentSelect.value
+      );
+      if (student) targetStudents = [student];
+    }
+
+    if (targetStudents.length === 0) {
+      alert('선택된 학생이 없습니다.');
+      return;
+    }
+
+    // 로딩 표시
+    const submitBtn = document.querySelector(
+      '#pointModal .modal-footer .btn-primary'
+    );
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '처리중...';
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+    const amount = parseInt(pointValue.value);
+    const reason = pointReason.value || '포인트 지급';
+
+    // 각 학생에게 포인트 지급
+    for (const student of targetStudents) {
+      try {
+        // 직접 Supabase에 삽입 (RLS 문제 우회)
+        const transactionId =
+          'TRX' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+        const { data, error } = await supabase
+          .from('points')
+          .insert({
+            transaction_id: transactionId,
+            student_id: student.studentId,
+            amount: amount,
+            type: amount >= 0 ? 'earn' : 'penalty',
+            reason: reason,
+            created_at: new Date().toISOString(),
+          })
+          .select();
+
+        if (error) throw error;
+
+        // students 테이블 업데이트
+        const newCurrentPoints = student.currentPoints + amount;
+        const newTotalPoints =
+          amount > 0 ? student.totalPoints + amount : student.totalPoints;
+
+        const { error: updateError } = await supabase
+          .from('students')
+          .update({
+            current_points: newCurrentPoints,
+            total_points: newTotalPoints,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('student_id', student.studentId);
+
+        if (!updateError) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error('Student update error:', updateError);
+        }
+      } catch (err) {
+        console.error('학생별 처리 오류:', err);
+        failCount++;
+      }
+    }
+
+    // 결과 표시
+    if (successCount > 0) {
+      toastr.success(
+        `${successCount}명에게 포인트를 지급했습니다.${
+          failCount > 0 ? ` (${failCount}명 실패)` : ''
+        }`,
+        '처리 완료'
+      );
+      closeModal();
+      await loadStudents(); // 목록 새로고침
+
+      // 입력 필드 초기화
+      pointValue.value = '';
+      pointReason.value = '';
+      studentSelect.value = '';
+    } else {
+      alert('포인트 지급에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('포인트 지급 오류:', error);
+    alert('오류가 발생했습니다: ' + error.message);
+  } finally {
+    const submitBtn = document.querySelector(
+      '#pointModal .modal-footer .btn-primary'
+    );
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '확인';
+    }
+  }
+}
+
+// ==================== 모달 닫기 함수 개선 ====================
+function closeModal() {
+  const modal = document.getElementById('pointModal');
+  if (modal) {
+    modal.classList.remove('active');
+    // 입력 필드 초기화
+    document.getElementById('modalStudentSelect').value = '';
+    document.getElementById('modalPointValue').value = '';
+    document.getElementById('modalPointReason').value = '';
+  }
+}

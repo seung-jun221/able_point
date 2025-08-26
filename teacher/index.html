@@ -4,22 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>포인트 뱅크 - 선생님 관리</title>
+
+    <!-- CSS -->
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/teacher.css" />
-    <!-- teacher 폴더 안의 파일 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../assets/js/config.js"></script>
-    <!-- ../ 주의! -->
-    <script src="../assets/js/api.js"></script>
-    <!-- ../ 주의! -->
 
-    <!-- ⭐ 새로 추가: DataTables CSS -->
+    <!-- DataTables CSS -->
     <link
       rel="stylesheet"
-      href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css"
+      href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css"
     />
 
-    <!-- ⭐ 새로 추가: Toastr (알림) CSS -->
+    <!-- Toastr CSS -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
@@ -30,19 +26,15 @@
       .toast-success {
         background-color: #22c55e !important;
       }
-
       .toast-error {
         background-color: #ef4444 !important;
       }
-
       .toast-warning {
         background-color: #f59e0b !important;
       }
-
       .toast-info {
         background-color: #6366f1 !important;
       }
-
       #toast-container > div {
         border-radius: 8px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -57,12 +49,12 @@
           <div class="logo-icon">🏦</div>
           <span>포인트 뱅크</span>
         </div>
+        <!-- HTML 부분 (teacher/index.html) -->
+        <!-- 기존의 하드코딩된 select를 아래로 교체 -->
+
         <select class="class-selector" id="classSelector">
           <option value="">전체 반</option>
-          <option value="4A">초등 4-A반</option>
-          <option value="4B">초등 4-B반</option>
-          <option value="5A">초등 5-A반</option>
-          <option value="6A">초등 6-A반</option>
+          <!-- 옵션은 JavaScript에서 동적으로 로드됨 -->
         </select>
       </div>
 
@@ -150,27 +142,116 @@
         </div>
       </div>
 
-      <!-- 빠른 액션 -->
+      <!-- 빠른 액션 그리드 -->
       <div class="quick-actions-grid">
-        <div class="quick-action" onclick="quickAction('attendance')">
-          <div class="quick-action-icon">✅</div>
-          <div class="quick-action-label">출석 포인트 지급</div>
+        <div class="quick-action" onclick="showPointModal()">
+          <div class="quick-action-icon">💰</div>
+          <div class="quick-action-label">포인트 지급</div>
         </div>
-        <div class="quick-action" onclick="quickAction('test')">
-          <div class="quick-action-icon">📝</div>
-          <div class="quick-action-label">시험 점수 입력</div>
+        <div class="quick-action" onclick="showBulkActions()">
+          <div class="quick-action-icon">👥</div>
+          <div class="quick-action-label">일괄 처리</div>
         </div>
-        <div class="quick-action" onclick="quickAction('homework')">
-          <div class="quick-action-icon">📚</div>
-          <div class="quick-action-label">숙제 포인트</div>
-        </div>
-        <div class="quick-action" onclick="quickAction('interest')">
-          <div class="quick-action-icon">💎</div>
-          <div class="quick-action-label">이자 정산</div>
+        <div class="quick-action" onclick="showReports()">
+          <div class="quick-action-icon">📊</div>
+          <div class="quick-action-label">리포트 생성</div>
         </div>
       </div>
 
-      <!-- ⭐ 새로 추가: 차트 섹션 -->
+      <!-- 일괄 액션 영역 -->
+      <div
+        id="bulkActionArea"
+        class="bulk-action-area"
+        style="display: none"
+      ></div>
+
+      <!-- 학생 테이블 섹션 -->
+      <div class="table-section">
+        <div class="table-header">
+          <h3 class="table-title">학생 목록</h3>
+          <div class="table-actions">
+            <input
+              type="text"
+              id="searchInput"
+              class="search-box"
+              placeholder="학생 검색..."
+            />
+            <button class="btn-primary" onclick="showPointModal()">
+              <span>➕</span> 포인트 지급
+            </button>
+          </div>
+        </div>
+
+        <!-- 학생 테이블 -->
+        <table id="studentTable" class="student-table">
+          <thead id="studentTableHead">
+            <tr>
+              <!-- 체크박스 열은 JS에서 자동 추가됨 -->
+              <th>이름</th>
+              <th>학급</th>
+              <th>레벨</th>
+              <th>보유 포인트</th>
+              <th>저축</th>
+              <th>빠른 액션</th>
+            </tr>
+          </thead>
+          <tbody id="studentTableBody">
+            <!-- 여기에 학생 목록이 동적으로 생성됨 -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 포인트 지급 모달 -->
+      <div id="pointModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>포인트 지급/차감</h2>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>대상 학생</label>
+              <select id="modalStudentSelect" class="form-control">
+                <option value="">학생을 선택하세요</option>
+                <option value="all">전체 학생</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>포인트 항목</label>
+              <select id="modalPointType" class="form-control">
+                <!-- 동적으로 생성됨 -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>포인트</label>
+              <input
+                type="number"
+                id="modalPointAmount"
+                class="form-control"
+                placeholder="포인트를 입력하세요"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>사유</label>
+              <input
+                type="text"
+                id="modalPointReason"
+                class="form-control"
+                placeholder="사유를 입력하세요"
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">취소</button>
+            <button class="btn-primary" onclick="submitPoints()">확인</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 차트 섹션 -->
       <div
         class="charts-section"
         style="
@@ -187,12 +268,15 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            min-height: 300px;
+            height: 350px;
+            position: relative;
           "
         >
           <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
             📊 주간 포인트 발급 현황
           </h3>
-          <canvas id="weeklyPointsChart"></canvas>
+          <canvas id="weeklyPointsChart" style="max-height: 250px"></canvas>
         </div>
 
         <div
@@ -202,6 +286,8 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            height: 350px;
+            position: relative;
           "
         >
           <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
@@ -210,6 +296,7 @@
           <canvas id="studentDistributionChart"></canvas>
         </div>
 
+        <!-- 차트 카드 스타일 수정 -->
         <div
           class="chart-card"
           style="
@@ -217,487 +304,206 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            height: 350px;
+            position: relative;
           "
         >
           <h3 style="font-size: 16px; margin-bottom: 20px; color: #333">
             📈 카테고리별 포인트
           </h3>
-          <canvas id="categoryChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 학생 목록 테이블 -->
-      <div class="table-section">
-        <div class="table-header">
-          <h2 class="table-title">학생 포인트 현황</h2>
-          <div class="table-actions">
-            <input
-              type="text"
-              class="search-box"
-              id="searchInput"
-              placeholder="학생 검색..."
-            />
-            <button class="btn btn-primary" onclick="showPointModal()">
-              포인트 지급
-            </button>
+          <div style="position: relative; height: 280px">
+            <canvas id="categoryChart"></canvas>
           </div>
         </div>
-
-        <table class="student-table" id="studentTable">
-          <thead>
-            <tr>
-              <th>학생</th>
-              <th>반</th>
-              <th>레벨</th>
-              <th>현재 포인트</th>
-              <th>저축 포인트</th>
-              <th>빠른 지급</th>
-            </tr>
-          </thead>
-          <tbody id="studentTableBody">
-            <tr>
-              <td colspan="6" style="text-align: center; padding: 40px">
-                데이터를 불러오는 중...
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
-    <!-- 포인트 정책 기반 지급 모달 -->
-    <div id="pointModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>포인트 지급/차감</h2>
-          <button class="modal-close" onclick="closeModal()">×</button>
-        </div>
+    <!-- ========== 스크립트 섹션 ========== -->
 
-        <!-- 학년 선택 -->
-        <div class="form-group">
-          <label class="form-label">학년 구분</label>
-          <select
-            class="form-select"
-            id="modalGradeSelect"
-            onchange="updatePointOptions()"
-          >
-            <option value="elementary">초등학생</option>
-            <option value="middle">중학생</option>
-          </select>
-        </div>
+    <!-- 1. Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        <!-- 대상 학생 -->
-        <div class="form-group">
-          <label class="form-label">대상 학생</label>
-          <select class="form-select" id="modalStudentSelect">
-            <option value="">학생을 선택하세요</option>
-          </select>
-        </div>
+    <!-- 2. Config & API -->
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/api.js"></script>
 
-        <!-- 포인트 카테고리 -->
-        <div class="form-group">
-          <label class="form-label">카테고리</label>
-          <select
-            class="form-select"
-            id="modalCategorySelect"
-            onchange="updatePointTypes()"
-          >
-            <option value="earn">획득 포인트</option>
-            <option value="penalty">차감 포인트</option>
-          </select>
-        </div>
-
-        <!-- 포인트 종류 -->
-        <div class="form-group">
-          <label class="form-label">포인트 종류</label>
-          <select
-            class="form-select"
-            id="modalPointType"
-            onchange="autoFillPoints()"
-          >
-            <!-- 옵션은 JavaScript로 동적 생성 -->
-          </select>
-        </div>
-
-        <!-- 포인트 금액 -->
-        <div class="form-group">
-          <label class="form-label">포인트 금액</label>
-          <input
-            type="number"
-            class="form-input"
-            id="modalPointAmount"
-            placeholder="자동으로 입력됩니다"
-          />
-        </div>
-
-        <!-- 사유 -->
-        <div class="form-group">
-          <label class="form-label">추가 사유 (선택)</label>
-          <input
-            type="text"
-            class="form-input"
-            id="modalPointReason"
-            placeholder="예: 수학 시험 만점"
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-          <button class="btn btn-primary" onclick="submitPoints()">
-            지급/차감
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 일괄 처리 모달 -->
-    <div id="batchModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>일괄 포인트 처리</h2>
-          <button class="modal-close" onclick="closeBatchModal()">×</button>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">대상</label>
-          <select class="form-select" id="batchTarget">
-            <option value="all">전체 학생</option>
-            <option value="elementary">초등학생 전체</option>
-            <option value="middle">중학생 전체</option>
-            <option value="class">특정 반</option>
-          </select>
-        </div>
-
-        <div class="form-group" id="classSelectGroup" style="display: none">
-          <label class="form-label">반 선택</label>
-          <select class="form-select" id="batchClass">
-            <option value="4A">초등 4-A반</option>
-            <option value="4B">초등 4-B반</option>
-            <option value="5A">초등 5-A반</option>
-            <option value="6A">초등 6-A반</option>
-            <option value="1A">중등 1-A반</option>
-            <option value="2A">중등 2-A반</option>
-            <option value="3A">중등 3-A반</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">포인트 유형</label>
-          <select class="form-select" id="batchType">
-            <option value="homework">과제 완료 (초등 100P, 중등 200P)</option>
-            <option value="mathPerfect">연산 만점 (초등 50P)</option>
-            <option value="attendance">출석 체크 (10P)</option>
-            <option value="custom">직접 입력</option>
-          </select>
-        </div>
-
-        <div class="form-group" id="customPointGroup" style="display: none">
-          <label class="form-label">포인트 금액</label>
-          <input
-            type="number"
-            class="form-input"
-            id="batchAmount"
-            placeholder="포인트 입력"
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeBatchModal()">
-            취소
-          </button>
-          <button class="btn btn-primary" onclick="processBatch()">
-            일괄 처리
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      // 포인트 정책 옵션 업데이트
-      function updatePointOptions() {
-        const grade = document.getElementById('modalGradeSelect').value;
-        const category = document.getElementById('modalCategorySelect').value;
-        updatePointTypes();
-      }
-
-      function updatePointTypes() {
-        const grade = document.getElementById('modalGradeSelect').value;
-        const category = document.getElementById('modalCategorySelect').value;
-        const typeSelect = document.getElementById('modalPointType');
-
-        typeSelect.innerHTML = '';
-
-        if (category === 'earn') {
-          if (grade === 'elementary') {
-            typeSelect.innerHTML = `
-        <option value="mathPerfect" data-points="50">연산 만점 (+50P)</option>
-        <option value="tamdalSite" data-points="">탐달 사고력 (실제 포인트 그대로)</option>
-        <option value="homework" data-points="100">과제 완료 (+100P)</option>
-        <option value="levelTest" data-points="200">등급유지테스트 통과 (+200P)</option>
-        <option value="writingExcellent" data-points="300">서술형 우수자 (+300P)</option>
-        <option value="tantanComplete" data-points="300">탄탄북 완료 (+300P)</option>
-        <option value="onlineComplete" data-points="500">온라인 문제풀이 완료 (+500P)</option>
-        <option value="makeupWork" data-points="200">결석분 가정학습 (+200P)</option>
-        <option value="friendRecommend" data-points="10000">신규생 친구 추천 (+10000P)</option>
-        <option value="returnRecommend" data-points="30000">퇴원생 재등원 추천 (+30000P)</option>
-        <option value="teacherSpecial" data-points="">선생님 재량 특별포인트 (10-50P)</option>
-      `;
-          } else {
-            typeSelect.innerHTML = `
-        <option value="homework" data-points="200">과제 완료 (+200P)</option>
-        <option value="levelTest" data-points="500">등급유지테스트 통과 (+500P)</option>
-        <option value="writingExcellent" data-points="300">서술형 우수자 (+300P)</option>
-        <option value="onlineComplete" data-points="1000">온라인 문제풀이 완료 (+1000P)</option>
-        <option value="makeupWork" data-points="200">결석분 가정학습 (+200P)</option>
-        <option value="friendRecommend" data-points="10000">신규생 친구 추천 (+10000P)</option>
-        <option value="returnRecommend" data-points="30000">퇴원생 재등원 추천 (+30000P)</option>
-        <option value="teacherSpecial" data-points="">선생님 재량 특별포인트 (10-50P)</option>
-      `;
-          }
-        } else {
-          if (grade === 'elementary') {
-            typeSelect.innerHTML = `
-        <option value="noBook" data-points="-200">책 미지참 (-200P)</option>
-        <option value="noHomework" data-points="-500">과제 미제출 (-500P)</option>
-        <option value="badHomework" data-points="-300">과제 불성실 50% 이상 오답 (-300P)</option>
-        <option value="mathTimeout" data-points="-50">연산 시간 초과 5분 (-50P)</option>
-        <option value="behaviorWarning" data-points="">태도 문제 경고 (재량)</option>
-      `;
-          } else {
-            typeSelect.innerHTML = `
-        <option value="noBook" data-points="-300">책 미지참 (-300P)</option>
-        <option value="noHomework" data-points="-500">과제 미제출 (-500P)</option>
-        <option value="badHomework" data-points="-300">과제 불성실 50% 이상 오답 (-300P)</option>
-        <option value="behaviorWarning" data-points="">태도 문제 경고 (재량)</option>
-      `;
-          }
-        }
-      }
-
-      function autoFillPoints() {
-        const typeSelect = document.getElementById('modalPointType');
-        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
-        const points = selectedOption.getAttribute('data-points');
-
-        if (points) {
-          document.getElementById('modalPointAmount').value = Math.abs(points);
-        } else {
-          document.getElementById('modalPointAmount').value = '';
-          document.getElementById('modalPointAmount').placeholder =
-            '직접 입력하세요';
-        }
-      }
-
-      // 일괄 처리 대상 변경
-      document
-        .getElementById('batchTarget')
-        ?.addEventListener('change', (e) => {
-          const classGroup = document.getElementById('classSelectGroup');
-          if (e.target.value === 'class') {
-            classGroup.style.display = 'block';
-          } else {
-            classGroup.style.display = 'none';
-          }
-        });
-
-      // 일괄 처리 유형 변경
-      document.getElementById('batchType')?.addEventListener('change', (e) => {
-        const customGroup = document.getElementById('customPointGroup');
-        if (e.target.value === 'custom') {
-          customGroup.style.display = 'block';
-        } else {
-          customGroup.style.display = 'none';
-        }
-      });
-
-      function closeBatchModal() {
-        document.getElementById('batchModal').classList.remove('active');
-      }
-
-      // 페이지 로드시 초기 옵션 설정
-      document.addEventListener('DOMContentLoaded', () => {
-        updatePointTypes();
-      });
-    </script>
-
-    <!-- ⭐ 스크립트 순서 중요! -->
-    <!-- jQuery 먼저 -->
+    <!-- 3. jQuery (DataTables, Toastr의 의존성) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- 그 다음 DataTables -->
+    <!-- 4. DataTables -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
 
-    <!-- Chart.js -->
+    <!-- 5. Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Toastr -->
+    <!-- 6. Toastr -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
-    <!-- 기존 스크립트 -->
-    <script src="../assets/js/api.js"></script>
+    <!-- 7. Teacher.js (메인 로직) -->
     <script src="../assets/js/teacher.js"></script>
 
-    <!-- ⭐ 차트 초기화 스크립트 -->
+    <!-- 8. 차트 초기화 스크립트 -->
     <script>
-      // DataTables 한글 설정
-      const dataTableKorean = {
-        lengthMenu: '_MENU_ 명씩 보기',
-        zeroRecords: '데이터가 없습니다',
-        info: '전체 _TOTAL_명 중 _START_~_END_',
-        infoEmpty: '데이터가 없습니다',
-        infoFiltered: '(전체 _MAX_명 중 검색)',
-        search: '검색:',
-        paginate: {
-          first: '처음',
-          last: '마지막',
-          next: '다음',
-          previous: '이전',
-        },
-      };
-
-      // 페이지 로드 시 실행
-      document.addEventListener('DOMContentLoaded', function () {
-        // DataTables 초기화 (테이블에 데이터가 있을 때만)
-        setTimeout(() => {
-          if ($.fn.DataTable && $('#studentTableBody tr').length > 1) {
-            $('#studentTable').DataTable({
-              language: dataTableKorean,
-              pageLength: 10,
-              order: [[3, 'desc']], // 포인트 기준 정렬
-              responsive: true,
-            });
-          }
-        }, 1000);
-
-        // 차트 초기화
-        initCharts();
-      });
+      // 차트 인스턴스 저장용
+      let chartInstances = [];
 
       // 차트 초기화 함수
       function initCharts() {
-        // 1. 주간 포인트 발급 차트
-        const weeklyCtx = document
-          .getElementById('weeklyPointsChart')
-          .getContext('2d');
-        new Chart(weeklyCtx, {
-          type: 'line',
-          data: {
-            labels: ['월', '화', '수', '목', '금'],
-            datasets: [
-              {
-                label: '발급 포인트',
-                data: [120, 190, 300, 250, 420],
-                borderColor: 'rgb(99, 102, 241)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                tension: 0.4,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: false },
+        // 기존 차트가 있으면 제거
+        chartInstances.forEach((chart) => {
+          if (chart) chart.destroy();
+        });
+        chartInstances = [];
+
+        // 1. 주간 포인트 발급 차트 - 테스트 데이터 추가
+        const weeklyCtx = document.getElementById('weeklyPointsChart');
+        if (weeklyCtx) {
+          chartInstances[0] = new Chart(weeklyCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: ['월', '화', '수', '목', '금'],
+              datasets: [
+                {
+                  label: '발급 포인트',
+                  data: [150, 230, 180, 290, 350], // 🔽 테스트 데이터
+                  borderColor: 'rgb(99, 102, 241)',
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  tension: 0.4,
+                },
+              ],
             },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function (value) {
-                    return value + 'P';
+            options: {
+              responsive: true,
+              maintainAspectRatio: false, // 🔽 추가
+              plugins: {
+                legend: { display: false },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function (value) {
+                      return value + 'P';
+                    },
                   },
                 },
               },
             },
-          },
-        });
+          });
+        }
 
-        // 2. 학생별 포인트 분포 차트
-        const distributionCtx = document
-          .getElementById('studentDistributionChart')
-          .getContext('2d');
-        new Chart(distributionCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['0-500P', '500-1000P', '1000-2000P', '2000P+'],
-            datasets: [
-              {
-                data: [8, 12, 15, 5],
-                backgroundColor: ['#fbbf24', '#34d399', '#60a5fa', '#a78bfa'],
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'bottom',
+        // 2. 학생별 포인트 분포 차트 - 테스트 데이터
+        const distributionCtx = document.getElementById(
+          'studentDistributionChart'
+        );
+        if (distributionCtx) {
+          chartInstances[1] = new Chart(distributionCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: ['0-500P', '500-1000P', '1000-2000P', '2000P+'],
+              datasets: [
+                {
+                  data: [5, 8, 12, 3], // 🔽 테스트 데이터
+                  backgroundColor: ['#fbbf24', '#34d399', '#60a5fa', '#a78bfa'],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false, // 🔽 추가
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                },
               },
             },
-          },
-        });
+          });
+        }
 
-        // 3. 카테고리별 포인트 차트
-        const categoryCtx = document
-          .getElementById('categoryChart')
-          .getContext('2d');
-        new Chart(categoryCtx, {
-          type: 'bar',
-          data: {
-            labels: ['출석', '숙제', '시험', '태도', '특별'],
-            datasets: [
-              {
-                label: '포인트',
-                data: [300, 450, 200, 150, 100],
-                backgroundColor: [
-                  '#6366f1',
-                  '#22c55e',
-                  '#f59e0b',
-                  '#ef4444',
-                  '#8b5cf6',
-                ],
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: false },
+        // 3. 카테고리별 포인트 차트 - 테스트 데이터
+        const categoryCtx = document.getElementById('categoryChart');
+        if (categoryCtx) {
+          chartInstances[2] = new Chart(categoryCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: ['출석', '숙제', '시험', '태도', '특별'],
+              datasets: [
+                {
+                  label: '포인트',
+                  data: [450, 680, 320, 150, 280], // 🔽 테스트 데이터
+                  backgroundColor: [
+                    '#6366f1',
+                    '#22c55e',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6',
+                  ],
+                },
+              ],
             },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function (value) {
-                    return value + 'P';
+            options: {
+              responsive: true,
+              maintainAspectRatio: false, // 🔽 추가
+              plugins: {
+                legend: { display: false },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function (value) {
+                      return value + 'P';
+                    },
                   },
                 },
               },
             },
-          },
-        });
-      }
-
-      // 차트 업데이트 함수 (teacher.js에서 호출용)
-      function updateCharts() {
-        // 실제 데이터로 차트 업데이트
-        const charts = Chart.instances;
-
-        if (charts[0]) {
-          // 주간 차트 업데이트
-          const today = new Date().getDay();
-          const dayIndex = today === 0 ? 4 : today - 1;
-          if (dayIndex >= 0 && dayIndex < 5) {
-            charts[0].data.datasets[0].data[dayIndex] += 10;
-            charts[0].update();
-          }
+          });
         }
       }
+
+      // 차트 업데이트 함수
+      function updateCharts(amount) {
+        // 주간 차트 업데이트
+        const weeklyChart = chartInstances[0];
+        if (weeklyChart) {
+          const today = new Date().getDay();
+          const dayIndex =
+            today === 0 || today === 6
+              ? 4
+              : today === 1
+              ? 0
+              : today === 2
+              ? 1
+              : today === 3
+              ? 2
+              : today === 4
+              ? 3
+              : today === 5
+              ? 4
+              : 4;
+
+          if (dayIndex >= 0 && dayIndex < 5) {
+            weeklyChart.data.datasets[0].data[dayIndex] += amount;
+            weeklyChart.update('active');
+          }
+        }
+
+        // 카테고리 차트 업데이트
+        const categoryChart = chartInstances[2];
+        if (categoryChart) {
+          const categoryIndex = 4; // '특별' 카테고리
+          categoryChart.data.datasets[0].data[categoryIndex] += amount;
+          categoryChart.update('active');
+        }
+      }
+
+      // DOM 로드 완료 시 차트 초기화
+      document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(() => {
+          initCharts();
+        }, 500);
+      });
     </script>
-    <!-- 기존 스크립트들 아래에 추가 -->
-    <!-- DataTables Buttons Extension (엑셀 다운로드용) -->
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   </body>
 </html>
