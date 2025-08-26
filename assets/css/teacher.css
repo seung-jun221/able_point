@@ -717,3 +717,280 @@ body {
     font-size: 12px;
   }
 }
+/* ==================== 체크박스 스타일 ==================== */
+.student-checkbox,
+#selectAllCheckbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.student-table th:first-child,
+.student-table td:first-child {
+  width: 40px;
+  text-align: center;
+}
+
+/* ==================== 일괄 액션 영역 ==================== */
+.bulk-action-area {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px dashed #6366f1;
+}
+
+.bulk-action-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.selected-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selected-count {
+  font-size: 18px;
+  font-weight: bold;
+  color: #6366f1;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bulk-action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bulk-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bulk-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.bulk-math {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.bulk-homework {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+}
+
+.bulk-level {
+  background: linear-gradient(135deg, #4299e1, #3182ce);
+  color: white;
+}
+
+.bulk-penalty {
+  background: linear-gradient(135deg, #f56565, #e53e3e);
+  color: white;
+}
+
+.bulk-no-homework {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+  color: white;
+}
+
+/* ==================== 개선된 퀵액션 버튼 ==================== */
+.quick-points {
+  display: flex;
+  gap: 6px;
+}
+
+.point-btn {
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 45px;
+}
+
+.point-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-math {
+  border-color: #818cf8;
+  color: #6366f1;
+}
+
+.action-math:hover:not(:disabled) {
+  background: #6366f1;
+  color: white;
+}
+
+.action-homework {
+  border-color: #86efac;
+  color: #22c55e;
+}
+
+.action-homework:hover:not(:disabled) {
+  background: #22c55e;
+  color: white;
+}
+
+.action-penalty {
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.action-penalty:hover:not(:disabled) {
+  background: #ef4444;
+  color: white;
+}
+
+.point-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+/* ==================== 테이블 개선 ==================== */
+.student-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.student-table thead {
+  background: #f8f9fa;
+}
+
+.student-table th {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.student-table tbody tr {
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.student-table tbody tr:hover {
+  background: #f0f1ff;
+}
+
+.student-table tbody tr:has(.student-checkbox:checked) {
+  background: #e0e7ff;
+}
+
+/* ==================== 반응형 디자인 ==================== */
+@media (max-width: 768px) {
+  .bulk-action-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bulk-action-buttons {
+    width: 100%;
+  }
+
+  .bulk-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .student-table {
+    font-size: 12px;
+  }
+
+  .point-btn {
+    font-size: 11px;
+    padding: 4px 8px;
+    min-width: 35px;
+  }
+}
+
+/* ==================== 애니메이션 효과 ==================== */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-action-area {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* ==================== 토스트 알림 커스터마이징 ==================== */
+.toast-success {
+  background-color: #10b981 !important;
+}
+
+.toast-error {
+  background-color: #ef4444 !important;
+}
+
+.toast-warning {
+  background-color: #f59e0b !important;
+}
+
+.toast-info {
+  background-color: #6366f1 !important;
+}
+
+/* ==================== 로딩 상태 ==================== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
