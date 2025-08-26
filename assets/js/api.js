@@ -173,9 +173,27 @@ class PointBankAPI {
         count: data?.length || 0,
       });
 
+      // ✅ 언더스코어를 카멜케이스로 변환
       return {
         success: true,
-        data: data || [],
+        data: data
+          ? data.map((student) => ({
+              studentId: student.student_id,
+              userId: student.user_id,
+              name: student.name,
+              classId: student.class_id,
+              level: student.level || '씨앗',
+              totalPoints: student.total_points || 0,
+              currentPoints: student.current_points || 0,
+              savingsPoints: student.savings_points || 0,
+              avatar: student.avatar || '🦁',
+              parentUserId: student.parent_user_id,
+              updatedAt: student.updated_at,
+              loginId: student.login_id,
+              className: student.class_name,
+              grade: student.grade,
+            }))
+          : [],
       };
     } catch (error) {
       console.error('Get students error:', error);

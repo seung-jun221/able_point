@@ -265,14 +265,28 @@
       </div>
     </div>
 
-    <!-- 포인트 지급 모달 -->
+    <!-- 포인트 정책 기반 지급 모달 -->
     <div id="pointModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>포인트 지급</h2>
+          <h2>포인트 지급/차감</h2>
           <button class="modal-close" onclick="closeModal()">×</button>
         </div>
 
+        <!-- 학년 선택 -->
+        <div class="form-group">
+          <label class="form-label">학년 구분</label>
+          <select
+            class="form-select"
+            id="modalGradeSelect"
+            onchange="updatePointOptions()"
+          >
+            <option value="elementary">초등학생</option>
+            <option value="middle">중학생</option>
+          </select>
+        </div>
+
+        <!-- 대상 학생 -->
         <div class="form-group">
           <label class="form-label">대상 학생</label>
           <select class="form-select" id="modalStudentSelect">
@@ -280,29 +294,45 @@
           </select>
         </div>
 
+        <!-- 포인트 카테고리 -->
         <div class="form-group">
-          <label class="form-label">포인트 종류</label>
-          <select class="form-select" id="modalPointType">
-            <option value="attendance">출석 포인트</option>
-            <option value="homework">숙제 포인트</option>
-            <option value="test">시험 포인트</option>
-            <option value="behavior">태도 포인트</option>
-            <option value="special">특별 포인트</option>
+          <label class="form-label">카테고리</label>
+          <select
+            class="form-select"
+            id="modalCategorySelect"
+            onchange="updatePointTypes()"
+          >
+            <option value="earn">획득 포인트</option>
+            <option value="penalty">차감 포인트</option>
           </select>
         </div>
 
+        <!-- 포인트 종류 -->
+        <div class="form-group">
+          <label class="form-label">포인트 종류</label>
+          <select
+            class="form-select"
+            id="modalPointType"
+            onchange="autoFillPoints()"
+          >
+            <!-- 옵션은 JavaScript로 동적 생성 -->
+          </select>
+        </div>
+
+        <!-- 포인트 금액 -->
         <div class="form-group">
           <label class="form-label">포인트 금액</label>
           <input
             type="number"
             class="form-input"
             id="modalPointAmount"
-            placeholder="지급할 포인트 입력"
+            placeholder="자동으로 입력됩니다"
           />
         </div>
 
+        <!-- 사유 -->
         <div class="form-group">
-          <label class="form-label">사유 (선택)</label>
+          <label class="form-label">추가 사유 (선택)</label>
           <input
             type="text"
             class="form-input"
@@ -314,11 +344,181 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="closeModal()">취소</button>
           <button class="btn btn-primary" onclick="submitPoints()">
-            지급하기
+            지급/차감
           </button>
         </div>
       </div>
     </div>
+
+    <!-- 일괄 처리 모달 -->
+    <div id="batchModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>일괄 포인트 처리</h2>
+          <button class="modal-close" onclick="closeBatchModal()">×</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">대상</label>
+          <select class="form-select" id="batchTarget">
+            <option value="all">전체 학생</option>
+            <option value="elementary">초등학생 전체</option>
+            <option value="middle">중학생 전체</option>
+            <option value="class">특정 반</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="classSelectGroup" style="display: none">
+          <label class="form-label">반 선택</label>
+          <select class="form-select" id="batchClass">
+            <option value="4A">초등 4-A반</option>
+            <option value="4B">초등 4-B반</option>
+            <option value="5A">초등 5-A반</option>
+            <option value="6A">초등 6-A반</option>
+            <option value="1A">중등 1-A반</option>
+            <option value="2A">중등 2-A반</option>
+            <option value="3A">중등 3-A반</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">포인트 유형</label>
+          <select class="form-select" id="batchType">
+            <option value="homework">과제 완료 (초등 100P, 중등 200P)</option>
+            <option value="mathPerfect">연산 만점 (초등 50P)</option>
+            <option value="attendance">출석 체크 (10P)</option>
+            <option value="custom">직접 입력</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="customPointGroup" style="display: none">
+          <label class="form-label">포인트 금액</label>
+          <input
+            type="number"
+            class="form-input"
+            id="batchAmount"
+            placeholder="포인트 입력"
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeBatchModal()">
+            취소
+          </button>
+          <button class="btn btn-primary" onclick="processBatch()">
+            일괄 처리
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 포인트 정책 옵션 업데이트
+      function updatePointOptions() {
+        const grade = document.getElementById('modalGradeSelect').value;
+        const category = document.getElementById('modalCategorySelect').value;
+        updatePointTypes();
+      }
+
+      function updatePointTypes() {
+        const grade = document.getElementById('modalGradeSelect').value;
+        const category = document.getElementById('modalCategorySelect').value;
+        const typeSelect = document.getElementById('modalPointType');
+
+        typeSelect.innerHTML = '';
+
+        if (category === 'earn') {
+          if (grade === 'elementary') {
+            typeSelect.innerHTML = `
+        <option value="mathPerfect" data-points="50">연산 만점 (+50P)</option>
+        <option value="tamdalSite" data-points="">탐달 사고력 (실제 포인트 그대로)</option>
+        <option value="homework" data-points="100">과제 완료 (+100P)</option>
+        <option value="levelTest" data-points="200">등급유지테스트 통과 (+200P)</option>
+        <option value="writingExcellent" data-points="300">서술형 우수자 (+300P)</option>
+        <option value="tantanComplete" data-points="300">탄탄북 완료 (+300P)</option>
+        <option value="onlineComplete" data-points="500">온라인 문제풀이 완료 (+500P)</option>
+        <option value="makeupWork" data-points="200">결석분 가정학습 (+200P)</option>
+        <option value="friendRecommend" data-points="10000">신규생 친구 추천 (+10000P)</option>
+        <option value="returnRecommend" data-points="30000">퇴원생 재등원 추천 (+30000P)</option>
+        <option value="teacherSpecial" data-points="">선생님 재량 특별포인트 (10-50P)</option>
+      `;
+          } else {
+            typeSelect.innerHTML = `
+        <option value="homework" data-points="200">과제 완료 (+200P)</option>
+        <option value="levelTest" data-points="500">등급유지테스트 통과 (+500P)</option>
+        <option value="writingExcellent" data-points="300">서술형 우수자 (+300P)</option>
+        <option value="onlineComplete" data-points="1000">온라인 문제풀이 완료 (+1000P)</option>
+        <option value="makeupWork" data-points="200">결석분 가정학습 (+200P)</option>
+        <option value="friendRecommend" data-points="10000">신규생 친구 추천 (+10000P)</option>
+        <option value="returnRecommend" data-points="30000">퇴원생 재등원 추천 (+30000P)</option>
+        <option value="teacherSpecial" data-points="">선생님 재량 특별포인트 (10-50P)</option>
+      `;
+          }
+        } else {
+          if (grade === 'elementary') {
+            typeSelect.innerHTML = `
+        <option value="noBook" data-points="-200">책 미지참 (-200P)</option>
+        <option value="noHomework" data-points="-500">과제 미제출 (-500P)</option>
+        <option value="badHomework" data-points="-300">과제 불성실 50% 이상 오답 (-300P)</option>
+        <option value="mathTimeout" data-points="-50">연산 시간 초과 5분 (-50P)</option>
+        <option value="behaviorWarning" data-points="">태도 문제 경고 (재량)</option>
+      `;
+          } else {
+            typeSelect.innerHTML = `
+        <option value="noBook" data-points="-300">책 미지참 (-300P)</option>
+        <option value="noHomework" data-points="-500">과제 미제출 (-500P)</option>
+        <option value="badHomework" data-points="-300">과제 불성실 50% 이상 오답 (-300P)</option>
+        <option value="behaviorWarning" data-points="">태도 문제 경고 (재량)</option>
+      `;
+          }
+        }
+      }
+
+      function autoFillPoints() {
+        const typeSelect = document.getElementById('modalPointType');
+        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+        const points = selectedOption.getAttribute('data-points');
+
+        if (points) {
+          document.getElementById('modalPointAmount').value = Math.abs(points);
+        } else {
+          document.getElementById('modalPointAmount').value = '';
+          document.getElementById('modalPointAmount').placeholder =
+            '직접 입력하세요';
+        }
+      }
+
+      // 일괄 처리 대상 변경
+      document
+        .getElementById('batchTarget')
+        ?.addEventListener('change', (e) => {
+          const classGroup = document.getElementById('classSelectGroup');
+          if (e.target.value === 'class') {
+            classGroup.style.display = 'block';
+          } else {
+            classGroup.style.display = 'none';
+          }
+        });
+
+      // 일괄 처리 유형 변경
+      document.getElementById('batchType')?.addEventListener('change', (e) => {
+        const customGroup = document.getElementById('customPointGroup');
+        if (e.target.value === 'custom') {
+          customGroup.style.display = 'block';
+        } else {
+          customGroup.style.display = 'none';
+        }
+      });
+
+      function closeBatchModal() {
+        document.getElementById('batchModal').classList.remove('active');
+      }
+
+      // 페이지 로드시 초기 옵션 설정
+      document.addEventListener('DOMContentLoaded', () => {
+        updatePointTypes();
+      });
+    </script>
 
     <!-- ⭐ 스크립트 순서 중요! -->
     <!-- jQuery 먼저 -->
