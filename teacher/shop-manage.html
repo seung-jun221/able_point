@@ -17,114 +17,179 @@
     />
   </head>
   <body>
-    <!-- 사이드바 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>🏦 포인트뱅크</h2>
-        <span class="teacher-label">선생님</span>
-      </div>
+    <div class="container">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">🏦</div>
+            <span>포인트뱅크</span>
+          </div>
+        </div>
 
-      <nav class="sidebar-nav">
-        <a href="index.html" class="nav-item">
-          <span class="nav-icon">📊</span>
-          <span>대시보드</span>
-        </a>
-        <a href="shop-manage.html" class="nav-item active">
-          <span class="nav-icon">🛍️</span>
-          <span>상점 관리</span>
-        </a>
-        <a href="#" class="nav-item">
-          <span class="nav-icon">📈</span>
-          <span>통계</span>
-        </a>
-        <a href="#" class="nav-item">
-          <span class="nav-icon">⚙️</span>
-          <span>설정</span>
-        </a>
-      </nav>
+        <nav class="nav-menu">
+          <!-- 관리자 전용 메뉴 -->
+          <div
+            class="nav-section admin-only"
+            id="adminSection"
+            style="display: none"
+          >
+            <div class="nav-section-title">관리자 메뉴</div>
 
-      <div class="sidebar-footer">
-        <button onclick="logout()" class="logout-btn">
-          <span>🚪</span>
-          <span>로그아웃</span>
-        </button>
-      </div>
-    </aside>
+            <div
+              class="nav-item"
+              onclick="location.href='manage.html'"
+              style="cursor: pointer"
+            >
+              <span>👨‍🏫</span>
+              <span>선생님 관리</span>
+            </div>
 
-    <!-- 메인 콘텐츠 -->
-    <main class="main-content">
-      <!-- 헤더 -->
-      <header class="page-header">
-        <h1>🛍️ 상점 관리</h1>
-        <div class="header-actions">
-          <button class="btn btn-primary" onclick="showAddItemModal()">
-            + 새 상품 등록
+            <div
+              class="nav-item"
+              onclick="location.href='classes.html'"
+              style="cursor: pointer"
+            >
+              <span>🏫</span>
+              <span>클래스 관리</span>
+            </div>
+
+            <div
+              class="nav-item"
+              onclick="location.href='students.html'"
+              style="cursor: pointer"
+            >
+              <span>🎓</span>
+              <span>학생 관리</span>
+            </div>
+
+            <div
+              class="nav-item active"
+              onclick="location.href='shop-manage.html'"
+              style="cursor: pointer"
+            >
+              <span>🛍️</span>
+              <span>상점 관리</span>
+            </div>
+          </div>
+
+          <!-- 일반 메뉴 -->
+          <div class="nav-section">
+            <div class="nav-section-title">포인트 관리</div>
+
+            <a href="index.html" class="nav-item" data-page="point">
+              <span>💰</span>
+              <span>포인트 지급</span>
+            </a>
+
+            <a href="#" class="nav-item" data-page="history">
+              <span>📜</span>
+              <span>포인트 내역</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">리포트</div>
+
+            <a href="#" class="nav-item" data-page="report">
+              <span>📊</span>
+              <span>통계</span>
+            </a>
+
+            <a href="#" class="nav-item" data-page="ranking">
+              <span>🏆</span>
+              <span>랭킹</span>
+            </a>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <span class="user-name" id="teacherName">원장</span>
+            <span class="user-role" id="userRole">Principal</span>
+          </div>
+          <button class="logout-btn" onclick="logout()">
+            <span>🚪</span>
+            <span>로그아웃</span>
           </button>
         </div>
-      </header>
+      </div>
 
-      <!-- 필터 섹션 -->
-      <section class="filter-section">
-        <div class="filter-group">
-          <label>카테고리</label>
-          <select id="categoryFilter" onchange="filterItems()">
-            <option value="">전체</option>
-            <option value="학용품">학용품</option>
-            <option value="간식">간식</option>
-            <option value="장난감">장난감</option>
-            <option value="쿠폰">쿠폰</option>
-            <option value="기타">기타</option>
-          </select>
+      <!-- 메인 컨텐츠 -->
+      <div class="main-content">
+        <!-- 페이지 헤더 -->
+        <div class="page-header">
+          <h1 class="page-title">🛍️ 상점 관리</h1>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="showAddItemModal()">
+              + 새 상품 등록
+            </button>
+          </div>
         </div>
 
-        <div class="filter-group">
-          <label>재고 상태</label>
-          <select id="stockFilter" onchange="filterItems()">
-            <option value="">전체</option>
-            <option value="available">재고 있음</option>
-            <option value="low">재고 부족 (10개 이하)</option>
-            <option value="out">품절</option>
-          </select>
-        </div>
+        <!-- 필터 섹션 -->
+        <section class="filter-section">
+          <div class="filter-group">
+            <label>카테고리</label>
+            <select id="categoryFilter" onchange="filterItems()">
+              <option value="">전체</option>
+              <option value="학용품">학용품</option>
+              <option value="간식">간식</option>
+              <option value="장난감">장난감</option>
+              <option value="쿠폰">쿠폰</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
 
-        <div class="filter-group">
-          <label>검색</label>
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="상품명 검색..."
-            onkeyup="filterItems()"
-          />
-        </div>
-      </section>
+          <div class="filter-group">
+            <label>재고 상태</label>
+            <select id="stockFilter" onchange="filterItems()">
+              <option value="">전체</option>
+              <option value="available">재고 있음</option>
+              <option value="low">재고 부족 (10개 이하)</option>
+              <option value="out">품절</option>
+            </select>
+          </div>
 
-      <!-- 상품 목록 -->
-      <section class="items-section">
-        <div class="section-header">
-          <h2>상품 목록</h2>
-          <span id="itemCount">전체 0개</span>
-        </div>
+          <div class="filter-group">
+            <label>검색</label>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="상품명 검색..."
+              onkeyup="filterItems()"
+            />
+          </div>
+        </section>
 
-        <div class="table-container">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>이미지</th>
-                <th>상품명</th>
-                <th>카테고리</th>
-                <th>가격</th>
-                <th>재고</th>
-                <th>상태</th>
-                <th>관리</th>
-              </tr>
-            </thead>
-            <tbody id="itemsTableBody">
-              <!-- 동적 생성 -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+        <!-- 상품 목록 -->
+        <section class="items-section">
+          <div class="section-header">
+            <h2>상품 목록</h2>
+            <span id="itemCount">전체 0개</span>
+          </div>
+
+          <div class="table-container">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>이미지</th>
+                  <th>상품명</th>
+                  <th>카테고리</th>
+                  <th>가격</th>
+                  <th>재고</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="itemsTableBody">
+                <!-- 동적 생성 -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
 
     <!-- 상품 등록/수정 모달 -->
     <div id="itemModal" class="modal">
@@ -193,8 +258,11 @@
               <!-- 이미지 업로드 영역 -->
               <div class="image-upload-area" id="uploadArea">
                 <div class="upload-instructions">
-                  <span>📸 이미지를 붙여넣기(Ctrl+V)하거나</span>
-                  <span>드래그 앤 드롭 또는 클릭해서 업로드</span>
+                  <span>📸 화면 캡처 후 Ctrl+V로 붙여넣기</span>
+                  <span>또는 드래그 앤 드롭 / 클릭해서 업로드</span>
+                  <small style="color: #9ca3af; font-size: 11px"
+                    >Windows: Win+Shift+S / Mac: Cmd+Shift+4</small
+                  >
                 </div>
                 <input
                   type="file"
