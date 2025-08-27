@@ -53,11 +53,39 @@ const LEVEL_SYSTEM = {
   ],
 };
 
-// 배지 상태 확인
+// 1. 페이지 로드 시 서버에서 배지 정보 가져오기
+async function loadClaimedBadges() {
+  const loginId = localStorage.getItem('loginId');
+
+  try {
+    const { data, error } = await supabase
+      .from('badge_claims')
+      .select('badge_id')
+      .eq('student_id', loginId);
+
+    if (data && data.length > 0) {
+      const claimedBadges = data.map((item) => item.badge_id);
+      // 로컬 스토리지에 캐싱 (백업용)
+      localStorage.setItem(
+        `claimedBadges_${loginId}`,
+        JSON.stringify(claimedBadges)
+      );
+      console.log('서버에서 배지 정보 로드:', claimedBadges);
+    }
+  } catch (error) {
+    console.error('배지 정보 로드 실패:', error);
+    // 서버 오류 시 로컬 스토리지 사용
+  }
+}
+
+// 2. getBadgeStatus 함수 수정 (서버 데이터 우선)
 function getBadgeStatus(badgeId) {
+  const loginId = localStorage.getItem('loginId');
   const unlockedBadges = getUnlockedBadges();
+
+  // 로컬 스토리지에서 확인
   const claimedBadges = JSON.parse(
-    localStorage.getItem('claimedBadges') || '[]'
+    localStorage.getItem(`claimedBadges_${loginId}`) || '[]'
   );
 
   if (claimedBadges.includes(badgeId)) {
@@ -166,7 +194,7 @@ const AVATAR_OPTIONS = [
   '🦆',
 ];
 
-// 페이지 로드 시 실행
+// 4. DOMContentLoaded 수정 - 서버에서 배지 정보 로드 추가
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('프로필 페이지 초기화');
 
@@ -177,6 +205,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '../login.html';
     return;
   }
+
+  // 서버에서 배지 정보 로드 (중요!)
+  await loadClaimedBadges();
+
+  // 구버전 데이터 마이그레이션
+  migrateLegacyBadgeData(loginId);
 
   // 데이터 로드
   await loadProfileData();
@@ -193,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 다크모드 체크
   checkDarkMode();
 
-  // 배지 업데이트 함수 설정 추가!
+  // 배지 업데이트 함수 설정
   updateBadges = updateBadgesWithStatus;
 });
 
@@ -601,6 +635,25 @@ function getUnlockedBadges() {
   return unlocked;
 }
 
+// 7. 구버전 데이터 마이그레이션 함수
+function migrateLegacyBadgeData(loginId) {
+  // 전역 claimedBadges가 있고, 사용자별 데이터가 없을 경우만 마이그레이션
+  const globalClaimed = localStorage.getItem('claimedBadges');
+  const userClaimed = localStorage.getItem(`claimedBadges_${loginId}`);
+
+  if (globalClaimed && !userClaimed) {
+    // 현재 사용자의 데이터로 저장
+    localStorage.setItem(`claimedBadges_${loginId}`, globalClaimed);
+
+    // 전역 데이터 삭제
+    localStorage.removeItem('claimedBadges');
+    localStorage.removeItem('rewardedBadges');
+    localStorage.removeItem('receivedBadgeRewards');
+
+    console.log('배지 데이터 마이그레이션 완료');
+  }
+}
+
 // 컬렉션 진행 상황 표시 함수 추가
 function updateCollectionProgress(unlockedCount) {
   let nextThreshold = null;
@@ -940,9 +993,21 @@ function checkDarkMode() {
   }
 }
 
-// 로그아웃
+// 5. 로그아웃 시 배지 데이터 정리 함수 추가
+function clearBadgeData() {
+  const loginId = localStorage.getItem('loginId');
+  if (loginId) {
+    // 사용자별 배지 데이터는 유지하되, 전역 데이터만 삭제
+    localStorage.removeItem('claimedBadges'); // 구버전 전역 키 삭제
+    localStorage.removeItem('rewardedBadges'); // 구버전 전역 키 삭제
+    localStorage.removeItem('receivedBadgeRewards'); // 구버전 전역 키 삭제
+  }
+}
+
+// 5. 로그아웃 함수 - 이제 안전하게 전체 삭제 가능
 function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
+    // 배지 정보는 서버에 있으므로 안전하게 전체 삭제 가능
     localStorage.clear();
     window.location.href = '../login.html';
   }
@@ -1668,26 +1733,67 @@ async function claimBadgeReward(badgeId) {
   document.body.insertAdjacentHTML('beforeend', confirmHTML);
 }
 
-// 수령 확인 함수 수정
+// 3. confirmClaim 함수 완전 수정 - 서버 저장 포함
 async function confirmClaim(badgeId) {
+  console.log('confirmClaim 시작:', badgeId);
+
   const badge = BADGE_DETAILS[badgeId];
   const loginId = localStorage.getItem('loginId');
 
+  if (!badge || !loginId) {
+    console.error('배지 또는 로그인 정보 없음');
+    showNotification('오류가 발생했습니다.', 'error');
+    return;
+  }
+
   try {
-    // supabase 대신 api 사용
+    // 1. 서버에서 중복 체크
+    const { data: existing } = await supabase
+      .from('badge_claims')
+      .select('id')
+      .eq('student_id', loginId)
+      .eq('badge_id', badgeId)
+      .single();
+
+    if (existing) {
+      showNotification('이미 수령한 배지입니다.', 'warning');
+      document.getElementById('claimModal')?.remove();
+      return;
+    }
+
+    // 2. 포인트 지급
     const result = await api.addPoints(
       loginId,
       badge.points,
+      'badge',
       `${badge.name} 배지 보상`
     );
 
     if (result.success) {
-      // 수령 완료 처리
+      // 3. 서버에 배지 수령 기록 저장
+      const { error: saveError } = await supabase.from('badge_claims').insert({
+        student_id: loginId,
+        badge_id: badgeId,
+        points_awarded: badge.points,
+      });
+
+      if (saveError) {
+        console.error('배지 저장 오류:', saveError);
+        // 서버 저장 실패해도 계속 진행
+      }
+
+      // 4. 로컬 스토리지 업데이트 (캐싱)
+      const userClaimedKey = `claimedBadges_${loginId}`;
       const claimedBadges = JSON.parse(
-        localStorage.getItem('claimedBadges') || '[]'
+        localStorage.getItem(userClaimedKey) || '[]'
       );
-      claimedBadges.push(badgeId);
-      localStorage.setItem('claimedBadges', JSON.stringify(claimedBadges));
+
+      if (!claimedBadges.includes(badgeId)) {
+        claimedBadges.push(badgeId);
+        localStorage.setItem(userClaimedKey, JSON.stringify(claimedBadges));
+      }
+
+      console.log('배지 수령 완료:', badgeId);
 
       // 모달 닫기
       document.getElementById('claimModal')?.remove();
@@ -1704,13 +1810,15 @@ async function confirmClaim(badgeId) {
       // 포인트 총합 업데이트
       await loadProfileData();
     } else {
-      throw new Error('포인트 지급 실패');
+      throw new Error(result.error || '포인트 지급 실패');
     }
   } catch (error) {
     console.error('배지 수령 실패:', error);
     showNotification('수령 중 오류가 발생했습니다.', 'error');
+    document.getElementById('claimModal')?.remove();
   }
 }
+
 // 함수 정의 직후에 바로 전역 등록
 window.confirmClaim = confirmClaim;
 
@@ -1783,51 +1891,75 @@ function createConfetti() {
 
 // 배지 업데이트 함수 수정 (클릭 이벤트 추가)
 // 현재 문제: unlockedBadges가 정의되지 않음
+// 배지 업데이트 함수 수정 (클릭 이벤트 추가)
+// 2. updateBadgesWithStatus 함수 개선 (claimed 체크마크 표시)
 function updateBadgesWithStatus() {
   const grid = document.getElementById('achievementGrid');
   if (!grid) return;
 
-  const unlockedBadges = getUnlockedBadges(); // 추가!
+  const unlockedBadges = getUnlockedBadges();
 
   grid.innerHTML = Object.keys(BADGE_DETAILS)
     .map((badgeId) => {
       const badge = BADGE_DETAILS[badgeId];
       const status = getBadgeStatus(badgeId);
 
+      // claimed 상태에 대한 스타일과 체크마크 추가
+      let badgeContent = '';
+      if (status === 'locked') {
+        badgeContent = '🔒';
+      } else {
+        badgeContent = badge.icon;
+      }
+
       return `
       <div class="badge-item ${status}" 
            data-badge="${badgeId}"
            onclick="handleBadgeClick('${badgeId}')"
            title="${badge.name}">
-        <span>${status === 'locked' ? '🔒' : badge.icon}</span>
+        <span>${badgeContent}</span>
         ${status === 'unlocked' ? '<div class="claim-indicator">!</div>' : ''}
+        ${status === 'claimed' ? '<div class="claimed-checkmark">✓</div>' : ''}
       </div>
     `;
     })
     .join('');
 
   updateBadgeCounter();
-  updateCollectionProgress(unlockedBadges.length); // 이제 작동
+  updateCollectionProgress(unlockedBadges.length);
 }
 
-// 배지 클릭 핸들러
+// 4. handleBadgeClick 함수에 중복 체크 추가
 async function handleBadgeClick(badgeId) {
   const status = getBadgeStatus(badgeId);
 
   if (status === 'locked') {
     showBadgeDetail(badgeId);
   } else if (status === 'unlocked') {
+    // 중복 체크
+    const loginId = localStorage.getItem('loginId');
+    const claimedBadges = JSON.parse(
+      localStorage.getItem(`claimedBadges_${loginId}`) || '[]'
+    );
+
+    if (claimedBadges.includes(badgeId)) {
+      showNotification('이미 수령한 배지입니다.', 'warning');
+      updateBadgesWithStatus(); // UI 재갱신
+      return;
+    }
+
     await claimBadgeReward(badgeId);
   } else if (status === 'claimed') {
     showBadgeDetail(badgeId);
   }
 }
 
-// 배지 카운터
+// 3. updateBadgeCounter 함수 수정 - 사용자별로 구분
 function updateBadgeCounter() {
+  const loginId = localStorage.getItem('loginId');
   const unlocked = getUnlockedBadges().length;
   const claimed = JSON.parse(
-    localStorage.getItem('claimedBadges') || '[]'
+    localStorage.getItem(`claimedBadges_${loginId}`) || '[]'
   ).length;
   const available = unlocked - claimed;
 
@@ -1844,3 +1976,179 @@ window.updateBadges = updateBadgesWithStatus;
 window.showBadgeDetail = showBadgeDetail;
 window.closeBadgePopup = closeBadgePopup;
 window.closeRewardPopup = closeRewardPopup;
+
+// 4. 디버깅용 함수 추가 (콘솔에서 테스트)
+window.debugBadges = {
+  // 현재 상태 확인
+  checkStatus: function () {
+    const loginId = localStorage.getItem('loginId');
+    console.log('=== 배지 상태 확인 ===');
+    console.log('현재 loginId:', loginId);
+    console.log(
+      '수령한 배지:',
+      localStorage.getItem(`claimedBadges_${loginId}`)
+    );
+    console.log(
+      '전역 키 (삭제해야 함):',
+      localStorage.getItem('claimedBadges')
+    );
+
+    // 모든 배지 상태 출력
+    Object.keys(BADGE_DETAILS).forEach((badgeId) => {
+      console.log(`${badgeId}: ${getBadgeStatus(badgeId)}`);
+    });
+  },
+
+  // 전역 키 정리
+  cleanGlobalKeys: function () {
+    const removed = [];
+    ['claimedBadges', 'rewardedBadges', 'receivedBadgeRewards'].forEach(
+      (key) => {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+          removed.push(key);
+        }
+      }
+    );
+    console.log('제거된 전역 키:', removed.length ? removed : '없음');
+  },
+
+  // 특정 배지 수령 상태 초기화 (테스트용)
+  resetBadge: function (badgeId) {
+    const loginId = localStorage.getItem('loginId');
+    const key = `claimedBadges_${loginId}`;
+    const claimed = JSON.parse(localStorage.getItem(key) || '[]');
+    const index = claimed.indexOf(badgeId);
+    if (index > -1) {
+      claimed.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(claimed));
+      console.log(`${badgeId} 배지 초기화 완료`);
+      updateBadgesWithStatus();
+    } else {
+      console.log(`${badgeId} 배지는 수령하지 않은 상태입니다`);
+    }
+  },
+
+  // 모든 배지 초기화
+  resetAll: function () {
+    const loginId = localStorage.getItem('loginId');
+    localStorage.removeItem(`claimedBadges_${loginId}`);
+    console.log('모든 배지 초기화 완료');
+    updateBadgesWithStatus();
+  },
+};
+
+console.log('🔧 배지 디버깅 도구가 준비되었습니다.');
+console.log('사용 가능한 명령:');
+console.log('- debugBadges.checkStatus() : 현재 상태 확인');
+console.log('- debugBadges.cleanGlobalKeys() : 전역 키 정리');
+console.log('- debugBadges.resetBadge("first_login") : 특정 배지 초기화');
+console.log('- debugBadges.resetAll() : 모든 배지 초기화');
+
+// 6. 서버 동기화 함수 (선택사항)
+async function syncBadgesWithServer() {
+  const loginId = localStorage.getItem('loginId');
+
+  try {
+    // 로컬에 있는 배지 정보
+    const localBadges = JSON.parse(
+      localStorage.getItem(`claimedBadges_${loginId}`) || '[]'
+    );
+
+    // 서버에 있는 배지 정보
+    const { data: serverBadges } = await supabase
+      .from('badge_claims')
+      .select('badge_id')
+      .eq('student_id', loginId);
+
+    const serverBadgeIds = serverBadges
+      ? serverBadges.map((b) => b.badge_id)
+      : [];
+
+    // 로컬에만 있는 배지를 서버에 동기화
+    for (const badgeId of localBadges) {
+      if (!serverBadgeIds.includes(badgeId)) {
+        const badge = BADGE_DETAILS[badgeId];
+        await supabase.from('badge_claims').insert({
+          student_id: loginId,
+          badge_id: badgeId,
+          points_awarded: badge?.points || 0,
+        });
+      }
+    }
+
+    console.log('배지 서버 동기화 완료');
+  } catch (error) {
+    console.error('배지 동기화 실패:', error);
+  }
+}
+
+// 7. 디버깅 도구 업데이트
+window.debugBadges = {
+  // 서버 상태 확인
+  checkServerStatus: async function () {
+    const loginId = localStorage.getItem('loginId');
+    const { data, error } = await supabase
+      .from('badge_claims')
+      .select('*')
+      .eq('student_id', loginId);
+
+    console.log('=== 서버 배지 상태 ===');
+    console.log('수령한 배지:', data);
+    if (error) console.error('오류:', error);
+  },
+
+  // 로컬과 서버 비교
+  compareStatus: async function () {
+    const loginId = localStorage.getItem('loginId');
+
+    // 로컬 데이터
+    const localBadges = JSON.parse(
+      localStorage.getItem(`claimedBadges_${loginId}`) || '[]'
+    );
+
+    // 서버 데이터
+    const { data } = await supabase
+      .from('badge_claims')
+      .select('badge_id')
+      .eq('student_id', loginId);
+
+    const serverBadges = data ? data.map((b) => b.badge_id) : [];
+
+    console.log('=== 로컬 vs 서버 비교 ===');
+    console.log('로컬:', localBadges);
+    console.log('서버:', serverBadges);
+    console.log(
+      '차이:',
+      localBadges.filter((b) => !serverBadges.includes(b))
+    );
+  },
+
+  // 서버에서 특정 배지 삭제 (테스트용)
+  deleteFromServer: async function (badgeId) {
+    const loginId = localStorage.getItem('loginId');
+    const { error } = await supabase
+      .from('badge_claims')
+      .delete()
+      .eq('student_id', loginId)
+      .eq('badge_id', badgeId);
+
+    if (!error) {
+      console.log(`${badgeId} 서버에서 삭제 완료`);
+      await loadClaimedBadges();
+      updateBadgesWithStatus();
+    } else {
+      console.error('삭제 실패:', error);
+    }
+  },
+
+  // 강제 동기화
+  forceSync: syncBadgesWithServer,
+};
+
+console.log('🔧 서버 연동 배지 시스템 준비 완료');
+console.log('새 명령어:');
+console.log('- debugBadges.checkServerStatus() : 서버 상태 확인');
+console.log('- debugBadges.compareStatus() : 로컬/서버 비교');
+console.log('- debugBadges.deleteFromServer("badge_id") : 서버에서 삭제');
+console.log('- debugBadges.forceSync() : 강제 동기화');
