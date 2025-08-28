@@ -895,25 +895,14 @@ class PointBankAPI {
           delivery_notes: notes,
         })
         .eq('transaction_id', transactionId)
-        .eq('type', 'purchase')
         .select();
 
       if (error) throw error;
 
-      if (!data || data.length === 0) {
-        throw new Error('구매 내역을 찾을 수 없습니다.');
-      }
-
-      return {
-        success: true,
-        data: data[0],
-      };
+      return { success: true, data: data[0] };
     } catch (error) {
       console.error('지급 처리 실패:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 

@@ -55,67 +55,33 @@
       </div>
 
       <nav class="nav-menu">
-        <!-- 관리 메뉴 (원장만) -->
-        <div class="nav-section" id="adminSection">
-          <div class="nav-section-title">시스템 관리</div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='manage.html'"
-            style="cursor: pointer"
-          >
-            <span>👨‍🏫</span>
+        <div class="nav-section" id="adminSection" style="display: none">
+          <div class="nav-section-title">관리자 메뉴</div>
+          <a href="manage.html" class="nav-item">
+            <span>👥</span>
             <span>선생님 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='classes.html'"
-            style="cursor: pointer"
-          >
+          </a>
+          <a href="classes.html" class="nav-item">
             <span>🏫</span>
             <span>클래스 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='students.html'"
-            style="cursor: pointer"
-          >
+          </a>
+          <a href="students.html" class="nav-item">
             <span>🎓</span>
             <span>학생 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='shop-manage.html'"
-            style="cursor: pointer"
-          >
+          </a>
+          <a href="shop-manage.html" class="nav-item">
             <span>🛍️</span>
             <span>상점 관리</span>
-          </div>
+          </a>
         </div>
 
-        <!-- 일반 메뉴 (모든 선생님) -->
         <div class="nav-section">
           <div class="nav-section-title">포인트 관리</div>
-
-          <a href="index.html" class="nav-item active" data-page="point">
+          <a href="index.html" class="nav-item active">
             <span>💰</span>
             <span>포인트 지급</span>
           </a>
-
-          <a href="#" class="nav-item" data-page="history">
-            <span>📜</span>
-            <span>포인트 내역</span>
-          </a>
-
-          <!-- 새로 추가된 구매 관리 메뉴 -->
-          <a
-            href="purchase-management.html"
-            class="nav-item"
-            data-page="purchase"
-          >
+          <a href="purchase-management.html" class="nav-item">
             <span>📦</span>
             <span>구매 관리</span>
             <span class="nav-badge" id="pendingBadge" style="display: none"
@@ -126,13 +92,11 @@
 
         <div class="nav-section">
           <div class="nav-section-title">리포트</div>
-
-          <a href="#" class="nav-item" data-page="report">
-            <span>📊</span>
-            <span>통계</span>
+          <a href="history.html" class="nav-item">
+            <span>📜</span>
+            <span>포인트 내역</span>
           </a>
-
-          <a href="#" class="nav-item" data-page="ranking">
+          <a href="ranking.html" class="nav-item">
             <span>🏆</span>
             <span>랭킹</span>
           </a>

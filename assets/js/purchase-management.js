@@ -28,13 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 사용자 정보 표시
   document.getElementById('teacherName').textContent = userName || '선생님';
   document.getElementById('userRole').textContent =
-    userRole === 'principal' ? 'Principal' : 'Teacher';
+    userRole === 'principal' ? '원장' : '선생님';
 
-  // 관리 메뉴 권한 체크
-  if (userRole !== 'principal' && loginId !== 'ablemaster') {
+  // 관리 메뉴 권한 체크 (원장만 표시)
+  if (userRole === 'principal' || loginId === 'ablemaster') {
     const adminSection = document.getElementById('adminSection');
     if (adminSection) {
-      adminSection.style.display = 'none';
+      adminSection.style.display = 'block';
     }
   }
 
@@ -669,6 +669,7 @@ function closeDeliveryModal() {
   selectedPurchase = null;
 }
 
+// confirmDelivery 함수에서 toastr 대신 alert 사용
 async function confirmDelivery() {
   if (!selectedPurchase) return;
 
@@ -676,7 +677,6 @@ async function confirmDelivery() {
   const originalText = confirmBtn.textContent;
 
   try {
-    // 버튼 비활성화 및 로딩 표시
     confirmBtn.disabled = true;
     confirmBtn.textContent = '처리 중...';
 
@@ -684,7 +684,6 @@ async function confirmDelivery() {
     const teacherId = localStorage.getItem('loginId');
     const teacherName = localStorage.getItem('userName');
 
-    // 실제 API 호출
     const result = await api.markAsDelivered(
       selectedPurchase.transaction_id,
       teacherId,
@@ -693,20 +692,20 @@ async function confirmDelivery() {
     );
 
     if (result.success) {
-      toastr.success(
+      // toastr 대신 alert 사용
+      alert(
         `${selectedPurchase.studentName}님의 ${selectedPurchase.item_name} 지급이 완료되었습니다.`
       );
 
       closeDeliveryModal();
-      await loadPurchases(); // 목록 새로고침
+      await loadPurchases();
     } else {
-      toastr.error(result.error || '지급 처리에 실패했습니다.');
+      alert('지급 처리에 실패했습니다: ' + (result.error || '알 수 없는 오류'));
     }
   } catch (error) {
     console.error('지급 처리 오류:', error);
-    toastr.error('지급 처리 중 오류가 발생했습니다.');
+    alert('지급 처리 중 오류가 발생했습니다.');
   } finally {
-    // 버튼 원상복구
     confirmBtn.disabled = false;
     confirmBtn.textContent = originalText;
   }

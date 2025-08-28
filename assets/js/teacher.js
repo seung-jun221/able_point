@@ -635,6 +635,11 @@ function setupEventListeners() {
   // 네비게이션
   document.querySelectorAll('.nav-item').forEach((item) => {
     item.addEventListener('click', (e) => {
+      // href가 있는 경우는 기본 동작 허용
+      if (item.href && item.href !== '#') {
+        return; // preventDefault 하지 않음
+      }
+
       e.preventDefault();
       document
         .querySelectorAll('.nav-item')

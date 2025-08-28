@@ -9,20 +9,24 @@
     <link rel="stylesheet" href="../assets/css/teacher.css" />
     <link rel="stylesheet" href="../assets/css/purchase-management.css" />
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../assets/js/config.js"></script>
-    <script src="../assets/js/api.js"></script>
+    <!-- jQuery 먼저 로드 (toastr가 jQuery 필요) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- Toastr 알림 -->
+    <!-- Toastr CSS & JS -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- Supabase & API -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/api.js"></script>
   </head>
   <body>
     <div class="container">
-      <!-- 사이드바 -->
+      <!-- 모든 페이지 공통 사이드바 -->
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="logo">
@@ -32,6 +36,7 @@
         </div>
 
         <nav class="nav-menu">
+          <!-- adminSection은 JS에서 권한 체크 후 표시 -->
           <div class="nav-section" id="adminSection" style="display: none">
             <div class="nav-section-title">관리자 메뉴</div>
             <a href="manage.html" class="nav-item">
