@@ -444,28 +444,30 @@ body.with-both-nav {
   }
 }
 
-/* ========== 데스크톱 화면 ========== */
+/* 모바일 우선 */
+.history-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+}
+
+.history-fixed-top {
+  width: calc(100% - 20px);
+  max-width: 100%;
+}
+
+/* 태블릿/데스크톱에서만 고정 너비 */
 @media (min-width: 768px) {
-  html body .history-container {
-    width: 500px !important;
-    max-width: 500px !important;
+  .history-container {
+    width: 580px;
+    max-width: 580px;
+    margin: 0 auto;
   }
 
-  html body .history-fixed-top {
-    width: 480px !important;
-    max-width: 480px !important;
+  .history-fixed-top {
+    width: 560px;
+    max-width: 560px;
   }
-}
-
-/* ========== 최고 우선순위 강제 적용 ========== */
-html body.with-both-nav div.history-container {
-  width: 500px !important;
-  max-width: 500px !important;
-}
-
-html body.with-both-nav div.history-fixed-top {
-  width: 480px !important;
-  max-width: 480px !important;
 }
 
 /* ========== 스크롤바 스타일링 (선택사항) ========== */
