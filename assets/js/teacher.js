@@ -905,3 +905,57 @@ function closeModal() {
     document.getElementById('modalPointReason').value = '';
   }
 }
+// ==================== 구매 관리 관련 ====================
+
+// 대시보드에서 미지급 구매 개수 실시간 업데이트
+async function updatePendingPurchaseBadge() {
+  try {
+    if (typeof api !== 'undefined' && api.getPendingPurchasesCount) {
+      const result = await api.getPendingPurchasesCount();
+
+      if (result.success) {
+        const badge = document.getElementById('pendingBadge');
+        const count = result.data.count;
+
+        if (badge) {
+          if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'inline-block';
+
+            // 5개 이상이면 애니메이션 추가
+            if (count >= 5) {
+              badge.style.animation = 'urgentBlink 2s infinite';
+            } else {
+              badge.style.animation = 'none';
+            }
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+
+        // 대시보드 요약 카드도 업데이트
+        const pendingCard = document.getElementById('pendingPurchases');
+        if (pendingCard) {
+          pendingCard.textContent = count + '건';
+        }
+      }
+    }
+  } catch (error) {
+    console.error('미지급 구매 개수 업데이트 실패:', error);
+  }
+}
+
+// 구매 관리 관련 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  updatePendingPurchaseBadge();
+
+  // 30초마다 업데이트
+  setInterval(updatePendingPurchaseBadge, 30000);
+});
+
+// 페이지 포커스 시 업데이트
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    updatePendingPurchaseBadge();
+  }
+});

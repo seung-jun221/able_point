@@ -55,20 +55,10 @@
       </div>
 
       <nav class="nav-menu">
-        <a href="index.html" class="nav-item active" data-page="dashboard">
-          <span>📊</span>
-          <span>대시보드</span>
-        </a>
+        <!-- 관리 메뉴 (원장만) -->
+        <div class="nav-section" id="adminSection">
+          <div class="nav-section-title">시스템 관리</div>
 
-        <!-- 원장 전용 관리 메뉴 섹션 -->
-        <div
-          class="nav-section admin-only"
-          id="adminSection"
-          style="display: none"
-        >
-          <div class="nav-section-title">관리 메뉴</div>
-
-          <!-- onclick 이벤트로 직접 이동 -->
           <div
             class="nav-item"
             onclick="location.href='manage.html'"
@@ -95,6 +85,7 @@
             <span>🎓</span>
             <span>학생 관리</span>
           </div>
+
           <div
             class="nav-item"
             onclick="location.href='shop-manage.html'"
@@ -105,11 +96,11 @@
           </div>
         </div>
 
-        <!-- 일반 메뉴 -->
+        <!-- 일반 메뉴 (모든 선생님) -->
         <div class="nav-section">
           <div class="nav-section-title">포인트 관리</div>
 
-          <a href="#" class="nav-item" data-page="point">
+          <a href="index.html" class="nav-item active" data-page="point">
             <span>💰</span>
             <span>포인트 지급</span>
           </a>
@@ -117,6 +108,19 @@
           <a href="#" class="nav-item" data-page="history">
             <span>📜</span>
             <span>포인트 내역</span>
+          </a>
+
+          <!-- 새로 추가된 구매 관리 메뉴 -->
+          <a
+            href="purchase-management.html"
+            class="nav-item"
+            data-page="purchase"
+          >
+            <span>📦</span>
+            <span>구매 관리</span>
+            <span class="nav-badge" id="pendingBadge" style="display: none"
+              >0</span
+            >
           </a>
         </div>
 

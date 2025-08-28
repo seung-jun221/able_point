@@ -803,6 +803,270 @@ class PointBankAPI {
     }
   }
 
+  // ==================== 구매 관리용 함수들 ====================
+
+  /**
+   * 모든 구매 내역 조회 (구매 관리용)
+   */
+  async getAllPurchases() {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(
+          `
+          *,
+          shop_items (
+            name,
+            image,
+            category
+          )
+        `
+        )
+        .eq('type', 'purchase')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // 학생 정보는 별도로 조회 (student_details 뷰 사용)
+      const studentIds = [...new Set(data.map((item) => item.student_id))];
+      const { data: students } = await supabase
+        .from('student_details')
+        .select('student_id, name, login_id, avatar, class_name')
+        .in('student_id', studentIds);
+
+      const studentsMap = new Map(
+        students?.map((s) => [s.student_id, s]) || []
+      );
+
+      // 데이터 정규화
+      const normalizedData = data.map((item) => {
+        const student = studentsMap.get(item.student_id);
+
+        return {
+          transaction_id: item.transaction_id,
+          student_id: item.student_id,
+          studentId: item.student_id,
+          studentName: student?.name || '알 수 없는 학생',
+          studentClass: student?.class_name || '',
+          studentAvatar: student?.avatar || '🦁',
+          item_id: item.item_id,
+          itemId: item.item_id,
+          itemName:
+            item.shop_items?.name || item.item_name || '알 수 없는 상품',
+          item_name:
+            item.shop_items?.name || item.item_name || '알 수 없는 상품',
+          price: Math.abs(item.amount),
+          amount: Math.abs(item.amount),
+          image_url: item.shop_items?.image || null,
+          category: item.shop_items?.category || null,
+          created_at: item.created_at,
+          delivery_status: item.delivery_status || 'pending',
+          delivered_by: item.delivered_by,
+          delivered_at: item.delivered_at,
+          delivery_notes: item.delivery_notes,
+          type: item.type,
+        };
+      });
+
+      return {
+        success: true,
+        data: normalizedData,
+      };
+    } catch (error) {
+      console.error('모든 구매 내역 조회 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 구매 지급 처리 (delivered로 상태 변경)
+   */
+  async markAsDelivered(transactionId, teacherId, teacherName, notes = '') {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          delivery_status: 'delivered',
+          delivered_by: teacherName || teacherId,
+          delivered_at: new Date().toISOString(),
+          delivery_notes: notes,
+        })
+        .eq('transaction_id', transactionId)
+        .eq('type', 'purchase')
+        .select();
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('구매 내역을 찾을 수 없습니다.');
+      }
+
+      return {
+        success: true,
+        data: data[0],
+      };
+    } catch (error) {
+      console.error('지급 처리 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 미지급 구매 개수 조회 (대시보드용)
+   */
+  async getPendingPurchasesCount() {
+    try {
+      const { count, error } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'purchase')
+        .eq('delivery_status', 'pending');
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: { count: count || 0 },
+      };
+    } catch (error) {
+      console.error('미지급 구매 개수 조회 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 오늘 지급된 구매 개수 조회
+   */
+  async getTodayDeliveredCount() {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const { count, error } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'purchase')
+        .eq('delivery_status', 'delivered')
+        .gte('delivered_at', today.toISOString())
+        .lt('delivered_at', tomorrow.toISOString());
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: { count: count || 0 },
+      };
+    } catch (error) {
+      console.error('오늘 지급 개수 조회 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 구매 통계 조회 (관리자용)
+   */
+  async getPurchaseStats(days = 7) {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(
+          `
+          *,
+          shop_items (name, category)
+        `
+        )
+        .eq('type', 'purchase')
+        .gte('created_at', startDate.toISOString());
+
+      if (error) throw error;
+
+      const stats = {
+        totalPurchases: data.length,
+        pendingCount: data.filter((item) => item.delivery_status === 'pending')
+          .length,
+        deliveredCount: data.filter(
+          (item) => item.delivery_status === 'delivered'
+        ).length,
+        totalAmount: data.reduce((sum, item) => sum + Math.abs(item.amount), 0),
+        topItems: {},
+        deliverySpeed: {}, // 평균 지급 시간 등
+      };
+
+      // 인기 상품 통계
+      data.forEach((item) => {
+        const itemName =
+          item.shop_items?.name || item.item_name || '알 수 없는 상품';
+        stats.topItems[itemName] = (stats.topItems[itemName] || 0) + 1;
+      });
+
+      return {
+        success: true,
+        data: stats,
+      };
+    } catch (error) {
+      console.error('구매 통계 조회 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 모든 학생 정보 조회 (구매 관리용)
+   */
+  async getAllStudents() {
+    try {
+      // student_details 뷰 사용 (이미 모든 정보가 조인되어 있음)
+      const { data, error } = await supabase
+        .from('student_details')
+        .select('*')
+        .eq('role', 'student'); // 학생만 필터링
+
+      if (error) throw error;
+
+      const normalizedData = data.map((student) => ({
+        studentId: student.student_id,
+        loginId: student.login_id,
+        name: student.name,
+        avatar: student.avatar || '🦁',
+        classId: student.class_id,
+        className: student.class_name,
+        currentPoints: student.current_points,
+        totalPoints: student.total_points,
+        savingsPoints: student.savings_points,
+        level: student.level,
+      }));
+
+      return {
+        success: true,
+        data: normalizedData,
+      };
+    } catch (error) {
+      console.error('모든 학생 정보 조회 실패:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
   // ==================== 거래 내역 통합 ====================
 
   /**
