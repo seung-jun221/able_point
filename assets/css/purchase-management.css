@@ -679,3 +679,45 @@
     justify-content: space-between;
   }
 }
+
+/* 상세보기 모달 추가 스타일 */
+.delivery-details {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.delivery-details .info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.delivery-details .info-row:last-child {
+  border-bottom: none;
+}
+
+.student-id {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+#detailTransactionId {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+#deliveryNotesRow span:last-child {
+  flex: 1;
+  text-align: right;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

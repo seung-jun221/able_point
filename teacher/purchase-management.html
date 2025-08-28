@@ -294,6 +294,120 @@
       </div>
     </div>
 
+    <!-- 상세보기 모달 (deliveryModal 다음에 추가) -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>📋 구매 상세 정보</h2>
+          <button class="modal-close" onclick="closeDetailModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="delivery-info">
+            <!-- 학생 정보 -->
+            <div class="info-group">
+              <label>학생 정보</label>
+              <div class="student-info-card">
+                <span class="student-avatar" id="detailStudentAvatar">🦁</span>
+                <div>
+                  <div class="student-name" id="detailStudentName">학생명</div>
+                  <div class="student-class" id="detailStudentClass">
+                    클래스
+                  </div>
+                  <div
+                    class="student-id"
+                    style="font-size: 12px; color: #9ca3af"
+                  >
+                    ID: <span id="detailStudentId">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 상품 정보 -->
+            <div class="info-group">
+              <label>상품 정보</label>
+              <div class="item-info-card">
+                <div class="item-name" id="detailItemName">상품명</div>
+                <div class="item-price" id="detailItemPrice">0P</div>
+              </div>
+            </div>
+
+            <!-- 구매 정보 -->
+            <div class="info-group">
+              <label>구매 정보</label>
+              <div class="purchase-info">
+                <div class="info-row">
+                  <span>거래 ID:</span>
+                  <span
+                    id="detailTransactionId"
+                    style="font-family: monospace; font-size: 12px"
+                    >-</span
+                  >
+                </div>
+                <div class="info-row">
+                  <span>구매 시간:</span>
+                  <span id="detailPurchaseTime">-</span>
+                </div>
+                <div class="info-row">
+                  <span>경과 시간:</span>
+                  <span id="detailElapsedTime">-</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 지급 정보 (지급완료인 경우만 표시) -->
+            <div
+              class="info-group"
+              id="deliveryInfoGroup"
+              style="display: none"
+            >
+              <label>지급 정보</label>
+              <div class="delivery-details">
+                <div class="info-row">
+                  <span>지급 상태:</span>
+                  <span class="status-badge delivered">✅ 지급완료</span>
+                </div>
+                <div class="info-row">
+                  <span>지급 처리자:</span>
+                  <span id="detailDeliveredBy">-</span>
+                </div>
+                <div class="info-row">
+                  <span>지급 시간:</span>
+                  <span id="detailDeliveredAt">-</span>
+                </div>
+                <div
+                  class="info-row"
+                  id="deliveryNotesRow"
+                  style="display: none"
+                >
+                  <span>지급 메모:</span>
+                  <span
+                    id="detailDeliveryNotes"
+                    style="font-style: italic; color: #6b7280"
+                    >-</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <!-- 미지급인 경우만 지급 버튼 표시 -->
+          <button
+            class="btn btn-primary"
+            id="detailDeliverBtn"
+            onclick="deliverFromDetail()"
+            style="display: none"
+          >
+            지급처리
+          </button>
+          <button class="btn btn-secondary" onclick="closeDetailModal()">
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- JavaScript -->
     <script src="../assets/js/purchase-management.js"></script>
   </body>

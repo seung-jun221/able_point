@@ -87,25 +87,34 @@ async function loadPurchases() {
   try {
     showLoading();
 
-    // 실제 API 호출로 변경
     const result = await api.getAllPurchases();
 
     if (result.success && result.data) {
       allPurchases = result.data;
       console.log(`실제 구매 내역 ${allPurchases.length}건 로드 완료`);
+
+      updateStatistics();
+      filterAndDisplayPurchases();
     } else {
       console.error('구매 내역 로드 실패:', result.error);
-      // 실패시 더미 데이터 사용
-      loadDummyData();
-      return;
+      // loadDummyData() 대신 빈 배열 사용
+      allPurchases = [];
+      updateStatistics();
+      filterAndDisplayPurchases();
     }
-
-    updateStatistics();
-    filterAndDisplayPurchases();
   } catch (error) {
     console.error('구매 내역 로드 오류:', error);
-    loadDummyData(); // 폴백
+    // loadDummyData() 대신 에러 처리
+    showError('데이터를 불러올 수 없습니다.');
   }
+}
+
+// loadDummyData 함수 추가 (없으므로)
+function loadDummyData() {
+  console.log('더미 데이터 사용');
+  allPurchases = generateDummyData();
+  updateStatistics();
+  filterAndDisplayPurchases();
 }
 
 // 테스트용 더미 데이터 생성
@@ -711,11 +720,107 @@ async function confirmDelivery() {
   }
 }
 
+// ==================== 상세보기 모달 ====================
 function showDetailModal(purchaseId) {
-  // 상세 모달 구현
-  console.log('상세보기:', purchaseId);
-  toastr.info('상세보기 기능은 준비중입니다.');
+  const purchase = filteredPurchases.find(
+    (p) => p.transaction_id === purchaseId
+  );
+
+  if (!purchase) {
+    console.error('구매 정보를 찾을 수 없습니다:', purchaseId);
+    return;
+  }
+
+  // 현재 선택된 구매 정보 저장 (지급처리용)
+  selectedPurchase = purchase;
+
+  // 학생 정보
+  document.getElementById('detailStudentName').textContent =
+    purchase.studentName;
+  document.getElementById('detailStudentClass').textContent =
+    purchase.studentClass;
+  document.getElementById('detailStudentAvatar').textContent =
+    purchase.studentAvatar || '🦁';
+  document.getElementById('detailStudentId').textContent = purchase.student_id;
+
+  // 상품 정보
+  document.getElementById('detailItemName').textContent = purchase.item_name;
+  document.getElementById(
+    'detailItemPrice'
+  ).textContent = `${purchase.amount.toLocaleString()}P`;
+
+  // 구매 정보
+  document.getElementById('detailTransactionId').textContent =
+    purchase.transaction_id;
+  document.getElementById('detailPurchaseTime').textContent = formatDateTime(
+    purchase.created_at
+  );
+  document.getElementById('detailElapsedTime').textContent = formatElapsedTime(
+    purchase.created_at
+  );
+
+  // 지급 정보 표시/숨김
+  const isPending = purchase.delivery_status === 'pending';
+  const deliveryInfoGroup = document.getElementById('deliveryInfoGroup');
+  const detailDeliverBtn = document.getElementById('detailDeliverBtn');
+
+  if (isPending) {
+    // 미지급인 경우
+    deliveryInfoGroup.style.display = 'none';
+    detailDeliverBtn.style.display = 'inline-block';
+  } else {
+    // 지급완료인 경우
+    deliveryInfoGroup.style.display = 'block';
+    detailDeliverBtn.style.display = 'none';
+
+    // 지급 정보 표시
+    document.getElementById('detailDeliveredBy').textContent =
+      purchase.delivered_by || '-';
+    document.getElementById('detailDeliveredAt').textContent =
+      purchase.delivered_at ? formatDateTime(purchase.delivered_at) : '-';
+
+    // 지급 메모 (있는 경우만 표시)
+    const notesRow = document.getElementById('deliveryNotesRow');
+    if (purchase.delivery_notes) {
+      notesRow.style.display = 'flex';
+      document.getElementById('detailDeliveryNotes').textContent =
+        purchase.delivery_notes;
+    } else {
+      notesRow.style.display = 'none';
+    }
+  }
+
+  // 모달 열기
+  document.getElementById('detailModal').classList.add('active');
 }
+
+// 상세보기 모달 닫기
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('active');
+  selectedPurchase = null;
+}
+
+// 상세보기에서 지급처리
+function deliverFromDetail() {
+  if (!selectedPurchase) return;
+
+  // 상세보기 모달 닫고
+  closeDetailModal();
+
+  // 지급 모달 열기
+  showDeliveryModal(selectedPurchase.transaction_id);
+}
+
+// ESC 키로 모달 닫기 (기존 코드 수정)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDeliveryModal();
+    closeDetailModal(); // 추가
+    if (typeof closeBulkDeliveryModal === 'function') {
+      closeBulkDeliveryModal();
+    }
+  }
+});
 
 // ==================== 유틸리티 함수 ====================
 function showLoading() {

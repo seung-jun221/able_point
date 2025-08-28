@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadProducts();
 
   // 구매 제한 배너 업데이트
-  updatePurchaseLimitBanner();
+  await updatePurchaseLimitBanner(); // await 추가
 
   // 최근 구매 내역 로드
   await loadRecentPurchases();
@@ -82,35 +82,53 @@ function getCurrentWeekKey() {
 }
 
 /**
- * 구매 제한 체크
+ * 구매 제한 체크 (DB 기반으로 수정)
  */
-function checkPurchaseLimit() {
-  const loginId = localStorage.getItem('loginId');
-  const currentWeek = getCurrentWeekKey();
-  const purchaseKey = `purchase_limit_${loginId}_${currentWeek}`;
+async function checkPurchaseLimit() {
+  try {
+    const loginId = localStorage.getItem('loginId');
 
-  const purchaseCount = parseInt(localStorage.getItem(purchaseKey) || '0');
-  const remainingPurchases = PURCHASE_LIMIT.maxPurchasesPerWeek - purchaseCount;
+    // DB에서 실제 구매 내역 확인
+    const studentResult = await api.getStudentPoints(loginId);
+    if (!studentResult.success) {
+      console.error('학생 정보 조회 실패');
+      return { canPurchase: false, remainingPurchases: 0 };
+    }
 
-  return {
-    canPurchase: remainingPurchases > 0,
-    purchaseCount,
-    remainingPurchases: Math.max(0, remainingPurchases),
-    currentWeek,
-  };
+    const studentId = studentResult.data.studentId;
+
+    // API의 checkWeeklyPurchaseLimit 호출
+    const limitResult = await api.checkWeeklyPurchaseLimit(studentId);
+
+    console.log('구매 제한 체크:', limitResult);
+
+    return {
+      canPurchase: limitResult.canPurchase,
+      purchaseCount: limitResult.purchaseCount,
+      remainingPurchases: limitResult.remainingPurchases,
+      currentWeek: getCurrentWeekKey(), // UI 표시용
+    };
+  } catch (error) {
+    console.error('구매 제한 체크 실패:', error);
+    // 에러 시 구매 차단 (안전장치)
+    return { canPurchase: false, remainingPurchases: 0 };
+  }
 }
 
 /**
- * 구매 제한 배너 업데이트
+ * 구매 제한 배너 업데이트 (비동기로 수정)
  */
-function updatePurchaseLimitBanner() {
+async function updatePurchaseLimitBanner() {
   const banner = document.getElementById('purchaseLimitBanner');
   const remainingSpan = document.getElementById('remainingPurchases');
   const statusIcon = document.querySelector('.banner-status .status-icon');
   const bannerMessage = document.getElementById('bannerMessage');
   const resetInfo = document.getElementById('bannerResetInfo');
 
-  const limitStatus = checkPurchaseLimit();
+  // 로딩 표시
+  bannerMessage.innerHTML = '구매 제한 확인 중...';
+
+  const limitStatus = await checkPurchaseLimit(); // await 추가
 
   // 남은 구매 횟수 표시
   remainingSpan.textContent = limitStatus.remainingPurchases;
@@ -127,6 +145,115 @@ function updatePurchaseLimitBanner() {
     banner.classList.add('exhausted');
     statusIcon.textContent = '🚫';
     bannerMessage.innerHTML = `이번 주 구매 횟수를 모두 사용했습니다`;
+  }
+}
+
+/**
+ * 구매 버튼 클릭 - async 추가 필수!
+ */
+async function purchaseItem(itemId, itemName, price, stock, imageUrl, emoji) {
+  console.log('구매 시도:', { itemId, itemName, price, stock });
+
+  // 구매 제한 체크 - await 추가!
+  const limitStatus = await checkPurchaseLimit(); // ⭐ await 추가
+
+  console.log('구매 제한 상태:', limitStatus); // 디버깅용
+
+  if (!limitStatus.canPurchase) {
+    showPurchaseLimitModal();
+    return;
+  }
+
+  // 재고 확인
+  if (stock <= 0) {
+    alert('해당 상품은 품절되었습니다.');
+    return;
+  }
+
+  // 포인트 확인
+  if (currentPoints < price) {
+    alert(
+      `포인트가 부족합니다!\n필요 포인트: ${price.toLocaleString()}P\n보유 포인트: ${currentPoints.toLocaleString()}P\n부족한 포인트: ${(
+        price - currentPoints
+      ).toLocaleString()}P`
+    );
+    return;
+  }
+
+  // 선택 상품 정보 저장
+  selectedItem = {
+    id: itemId,
+    name: itemName,
+    price: price,
+    stock: stock,
+    imageUrl: imageUrl,
+    emoji: emoji,
+  };
+
+  showPurchaseModal();
+}
+
+/**
+ * 구매 확인 - recordPurchase() 제거
+ */
+async function confirmPurchase() {
+  if (!selectedItem) return;
+
+  const confirmBtn = document.getElementById('confirmPurchase');
+  const originalText = confirmBtn.textContent;
+
+  try {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="loading-spinner"></span> 구매 중...';
+
+    const loginId = localStorage.getItem('loginId');
+    const result = await api.purchaseItem(loginId, selectedItem.id);
+
+    if (result.success) {
+      alert(
+        `구매가 완료되었습니다!\n\n상품명: ${
+          selectedItem.name
+        }\n결제 금액: ${selectedItem.price.toLocaleString()}P\n\n데스크에서 상품을 수령해주세요.`
+      );
+
+      // 1초 후 페이지 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
+      // ❌ recordPurchase() 제거 - DB에 이미 저장됨
+      // recordPurchase();
+
+      // 포인트 업데이트
+      currentPoints -= selectedItem.price;
+      localStorage.setItem('currentPoints', currentPoints.toString());
+
+      // UI 업데이트
+      const headerPoints = document.getElementById('headerTotalPoints');
+      if (headerPoints) {
+        headerPoints.textContent = currentPoints.toLocaleString() + 'P';
+      }
+
+      // 구매 제한 배너 업데이트
+      await updatePurchaseLimitBanner(); // await 추가
+
+      // 상품 목록 새로고침
+      await loadProducts();
+
+      // 최근 구매 내역 새로고침
+      await loadRecentPurchases();
+
+      // 모달 닫기
+      closePurchaseModal();
+    } else {
+      alert(result.error || '구매에 실패했습니다. 다시 시도해주세요.');
+    }
+  } catch (error) {
+    console.error('구매 오류:', error);
+    alert('구매 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalText;
   }
 }
 
@@ -278,9 +405,9 @@ function createProductCard(item) {
   const stockText = isOutOfStock ? '품절' : `재고 ${item.stock}개`;
 
   return `
-    <div class="product-card ${
-      isOutOfStock ? 'out-of-stock' : ''
-    }" data-category="${item.category}">
+  <div class="product-card ${
+    isOutOfStock ? 'out-of-stock' : ''
+  }" data-category="${item.category}">
       <div class="product-image">
         ${imageHtml}
         ${emojiHtml}
@@ -292,14 +419,14 @@ function createProductCard(item) {
         <div class="product-footer">
           <span class="product-price">${item.price.toLocaleString()}P</span>
           <button 
-            class="buy-btn" 
-            ${isOutOfStock ? 'disabled' : ''}
-            onclick="purchaseItem('${item.item_id}', '${item.name}', ${
-    item.price
-  }, ${item.stock}, '${item.image || ''}', '${emoji}')"
-          >
-            ${isOutOfStock ? '품절' : '구매'}
-          </button>
+      class="buy-btn" 
+      ${isOutOfStock ? 'disabled' : ''}
+      onclick="purchaseItem('${item.item_id}', '${item.name}', ${item.price}, ${
+    item.stock
+  }, '${item.image || ''}', '${emoji}')"
+    >
+      ${isOutOfStock ? '품절' : '구매'}
+    </button>
         </div>
       </div>
     </div>
@@ -477,50 +604,6 @@ function formatTimeAgo(dateString) {
   return date.toLocaleDateString('ko-KR');
 }
 
-// ==================== 상품 구매 ====================
-
-/**
- * 구매 버튼 클릭
- */
-function purchaseItem(itemId, itemName, price, stock, imageUrl, emoji) {
-  console.log('구매 시도:', { itemId, itemName, price, stock });
-
-  // 구매 제한 체크
-  const limitStatus = checkPurchaseLimit();
-  if (!limitStatus.canPurchase) {
-    showPurchaseLimitModal();
-    return;
-  }
-
-  // 재고 확인
-  if (stock <= 0) {
-    alert('해당 상품은 품절되었습니다.');
-    return;
-  }
-
-  // 포인트 확인
-  if (currentPoints < price) {
-    alert(
-      `포인트가 부족합니다!\n필요 포인트: ${price.toLocaleString()}P\n보유 포인트: ${currentPoints.toLocaleString()}P\n부족한 포인트: ${(
-        price - currentPoints
-      ).toLocaleString()}P`
-    );
-    return;
-  }
-
-  // 선택 상품 정보 저장
-  selectedItem = {
-    id: itemId,
-    name: itemName,
-    price: price,
-    stock: stock,
-    imageUrl: imageUrl,
-    emoji: emoji,
-  };
-
-  showPurchaseModal();
-}
-
 /**
  * 구매 확인 모달 표시
  */
@@ -576,67 +659,6 @@ function showPurchaseLimitModal() {
   const nextResetTime = getNextResetTime();
   document.getElementById('nextPurchaseDate').textContent = nextResetTime;
   document.getElementById('purchaseLimitModal').classList.add('active');
-}
-
-/**
- * 구매 확인
- */
-async function confirmPurchase() {
-  if (!selectedItem) return;
-
-  const confirmBtn = document.getElementById('confirmPurchase');
-  const originalText = confirmBtn.textContent;
-
-  try {
-    // 버튼 로딩 상태
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<span class="loading-spinner"></span> 구매 중...';
-
-    const loginId = localStorage.getItem('loginId');
-    const result = await api.purchaseItem(loginId, selectedItem.id);
-
-    if (result.success) {
-      // 구매 성공
-      alert(
-        `구매가 완료되었습니다!\n\n상품명: ${
-          selectedItem.name
-        }\n결제 금액: ${selectedItem.price.toLocaleString()}P\n\n데스크에서 상품을 수령해주세요.`
-      );
-
-      // 구매 기록 저장 (로컬)
-      recordPurchase();
-
-      // 포인트 업데이트
-      currentPoints -= selectedItem.price;
-      localStorage.setItem('currentPoints', currentPoints.toString());
-
-      // UI 업데이트
-      const headerPoints = document.getElementById('headerTotalPoints');
-      if (headerPoints) {
-        headerPoints.textContent = currentPoints.toLocaleString() + 'P';
-      }
-
-      // 구매 제한 배너 업데이트
-      updatePurchaseLimitBanner();
-
-      // 상품 목록 새로고침 (재고 업데이트)
-      await loadProducts();
-
-      // 최근 구매 내역 새로고침
-      await loadRecentPurchases();
-
-      // 모달 닫기
-      closePurchaseModal();
-    } else {
-      alert(result.error || '구매에 실패했습니다. 다시 시도해주세요.');
-    }
-  } catch (error) {
-    console.error('구매 오류:', error);
-    alert('구매 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-  } finally {
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = originalText;
-  }
 }
 
 // ==================== UI 제어 ====================

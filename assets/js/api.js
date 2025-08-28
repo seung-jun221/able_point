@@ -785,10 +785,22 @@ class PointBankAPI {
         .eq('type', 'purchase')
         .gte('created_at', mondayMorning.toISOString());
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase 에러:', error);
+        // 에러 시에도 구매 차단 (안전)
+        return {
+          canPurchase: false,
+          purchaseCount: 1,
+          remainingPurchases: 0,
+        };
+      }
 
       const purchaseCount = data ? data.length : 0;
-      const maxPurchases = 1; // 주 1회 제한
+      const maxPurchases = 1;
+
+      console.log(
+        `구매 제한 확인 - 학생ID: ${studentId}, 이번주 구매: ${purchaseCount}/${maxPurchases}`
+      );
 
       return {
         canPurchase: purchaseCount < maxPurchases,
@@ -797,9 +809,13 @@ class PointBankAPI {
         resetTime: mondayMorning.toISOString(),
       };
     } catch (error) {
-      console.error('Check purchase limit error:', error);
-      // 에러 시 구매 허용 (안전장치)
-      return { canPurchase: true, purchaseCount: 0, remainingPurchases: 1 };
+      console.error('checkWeeklyPurchaseLimit 에러:', error);
+      // 에러 발생 시 구매 차단
+      return {
+        canPurchase: false,
+        purchaseCount: 1,
+        remainingPurchases: 0,
+      };
     }
   }
 
@@ -886,6 +902,8 @@ class PointBankAPI {
    */
   async markAsDelivered(transactionId, teacherId, teacherName, notes = '') {
     try {
+      console.log('지급처리 시도:', { transactionId, teacherId, teacherName }); // 디버깅용
+
       const { data, error } = await supabase
         .from('transactions')
         .update({
@@ -899,6 +917,16 @@ class PointBankAPI {
 
       if (error) throw error;
 
+      // ⭐ 중요: data가 비어있으면 업데이트 실패!
+      if (!data || data.length === 0) {
+        console.error('업데이트된 row가 없음. transaction_id:', transactionId);
+        return {
+          success: false,
+          error: `거래 ID ${transactionId}를 찾을 수 없습니다.`,
+        };
+      }
+
+      console.log('지급처리 성공:', data[0]); // 디버깅용
       return { success: true, data: data[0] };
     } catch (error) {
       console.error('지급 처리 실패:', error);
