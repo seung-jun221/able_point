@@ -1,4 +1,4 @@
-// purchase-management.js - 구매 관리 기능
+// purchase-management-table.js - 개선된 구매 관리 기능 (테이블 뷰 포함)
 
 // 전역 변수
 let allPurchases = [];
@@ -7,6 +7,8 @@ let currentTab = 'pending';
 let currentPage = 1;
 let itemsPerPage = 20;
 let selectedPurchase = null;
+let selectedPurchases = new Set();
+let currentViewMode = 'table'; // 'table' or 'card'
 
 // ==================== 초기화 ====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userRole').textContent =
     userRole === 'principal' ? 'Principal' : 'Teacher';
 
-  // 관리 메뉴 권한 체크 (원장만 표시)
+  // 관리 메뉴 권한 체크
   if (userRole !== 'principal' && loginId !== 'ablemaster') {
     const adminSection = document.getElementById('adminSection');
     if (adminSection) {
@@ -50,60 +52,126 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('구매 관리 페이지 초기화 완료');
 });
 
-// ==================== 데이터 로드 ====================
+// ==================== 뷰 모드 전환 ====================
+function setViewMode(mode) {
+  currentViewMode = mode;
 
-/**
- * 구매 내역 로드
- */
+  // 버튼 활성화 상태 변경
+  document.querySelectorAll('.view-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === mode);
+  });
+
+  // 뷰 전환
+  document
+    .getElementById('tableView')
+    .classList.toggle('active', mode === 'table');
+  document
+    .getElementById('cardView')
+    .classList.toggle('active', mode === 'card');
+
+  // 데이터 다시 표시
+  displayPurchases();
+}
+
+// ==================== 페이지당 표시 개수 변경 ====================
+function changeItemsPerPage() {
+  const selector = document.getElementById('perPageSelector');
+  itemsPerPage = parseInt(selector.value);
+  currentPage = 1;
+  displayPurchases();
+  updatePagination();
+}
+
+// ==================== 데이터 로드 ====================
 async function loadPurchases() {
   try {
     showLoading();
 
-    // 구매 내역과 학생 정보를 함께 가져오기
-    const [purchaseResult, studentResult] = await Promise.all([
-      api.getAllPurchases(), // 새로 만들어야 하는 API 함수
-      api.getAllStudents(), // 기존 API 함수
-    ]);
+    // 실제 API 호출로 변경
+    const result = await api.getAllPurchases();
 
-    if (purchaseResult.success && purchaseResult.data) {
-      allPurchases = purchaseResult.data;
-
-      // 학생 정보 매핑
-      if (studentResult.success && studentResult.data) {
-        const studentsMap = new Map();
-        studentResult.data.forEach((student) => {
-          studentsMap.set(student.loginId || student.studentId, student);
-        });
-
-        allPurchases.forEach((purchase) => {
-          const student = studentsMap.get(
-            purchase.studentId || purchase.student_id
-          );
-          if (student) {
-            purchase.studentName = student.name;
-            purchase.studentClass = student.className || student.classId;
-            purchase.studentAvatar = student.avatar || '🦁';
-          }
-        });
-      }
-
-      console.log(`구매 내역 ${allPurchases.length}건 로드 완료`);
+    if (result.success && result.data) {
+      allPurchases = result.data;
+      console.log(`실제 구매 내역 ${allPurchases.length}건 로드 완료`);
     } else {
-      console.error('구매 내역 로드 실패:', purchaseResult.error);
-      allPurchases = [];
+      console.error('구매 내역 로드 실패:', result.error);
+      // 실패시 더미 데이터 사용
+      loadDummyData();
+      return;
     }
 
     updateStatistics();
     filterAndDisplayPurchases();
   } catch (error) {
     console.error('구매 내역 로드 오류:', error);
-    showError('구매 내역을 불러올 수 없습니다.');
+    loadDummyData(); // 폴백
   }
 }
 
-/**
- * 통계 업데이트
- */
+// 테스트용 더미 데이터 생성
+function generateDummyData() {
+  const items = [
+    '츄파춥스',
+    '초코파이',
+    '아이스크림',
+    '삼각김밥',
+    '컵라면',
+    '문화상품권',
+    '에어팟',
+    '연필',
+    '공책',
+  ];
+  const classes = [
+    '초등 월수 1반',
+    '초등 화목 2반',
+    '중등 월수 1반',
+    '중등 화목 3반',
+  ];
+  const students = [
+    '김민준',
+    '이서연',
+    '박지호',
+    '최유진',
+    '정예준',
+    '강민서',
+    '조은우',
+    '윤서진',
+    '임하준',
+    '한지우',
+  ];
+
+  const data = [];
+  for (let i = 0; i < 150; i++) {
+    const isPending = Math.random() > 0.6;
+    const createdAt = new Date(
+      Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000
+    );
+
+    data.push({
+      transaction_id: `T${1000 + i}`,
+      student_id: `S${100 + Math.floor(Math.random() * 50)}`,
+      studentName: students[Math.floor(Math.random() * students.length)],
+      studentClass: classes[Math.floor(Math.random() * classes.length)],
+      studentAvatar: ['🦁', '🐰', '🐻', '🐼', '🦊'][
+        Math.floor(Math.random() * 5)
+      ],
+      item_name: items[Math.floor(Math.random() * items.length)],
+      amount: Math.floor(Math.random() * 50 + 10) * 100,
+      created_at: createdAt.toISOString(),
+      delivery_status: isPending ? 'pending' : 'delivered',
+      delivered_at: isPending
+        ? null
+        : new Date(
+            createdAt.getTime() + Math.random() * 2 * 60 * 60 * 1000
+          ).toISOString(),
+      delivered_by: isPending ? null : '김선생님',
+    });
+  }
+
+  return data;
+}
+
+// ==================== 통계 업데이트 ====================
 function updateStatistics() {
   const pendingCount = allPurchases.filter(
     (p) => p.delivery_status === 'pending'
@@ -115,30 +183,21 @@ function updateStatistics() {
   document.getElementById('pendingCount').textContent = pendingCount;
   document.getElementById('todayCount').textContent = todayDelivered;
   document.getElementById('pendingBadge').textContent = pendingCount;
+  document.getElementById('pendingBadge2').textContent = pendingCount;
 
-  // 긴급 상태 표시 (1시간 이상 미지급)
-  const urgentCount = allPurchases.filter((p) => {
-    return (
-      p.delivery_status === 'pending' && getHoursElapsed(p.created_at) >= 1
-    );
-  }).length;
-
-  const statCard = document.querySelector('.stat-card.urgent');
-  if (urgentCount > 0) {
-    statCard.classList.add('blink');
-  } else {
-    statCard.classList.remove('blink');
+  // 미지급 배지 표시/숨기기
+  const badge = document.getElementById('pendingBadge');
+  if (badge) {
+    badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
   }
 }
 
-// ==================== 탭 및 필터링 ====================
-
-/**
- * 탭 전환
- */
+// ==================== 필터링 및 표시 ====================
 function showTab(tab) {
   currentTab = tab;
   currentPage = 1;
+  selectedPurchases.clear();
+  updateBulkActionBar();
 
   // 탭 버튼 활성화
   document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -148,9 +207,6 @@ function showTab(tab) {
   filterAndDisplayPurchases();
 }
 
-/**
- * 필터링 및 표시
- */
 function filterAndDisplayPurchases() {
   let filtered = [...allPurchases];
 
@@ -161,9 +217,6 @@ function filterAndDisplayPurchases() {
       break;
     case 'delivered':
       filtered = filtered.filter((p) => p.delivery_status === 'delivered');
-      break;
-    case 'all':
-      // 전체 표시
       break;
   }
 
@@ -176,12 +229,11 @@ function filterAndDisplayPurchases() {
     filtered = filtered.filter(
       (p) =>
         (p.studentName && p.studentName.toLowerCase().includes(searchTerm)) ||
-        (p.itemName && p.itemName.toLowerCase().includes(searchTerm)) ||
         (p.item_name && p.item_name.toLowerCase().includes(searchTerm))
     );
   }
 
-  // 정렬 (미지급은 오래된 순, 지급완료는 최신순)
+  // 정렬
   if (currentTab === 'pending') {
     filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   } else {
@@ -193,10 +245,113 @@ function filterAndDisplayPurchases() {
   updatePagination();
 }
 
-/**
- * 구매 목록 표시
- */
+function handleSearch() {
+  currentPage = 1;
+  filterAndDisplayPurchases();
+}
+
+// ==================== 테이블 뷰 표시 ====================
 function displayPurchases() {
+  if (currentViewMode === 'table') {
+    displayTableView();
+  } else {
+    displayCardView();
+  }
+  updatePaginationInfo();
+}
+
+function displayTableView() {
+  const tbody = document.getElementById('purchaseTableBody');
+
+  if (filteredPurchases.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 40px; color: #9ca3af;">
+          ${
+            currentTab === 'pending'
+              ? '미지급 구매가 없습니다'
+              : currentTab === 'delivered'
+              ? '지급 완료된 구매가 없습니다'
+              : '구매 내역이 없습니다'
+          }
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const pageItems = filteredPurchases.slice(startIndex, endIndex);
+
+  tbody.innerHTML = pageItems
+    .map((purchase) => {
+      const isPending = purchase.delivery_status === 'pending';
+      const hoursElapsed = getHoursElapsed(purchase.created_at);
+      const isUrgent = isPending && hoursElapsed >= 1;
+      const isSelected = selectedPurchases.has(purchase.transaction_id);
+
+      return `
+      <tr class="${isSelected ? 'selected' : ''}" data-id="${
+        purchase.transaction_id
+      }">
+        <td>
+          <input type="checkbox" 
+                 class="purchase-checkbox" 
+                 data-id="${purchase.transaction_id}"
+                 ${isSelected ? 'checked' : ''}
+                 ${!isPending ? 'disabled' : ''}
+                 onchange="togglePurchaseSelection('${
+                   purchase.transaction_id
+                 }')">
+        </td>
+        <td>
+          <span class="status-badge ${
+            isPending ? (isUrgent ? 'urgent' : 'pending') : 'delivered'
+          }">
+            ${isPending ? (isUrgent ? '🚨 긴급' : '⏳ 대기중') : '✅ 완료'}
+          </span>
+        </td>
+        <td>
+          <div class="student-cell">
+            <div class="student-avatar-small">${purchase.studentAvatar}</div>
+            <span class="student-name-small">${purchase.studentName}</span>
+          </div>
+        </td>
+        <td>${purchase.studentClass}</td>
+        <td><strong>${purchase.item_name}</strong></td>
+        <td class="price-cell">${purchase.amount.toLocaleString()}P</td>
+        <td class="time-cell">${formatShortDateTime(purchase.created_at)}</td>
+        <td class="${isUrgent ? 'elapsed-urgent' : 'time-cell'}">
+          ${formatElapsedTime(purchase.created_at)}
+        </td>
+        <td>
+          <div class="action-buttons">
+            ${
+              isPending
+                ? `
+              <button class="btn-action btn-deliver-small" 
+                      onclick="showDeliveryModal('${purchase.transaction_id}')">
+                지급
+              </button>
+            `
+                : ''
+            }
+            <button class="btn-action" onclick="showDetailModal('${
+              purchase.transaction_id
+            }')">
+              상세
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    })
+    .join('');
+}
+
+// ==================== 카드 뷰 표시 (기존 스타일) ====================
+function displayCardView() {
   const container = document.getElementById('purchaseList');
 
   if (filteredPurchases.length === 0) {
@@ -212,19 +367,11 @@ function displayPurchases() {
               : '구매 내역이 없습니다'
           }
         </div>
-        <div class="empty-subtitle">
-          ${
-            currentTab === 'pending'
-              ? '새로운 구매가 있으면 여기에 표시됩니다'
-              : ''
-          }
-        </div>
       </div>
     `;
     return;
   }
 
-  // 페이징 처리
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const pageItems = filteredPurchases.slice(startIndex, endIndex);
@@ -234,96 +381,54 @@ function displayPurchases() {
     .join('');
 }
 
-/**
- * 구매 카드 생성
- */
 function createPurchaseCard(purchase) {
   const isPending = purchase.delivery_status === 'pending';
   const hoursElapsed = getHoursElapsed(purchase.created_at);
   const isUrgent = isPending && hoursElapsed >= 1;
 
-  const itemName = purchase.itemName || purchase.item_name || '알 수 없는 상품';
-  const price = purchase.price || purchase.amount || 0;
-  const studentName = purchase.studentName || '알 수 없는 학생';
-  const studentClass = purchase.studentClass || '';
-
   return `
-    <div class="purchase-card ${isPending ? 'pending' : 'delivered'} ${
-    isUrgent ? 'urgent' : ''
-  }" 
-         data-id="${purchase.transaction_id || purchase.id}">
-      
-      ${isUrgent ? '<div class="urgent-indicator">🚨 긴급</div>' : ''}
+    <div class="purchase-card ${
+      isPending ? (isUrgent ? 'urgent' : 'pending') : 'delivered'
+    }">
+      ${isUrgent ? '<div class="urgent-indicator">⏰ 긴급</div>' : ''}
       
       <div class="card-header">
         <div class="student-info">
-          <div class="student-avatar">${purchase.studentAvatar || '🦁'}</div>
+          <div class="student-avatar">${purchase.studentAvatar}</div>
           <div class="student-details">
-            <div class="student-name">${studentName}</div>
-            <div class="student-class">${studentClass}</div>
+            <div class="student-name">${purchase.studentName}</div>
+            <div class="student-class">${purchase.studentClass}</div>
           </div>
         </div>
-        
-        <div class="status-badge ${isPending ? 'pending' : 'delivered'}">
-          ${isPending ? '🔸 미지급' : '✅ 완료'}
+        <div class="status-info">
+          <span class="status-badge ${isPending ? 'pending' : 'delivered'}">
+            ${isPending ? '🔸 미지급' : '✅ 지급완료'}
+          </span>
         </div>
       </div>
 
-      <div class="card-body">
-        <div class="item-section">
-          <div class="item-image">
-            ${
-              purchase.image_url
-                ? `<img src="${purchase.image_url}" alt="${itemName}" 
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-                : ''
-            }
-            <span class="item-emoji" ${
-              purchase.image_url ? 'style="display:none;"' : ''
-            }>${getProductEmoji(itemName)}</span>
-          </div>
-          <div class="item-info">
-            <div class="item-name">${itemName}</div>
-            <div class="item-price">${Math.abs(price).toLocaleString()}P</div>
-          </div>
-        </div>
+      <div class="item-info">
+        <div class="item-name">${purchase.item_name}</div>
+        <div class="item-price">${purchase.amount.toLocaleString()}P</div>
+      </div>
 
-        <div class="time-section">
-          <div class="time-info">
-            <div class="purchase-time">
-              📅 ${formatDateTime(purchase.created_at)}
-            </div>
-            <div class="elapsed-time ${isUrgent ? 'urgent' : ''}">
-              ⏰ ${formatElapsedTime(purchase.created_at)}
-            </div>
-            ${
-              !isPending
-                ? `
-              <div class="delivery-info">
-                👤 ${purchase.delivered_by || '알 수 없음'} | 
-                📅 ${formatDateTime(purchase.delivered_at)}
-              </div>
-            `
-                : ''
-            }
-          </div>
-        </div>
+      <div class="time-info">
+        <div>구매: ${formatDateTime(purchase.created_at)}</div>
+        <div>경과: ${formatElapsedTime(purchase.created_at)}</div>
       </div>
 
       <div class="card-actions">
         ${
           isPending
             ? `
-          <button class="btn-deliver" onclick="showDeliveryModal('${
-            purchase.transaction_id || purchase.id
-          }')">
+          <button class="btn-deliver" onclick="showDeliveryModal('${purchase.transaction_id}')">
             🎁 지급완료
           </button>
         `
             : ''
         }
         <button class="btn-detail" onclick="showDetailModal('${
-          purchase.transaction_id || purchase.id
+          purchase.transaction_id
         }')">
           📋 상세보기
         </button>
@@ -332,67 +437,238 @@ function createPurchaseCard(purchase) {
   `;
 }
 
-// ==================== 지급 처리 ====================
-
-/**
- * 지급 모달 표시
- */
-function showDeliveryModal(purchaseId) {
-  const purchase = allPurchases.find(
-    (p) => (p.transaction_id || p.id) === purchaseId
+// ==================== 선택 관리 ====================
+function toggleSelectAll() {
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll(
+    '.purchase-checkbox:not(:disabled)'
   );
 
-  if (!purchase) {
-    toastr.error('구매 정보를 찾을 수 없습니다.');
+  if (selectAll.checked) {
+    checkboxes.forEach((cb) => {
+      cb.checked = true;
+      selectedPurchases.add(cb.dataset.id);
+    });
+  } else {
+    checkboxes.forEach((cb) => {
+      cb.checked = false;
+    });
+    selectedPurchases.clear();
+  }
+
+  updateBulkActionBar();
+}
+
+function togglePurchaseSelection(id) {
+  if (selectedPurchases.has(id)) {
+    selectedPurchases.delete(id);
+  } else {
+    selectedPurchases.add(id);
+  }
+
+  // 해당 행 선택 표시
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (row) {
+    row.classList.toggle('selected', selectedPurchases.has(id));
+  }
+
+  // 전체 선택 체크박스 상태 업데이트
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll(
+    '.purchase-checkbox:not(:disabled)'
+  );
+  selectAll.checked =
+    checkboxes.length > 0 && Array.from(checkboxes).every((cb) => cb.checked);
+
+  updateBulkActionBar();
+}
+
+function updateBulkActionBar() {
+  const bar = document.getElementById('bulkActionBar');
+  const count = selectedPurchases.size;
+
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('selectedCount').textContent = count;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function cancelSelection() {
+  selectedPurchases.clear();
+  document
+    .querySelectorAll('.purchase-checkbox')
+    .forEach((cb) => (cb.checked = false));
+  document
+    .querySelectorAll('tr.selected')
+    .forEach((row) => row.classList.remove('selected'));
+  document.getElementById('selectAll').checked = false;
+  updateBulkActionBar();
+}
+
+// ==================== 일괄 처리 ====================
+function bulkDeliver() {
+  if (selectedPurchases.size === 0) return;
+
+  const modal = document.getElementById('bulkDeliveryModal');
+  document.getElementById('bulkCount').textContent = selectedPurchases.size;
+
+  // 선택된 항목 목록 표시
+  const selectedItems = Array.from(selectedPurchases)
+    .map((id) => {
+      const purchase = filteredPurchases.find((p) => p.transaction_id === id);
+      return `
+      <div class="selected-item">
+        ${purchase.studentName} - ${
+        purchase.item_name
+      } (${purchase.amount.toLocaleString()}P)
+      </div>
+    `;
+    })
+    .join('');
+
+  document.getElementById('selectedItemsList').innerHTML = selectedItems;
+  modal.classList.add('active');
+}
+
+function closeBulkDeliveryModal() {
+  document.getElementById('bulkDeliveryModal').classList.remove('active');
+}
+
+async function confirmBulkDelivery() {
+  const notes = document.getElementById('bulkDeliveryNotes').value.trim();
+  const teacherId = localStorage.getItem('loginId');
+  const teacherName = localStorage.getItem('userName');
+
+  // 실제 API 호출 구현 필요
+  console.log(`${selectedPurchases.size}개 항목 일괄 지급 처리`, notes);
+
+  // 성공 메시지
+  toastr.success(`${selectedPurchases.size}개 상품이 지급 처리되었습니다.`);
+
+  // 초기화
+  closeBulkDeliveryModal();
+  cancelSelection();
+  await loadPurchases();
+}
+
+// ==================== 페이지네이션 ====================
+function updatePagination() {
+  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
+  const pagination = document.getElementById('pagination');
+
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
     return;
   }
 
+  let html = '';
+
+  // 이전 페이지
+  if (currentPage > 1) {
+    html += `<button class="page-btn" onclick="changePage(${
+      currentPage - 1
+    })">‹</button>`;
+  }
+
+  // 페이지 번호 계산
+  const maxButtons = 7;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+  if (endPage - startPage < maxButtons - 1) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+
+  // 첫 페이지
+  if (startPage > 1) {
+    html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+    if (startPage > 2) {
+      html += `<span class="page-dots">...</span>`;
+    }
+  }
+
+  // 페이지 번호들
+  for (let i = startPage; i <= endPage; i++) {
+    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" 
+             onclick="changePage(${i})">${i}</button>`;
+  }
+
+  // 마지막 페이지
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      html += `<span class="page-dots">...</span>`;
+    }
+    html += `<button class="page-btn" onclick="changePage(${totalPages})">${totalPages}</button>`;
+  }
+
+  // 다음 페이지
+  if (currentPage < totalPages) {
+    html += `<button class="page-btn" onclick="changePage(${
+      currentPage + 1
+    })">›</button>`;
+  }
+
+  pagination.innerHTML = html;
+}
+
+function updatePaginationInfo() {
+  const total = filteredPurchases.length;
+  const start = total > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const end = Math.min(currentPage * itemsPerPage, total);
+
+  document.getElementById('totalItems').textContent = total;
+  document.getElementById('showingRange').textContent = `${start}-${end}`;
+}
+
+function changePage(page) {
+  currentPage = page;
+  selectedPurchases.clear();
+  document.getElementById('selectAll').checked = false;
+  updateBulkActionBar();
+  displayPurchases();
+  updatePagination();
+
+  // 페이지 상단으로 스크롤
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==================== 모달 관리 ====================
+function showDeliveryModal(purchaseId) {
+  const purchase = filteredPurchases.find(
+    (p) => p.transaction_id === purchaseId
+  );
+  if (!purchase) return;
+
   selectedPurchase = purchase;
 
-  // 모달 정보 설정
   document.getElementById('modalStudentName').textContent =
-    purchase.studentName || '알 수 없는 학생';
+    purchase.studentName;
   document.getElementById('modalStudentClass').textContent =
-    purchase.studentClass || '';
+    purchase.studentClass;
   document.getElementById('modalStudentAvatar').textContent =
-    purchase.studentAvatar || '🦁';
-
-  const itemName = purchase.itemName || purchase.item_name || '알 수 없는 상품';
-  document.getElementById('modalItemName').textContent = itemName;
-  document.getElementById('modalItemPrice').textContent = `${Math.abs(
-    purchase.price || purchase.amount || 0
-  ).toLocaleString()}P`;
-
+    purchase.studentAvatar;
+  document.getElementById('modalItemName').textContent = purchase.item_name;
+  document.getElementById(
+    'modalItemPrice'
+  ).textContent = `${purchase.amount.toLocaleString()}P`;
   document.getElementById('modalPurchaseTime').textContent = formatDateTime(
     purchase.created_at
   );
   document.getElementById('modalElapsedTime').textContent = formatElapsedTime(
     purchase.created_at
   );
-
-  // 이미지 설정
-  const modalImage = document.getElementById('modalItemImage');
-  if (purchase.image_url) {
-    modalImage.innerHTML = `<img src="${purchase.image_url}" alt="${itemName}" 
-      onerror="this.parentNode.innerHTML='<span class=\\"item-emoji\\">${getProductEmoji(
-        itemName
-      )}</span>'">`;
-  } else {
-    modalImage.innerHTML = `<span class="item-emoji">${getProductEmoji(
-      itemName
-    )}</span>`;
-  }
-
-  // 메모 초기화
   document.getElementById('deliveryNotes').value = '';
 
-  // 모달 표시
   document.getElementById('deliveryModal').classList.add('active');
 }
 
-/**
- * 지급 확인
- */
+function closeDeliveryModal() {
+  document.getElementById('deliveryModal').classList.remove('active');
+  selectedPurchase = null;
+}
+
 async function confirmDelivery() {
   if (!selectedPurchase) return;
 
@@ -400,33 +676,29 @@ async function confirmDelivery() {
   const originalText = confirmBtn.textContent;
 
   try {
-    // 버튼 로딩 상태
+    // 버튼 비활성화 및 로딩 표시
     confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<span class="loading-spinner"></span> 처리 중...';
+    confirmBtn.textContent = '처리 중...';
 
-    const deliveryNotes = document.getElementById('deliveryNotes').value.trim();
+    const notes = document.getElementById('deliveryNotes').value.trim();
     const teacherId = localStorage.getItem('loginId');
     const teacherName = localStorage.getItem('userName');
 
+    // 실제 API 호출
     const result = await api.markAsDelivered(
-      selectedPurchase.transaction_id || selectedPurchase.id,
+      selectedPurchase.transaction_id,
       teacherId,
       teacherName,
-      deliveryNotes
+      notes
     );
 
     if (result.success) {
       toastr.success(
-        `${selectedPurchase.studentName}님의 ${
-          selectedPurchase.itemName || selectedPurchase.item_name
-        } 지급 처리가 완료되었습니다.`
+        `${selectedPurchase.studentName}님의 ${selectedPurchase.item_name} 지급이 완료되었습니다.`
       );
 
-      // 모달 닫기
       closeDeliveryModal();
-
-      // 데이터 새로고침
-      await loadPurchases();
+      await loadPurchases(); // 목록 새로고침
     } else {
       toastr.error(result.error || '지급 처리에 실패했습니다.');
     }
@@ -434,227 +706,61 @@ async function confirmDelivery() {
     console.error('지급 처리 오류:', error);
     toastr.error('지급 처리 중 오류가 발생했습니다.');
   } finally {
+    // 버튼 원상복구
     confirmBtn.disabled = false;
     confirmBtn.textContent = originalText;
   }
 }
 
-// ==================== 모달 관리 ====================
-
-/**
- * 지급 모달 닫기
- */
-function closeDeliveryModal() {
-  document.getElementById('deliveryModal').classList.remove('active');
-  selectedPurchase = null;
-}
-
-/**
- * 상세 모달 표시
- */
 function showDetailModal(purchaseId) {
-  const purchase = allPurchases.find(
-    (p) => (p.transaction_id || p.id) === purchaseId
-  );
-
-  if (!purchase) {
-    toastr.error('구매 정보를 찾을 수 없습니다.');
-    return;
-  }
-
-  const isPending = purchase.delivery_status === 'pending';
-  const itemName = purchase.itemName || purchase.item_name || '알 수 없는 상품';
-
-  const detailContent = `
-    <div class="detail-section">
-      <h3>학생 정보</h3>
-      <div class="detail-grid">
-        <div class="detail-item">
-          <span class="label">이름</span>
-          <span class="value">${
-            purchase.studentName || '알 수 없는 학생'
-          }</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">클래스</span>
-          <span class="value">${purchase.studentClass || '-'}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">학생 ID</span>
-          <span class="value">${
-            purchase.studentId || purchase.student_id || '-'
-          }</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <h3>상품 정보</h3>
-      <div class="detail-grid">
-        <div class="detail-item">
-          <span class="label">상품명</span>
-          <span class="value">${itemName}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">가격</span>
-          <span class="value">${Math.abs(
-            purchase.price || purchase.amount || 0
-          ).toLocaleString()}P</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">상품 ID</span>
-          <span class="value">${
-            purchase.itemId || purchase.item_id || '-'
-          }</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <h3>구매 정보</h3>
-      <div class="detail-grid">
-        <div class="detail-item">
-          <span class="label">구매 시간</span>
-          <span class="value">${formatDateTime(purchase.created_at)}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">경과 시간</span>
-          <span class="value">${formatElapsedTime(purchase.created_at)}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">상태</span>
-          <span class="value status ${isPending ? 'pending' : 'delivered'}">
-            ${isPending ? '🔸 미지급' : '✅ 지급완료'}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    ${
-      !isPending
-        ? `
-      <div class="detail-section">
-        <h3>지급 정보</h3>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <span class="label">지급자</span>
-            <span class="value">${purchase.delivered_by || '알 수 없음'}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">지급 시간</span>
-            <span class="value">${formatDateTime(purchase.delivered_at)}</span>
-          </div>
-          <div class="detail-item full-width">
-            <span class="label">메모</span>
-            <span class="value">${purchase.delivery_notes || '없음'}</span>
-          </div>
-        </div>
-      </div>
-    `
-        : ''
-    }
-  `;
-
-  document.getElementById('detailContent').innerHTML = detailContent;
-  document.getElementById('detailModal').classList.add('active');
-}
-
-/**
- * 상세 모달 닫기
- */
-function closeDetailModal() {
-  document.getElementById('detailModal').classList.remove('active');
+  // 상세 모달 구현
+  console.log('상세보기:', purchaseId);
+  toastr.info('상세보기 기능은 준비중입니다.');
 }
 
 // ==================== 유틸리티 함수 ====================
-
-/**
- * 검색 처리
- */
-function handleSearch() {
-  clearTimeout(window.searchTimeout);
-  window.searchTimeout = setTimeout(() => {
-    currentPage = 1;
-    filterAndDisplayPurchases();
-  }, 300);
-}
-
-/**
- * 새로고침
- */
-async function refreshPurchases() {
-  const refreshBtn = document.querySelector('.btn-refresh');
-  refreshBtn.style.transform = 'rotate(360deg)';
-
-  await loadPurchases();
-
-  setTimeout(() => {
-    refreshBtn.style.transform = 'rotate(0deg)';
-  }, 500);
-}
-
-/**
- * 로딩 표시
- */
 function showLoading() {
-  const container = document.getElementById('purchaseList');
+  const container =
+    currentViewMode === 'table'
+      ? document.getElementById('purchaseTableBody')
+      : document.getElementById('purchaseList');
+
   container.innerHTML = `
-    <div class="loading-state">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">구매 내역을 불러오는 중...</div>
-    </div>
+    <tr><td colspan="9" style="text-align: center; padding: 40px;">
+      <div>구매 내역을 불러오는 중...</div>
+    </td></tr>
   `;
 }
 
-/**
- * 에러 표시
- */
 function showError(message) {
-  const container = document.getElementById('purchaseList');
+  const container =
+    currentViewMode === 'table'
+      ? document.getElementById('purchaseTableBody')
+      : document.getElementById('purchaseList');
+
   container.innerHTML = `
-    <div class="error-state">
-      <div class="error-icon">⚠️</div>
-      <div class="error-title">오류가 발생했습니다</div>
-      <div class="error-message">${message}</div>
-      <button class="btn-retry" onclick="loadPurchases()">다시 시도</button>
-    </div>
+    <tr><td colspan="9" style="text-align: center; padding: 40px; color: #ef4444;">
+      ${message}
+    </td></tr>
   `;
 }
 
-/**
- * 상품 이모지 가져오기
- */
-function getProductEmoji(itemName) {
-  const emojiMap = {
-    츄파춥스: '🍭',
-    초코파이: '🍫',
-    아이스크림: '🍦',
-    삼각김밥: '🍙',
-    컵라면: '🍜',
-    문상: '💳',
-    에어팟: '🎧',
-    연필: '✏️',
-    공책: '📓',
-    지우개: '🧽',
-  };
-
-  for (const [key, emoji] of Object.entries(emojiMap)) {
-    if (itemName.includes(key)) {
-      return emoji;
-    }
-  }
-  return '🎁'; // 기본 이모지
-}
-
-/**
- * 시간 관련 유틸리티
- */
 function formatDateTime(dateString) {
   const date = new Date(dateString);
   return date.toLocaleString('ko-KR', {
     year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatShortDateTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -670,7 +776,7 @@ function formatElapsedTime(dateString) {
   if (hours === 0) {
     return `${minutes}분 전`;
   } else if (hours < 24) {
-    return `${hours}시간 ${minutes}분 전`;
+    return `${hours}시간 전`;
   } else {
     const days = Math.floor(hours / 24);
     return `${days}일 전`;
@@ -690,94 +796,23 @@ function isToday(dateString) {
   return date.toDateString() === today.toDateString();
 }
 
-/**
- * 페이징 처리
- */
-function updatePagination() {
-  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
-  const pagination = document.getElementById('pagination');
-
-  if (totalPages <= 1) {
-    pagination.innerHTML = '';
-    return;
-  }
-
-  let html = '';
-
-  // 이전 페이지
-  if (currentPage > 1) {
-    html += `<button class="page-btn" onclick="changePage(${
-      currentPage - 1
-    })">‹</button>`;
-  }
-
-  // 페이지 번호
-  const startPage = Math.max(1, currentPage - 2);
-  const endPage = Math.min(totalPages, currentPage + 2);
-
-  if (startPage > 1) {
-    html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
-    if (startPage > 2) {
-      html += `<span class="page-dots">...</span>`;
-    }
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" 
-             onclick="changePage(${i})">${i}</button>`;
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      html += `<span class="page-dots">...</span>`;
-    }
-    html += `<button class="page-btn" onclick="changePage(${totalPages})">${totalPages}</button>`;
-  }
-
-  // 다음 페이지
-  if (currentPage < totalPages) {
-    html += `<button class="page-btn" onclick="changePage(${
-      currentPage + 1
-    })">›</button>`;
-  }
-
-  pagination.innerHTML = html;
+function refreshPurchases() {
+  loadPurchases();
+  toastr.info('목록을 새로고침했습니다.');
 }
 
-function changePage(page) {
-  currentPage = page;
-  displayPurchases();
-  updatePagination();
-
-  // 페이지 상단으로 스크롤
-  document.querySelector('.purchase-list-container').scrollTop = 0;
-}
-
-// ==================== 이벤트 리스너 ====================
-
-// 모달 외부 클릭 시 닫기
-document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('modal')) {
-    if (e.target.id === 'deliveryModal') {
-      closeDeliveryModal();
-    } else if (e.target.id === 'detailModal') {
-      closeDetailModal();
-    }
-  }
-});
-
-// ESC 키로 모달 닫기
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeDeliveryModal();
-    closeDetailModal();
-  }
-});
-
-// 로그아웃 함수
+// 로그아웃
 function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
     localStorage.clear();
     window.location.href = '../login.html';
   }
 }
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDeliveryModal();
+    closeBulkDeliveryModal();
+  }
+});

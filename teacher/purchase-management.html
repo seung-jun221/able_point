@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>구매 관리 - 포인트 뱅크</title>
 
-    <!-- Supabase & Config -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../assets/js/config.js"></script>
-    <script src="../assets/js/api.js"></script>
-
-    <!-- CSS -->
     <link rel="stylesheet" href="../assets/css/common.css" />
     <link rel="stylesheet" href="../assets/css/teacher.css" />
     <link rel="stylesheet" href="../assets/css/purchase-management.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/api.js"></script>
 
     <!-- Toastr 알림 -->
     <link
@@ -23,186 +21,202 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   </head>
   <body>
-    <!-- 사이드바 -->
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">
-          <div class="logo-icon">🏦</div>
-          <span>포인트 뱅크</span>
-        </div>
-
-        <select
-          class="class-selector"
-          id="classSelector"
-          onchange="changeClass()"
-        >
-          <option value="">전체 학급</option>
-        </select>
-      </div>
-
-      <nav class="nav-menu">
-        <!-- 관리 메뉴 (원장만) -->
-        <div class="nav-section" id="adminSection">
-          <div class="nav-section-title">시스템 관리</div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='manage.html'"
-            style="cursor: pointer"
-          >
-            <span>👨‍🏫</span>
-            <span>선생님 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='classes.html'"
-            style="cursor: pointer"
-          >
-            <span>🏫</span>
-            <span>클래스 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='students.html'"
-            style="cursor: pointer"
-          >
-            <span>🎓</span>
-            <span>학생 관리</span>
-          </div>
-
-          <div
-            class="nav-item"
-            onclick="location.href='shop-manage.html'"
-            style="cursor: pointer"
-          >
-            <span>🛍️</span>
-            <span>상점 관리</span>
+    <div class="container">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">🏦</div>
+            <span>포인트 뱅크</span>
           </div>
         </div>
 
-        <!-- 일반 메뉴 (모든 선생님) -->
-        <div class="nav-section">
-          <div class="nav-section-title">포인트 관리</div>
-
-          <a href="index.html" class="nav-item" data-page="point">
-            <span>💰</span>
-            <span>포인트 지급</span>
-          </a>
-
-          <a href="#" class="nav-item" data-page="history">
-            <span>📜</span>
-            <span>포인트 내역</span>
-          </a>
-
-          <a
-            href="purchase-management.html"
-            class="nav-item active"
-            data-page="purchase"
-          >
-            <span>📦</span>
-            <span>구매 관리</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">리포트</div>
-
-          <a href="#" class="nav-item" data-page="report">
-            <span>📊</span>
-            <span>통계</span>
-          </a>
-
-          <a href="#" class="nav-item" data-page="ranking">
-            <span>🏆</span>
-            <span>랭킹</span>
-          </a>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="user-info">
-          <span class="user-name" id="teacherName">선생님</span>
-          <span class="user-role" id="userRole">Teacher</span>
-        </div>
-        <button class="logout-btn" onclick="logout()">
-          <span>🚪</span>
-          <span>로그아웃</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- 메인 컨텐츠 -->
-    <div class="main-content">
-      <!-- 페이지 헤더 -->
-      <div class="page-header">
-        <div class="header-title">
-          <h1 class="page-title">📦 구매 관리</h1>
-          <p class="page-subtitle">학생 구매 내역을 확인하고 지급 처리하세요</p>
-        </div>
-        <div class="header-stats">
-          <div class="stat-card urgent">
-            <div class="stat-value" id="pendingCount">0</div>
-            <div class="stat-label">미지급</div>
+        <nav class="nav-menu">
+          <div class="nav-section" id="adminSection" style="display: none">
+            <div class="nav-section-title">관리자 메뉴</div>
+            <a href="manage.html" class="nav-item">
+              <span>👥</span>
+              <span>선생님 관리</span>
+            </a>
+            <a href="classes.html" class="nav-item">
+              <span>🏫</span>
+              <span>클래스 관리</span>
+            </a>
+            <a href="students.html" class="nav-item">
+              <span>🎓</span>
+              <span>학생 관리</span>
+            </a>
+            <a href="shop-manage.html" class="nav-item">
+              <span>🛍️</span>
+              <span>상점 관리</span>
+            </a>
           </div>
-          <div class="stat-card">
-            <div class="stat-value" id="todayCount">0</div>
-            <div class="stat-label">오늘 처리</div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">포인트 관리</div>
+            <a href="index.html" class="nav-item">
+              <span>💰</span>
+              <span>포인트 지급</span>
+            </a>
+            <a href="purchase-management.html" class="nav-item active">
+              <span>📦</span>
+              <span>구매 관리</span>
+              <span class="nav-badge" id="pendingBadge" style="display: none"
+                >0</span
+              >
+            </a>
           </div>
-        </div>
-      </div>
+        </nav>
 
-      <!-- 필터 및 액션 -->
-      <div class="control-section">
-        <div class="filter-tabs">
-          <button
-            class="tab-btn active"
-            onclick="showTab('pending')"
-            data-tab="pending"
-          >
-            미지급 <span class="badge" id="pendingBadge">0</span>
-          </button>
-          <button
-            class="tab-btn"
-            onclick="showTab('delivered')"
-            data-tab="delivered"
-          >
-            지급완료
-          </button>
-          <button class="tab-btn" onclick="showTab('all')" data-tab="all">
-            전체내역
-          </button>
-        </div>
-
-        <div class="search-section">
-          <input
-            type="text"
-            id="searchInput"
-            class="search-box"
-            placeholder="학생 이름 또는 상품명 검색..."
-          />
-          <button
-            class="btn-refresh"
-            onclick="refreshPurchases()"
-            title="새로고침"
-          >
-            🔄
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <span class="user-name" id="teacherName">선생님</span>
+            <span class="user-role" id="userRole">Teacher</span>
+          </div>
+          <button class="logout-btn" onclick="logout()">
+            <span>🚪</span>
+            <span>로그아웃</span>
           </button>
         </div>
       </div>
 
-      <!-- 구매 목록 -->
-      <div class="purchase-list-container">
-        <div id="purchaseList" class="purchase-list">
-          <!-- 동적으로 생성됨 -->
+      <!-- 메인 컨텐츠 -->
+      <div class="main-content">
+        <!-- 페이지 헤더 -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">구매 관리</h1>
+            <p class="page-subtitle">
+              학생들의 상점 구매 내역을 확인하고 지급 처리합니다
+            </p>
+          </div>
+          <div class="header-right">
+            <div class="stat-cards">
+              <div class="mini-stat-card urgent">
+                <span class="stat-value" id="pendingCount">0</span>
+                <span class="stat-label">미지급</span>
+              </div>
+              <div class="mini-stat-card">
+                <span class="stat-value" id="todayCount">0</span>
+                <span class="stat-label">오늘 처리</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- 페이징 -->
-      <div class="pagination-container">
-        <div class="pagination" id="pagination">
-          <!-- 동적으로 생성됨 -->
+        <!-- 필터 바 -->
+        <div class="filter-bar">
+          <div class="filter-left">
+            <div class="tab-group">
+              <button
+                class="tab-btn active"
+                onclick="showTab('pending')"
+                data-tab="pending"
+              >
+                미지급 <span class="tab-badge" id="pendingBadge2">2</span>
+              </button>
+              <button
+                class="tab-btn"
+                onclick="showTab('delivered')"
+                data-tab="delivered"
+              >
+                지급완료
+              </button>
+              <button class="tab-btn" onclick="showTab('all')" data-tab="all">
+                전체내역
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-right">
+            <select
+              id="perPageSelector"
+              class="form-select"
+              onchange="changeItemsPerPage()"
+            >
+              <option value="20">20개씩 보기</option>
+              <option value="30">30개씩 보기</option>
+              <option value="50">50개씩 보기</option>
+              <option value="100">100개씩 보기</option>
+            </select>
+
+            <input
+              type="text"
+              id="searchInput"
+              class="form-input search-input"
+              placeholder="학생 이름 또는 상품명 검색..."
+            />
+
+            <button
+              class="btn-icon"
+              onclick="refreshPurchases()"
+              title="새로고침"
+            >
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- 테이블 컨테이너 -->
+        <div class="table-container">
+          <table class="data-table purchase-table">
+            <thead>
+              <tr>
+                <th width="40">
+                  <input
+                    type="checkbox"
+                    id="selectAll"
+                    onchange="toggleSelectAll()"
+                  />
+                </th>
+                <th width="80">상태</th>
+                <th width="150">학생</th>
+                <th width="120">클래스</th>
+                <th>상품명</th>
+                <th width="100">가격</th>
+                <th width="150">구매시간</th>
+                <th width="100">경과시간</th>
+                <th width="120">액션</th>
+              </tr>
+            </thead>
+            <tbody id="purchaseTableBody">
+              <!-- 동적 생성 -->
+            </tbody>
+          </table>
+
+          <!-- 데이터 없을 때 -->
+          <div class="empty-state" id="emptyState" style="display: none">
+            <div class="empty-icon">📦</div>
+            <div class="empty-message">데이터가 없습니다</div>
+          </div>
+        </div>
+
+        <!-- 일괄 처리 바 -->
+        <div class="bulk-action-bar" id="bulkActionBar" style="display: none">
+          <div class="bulk-info">
+            <span class="selected-count"
+              ><span id="selectedCount">0</span>개 선택됨</span
+            >
+          </div>
+          <div class="bulk-actions">
+            <button class="btn btn-primary" onclick="bulkDeliver()">
+              일괄 지급 처리
+            </button>
+            <button class="btn btn-secondary" onclick="cancelSelection()">
+              선택 취소
+            </button>
+          </div>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="pagination-wrapper">
+          <div class="pagination-info">
+            전체 <span id="totalItems">2</span>건 중
+            <span id="showingRange">1-2</span>번째 표시
+          </div>
+          <div class="pagination" id="pagination">
+            <!-- 동적 생성 -->
+          </div>
         </div>
       </div>
     </div>
@@ -211,47 +225,53 @@
     <div id="deliveryModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>🎁 지급 처리</h2>
+          <h2>지급 처리</h2>
           <button class="modal-close" onclick="closeDeliveryModal()">×</button>
         </div>
         <div class="modal-body">
           <div class="delivery-info">
-            <div class="student-info">
-              <div class="student-avatar" id="modalStudentAvatar">🦁</div>
-              <div class="student-details">
-                <div class="student-name" id="modalStudentName">학생명</div>
-                <div class="student-class" id="modalStudentClass">클래스</div>
+            <div class="info-group">
+              <label>학생 정보</label>
+              <div class="student-info-card">
+                <span class="student-avatar" id="modalStudentAvatar">🦁</span>
+                <div>
+                  <div class="student-name" id="modalStudentName">학생명</div>
+                  <div class="student-class" id="modalStudentClass">클래스</div>
+                </div>
               </div>
             </div>
 
-            <div class="item-info">
-              <div class="item-image" id="modalItemImage">
-                <span class="item-emoji">🎁</span>
-              </div>
-              <div class="item-details">
+            <div class="info-group">
+              <label>상품 정보</label>
+              <div class="item-info-card">
                 <div class="item-name" id="modalItemName">상품명</div>
                 <div class="item-price" id="modalItemPrice">0P</div>
               </div>
             </div>
 
-            <div class="purchase-details">
-              <div class="detail-row">
-                <span class="label">구매 시간</span>
-                <span class="value" id="modalPurchaseTime">-</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">경과 시간</span>
-                <span class="value" id="modalElapsedTime">-</span>
+            <div class="info-group">
+              <label>구매 정보</label>
+              <div class="purchase-info">
+                <div class="info-row">
+                  <span>구매 시간:</span>
+                  <span id="modalPurchaseTime">-</span>
+                </div>
+                <div class="info-row">
+                  <span>경과 시간:</span>
+                  <span id="modalElapsedTime">-</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="delivery-notes">
-            <label for="deliveryNotes">지급 메모 (선택사항)</label>
-            <textarea
-              id="deliveryNotes"
-              placeholder="예: 데스크에서 직접 전달, 특이사항 등"
-            ></textarea>
+            <div class="info-group">
+              <label for="deliveryNotes">지급 메모 (선택)</label>
+              <textarea
+                id="deliveryNotes"
+                class="form-textarea"
+                placeholder="예: 데스크에서 직접 전달"
+                rows="3"
+              ></textarea>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -269,28 +289,7 @@
       </div>
     </div>
 
-    <!-- 상세보기 모달 -->
-    <div id="detailModal" class="modal">
-      <div class="modal-content large">
-        <div class="modal-header">
-          <h2>📋 구매 상세 정보</h2>
-          <button class="modal-close" onclick="closeDetailModal()">×</button>
-        </div>
-        <div class="modal-body">
-          <div id="detailContent">
-            <!-- 동적으로 생성됨 -->
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" onclick="closeDetailModal()">
-            확인
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- JavaScript -->
-    <script src="../assets/js/teacher.js"></script>
     <script src="../assets/js/purchase-management.js"></script>
   </body>
 </html>
