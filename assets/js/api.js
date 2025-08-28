@@ -246,6 +246,46 @@ class PointBankAPI {
     }
   }
 
+  /**
+   * 🆕 여기에 getStudentInfo() 메서드 추가
+   */
+  async getStudentInfo(loginId) {
+    try {
+      window.POINTBANK_CONFIG.debugLog('Getting student info', { loginId });
+
+      const { data: student, error } = await supabase
+        .from('student_details')
+        .select('*')
+        .eq('login_id', loginId)
+        .single();
+
+      if (error) {
+        window.POINTBANK_CONFIG.debugLog('Student info error', error);
+        throw error;
+      }
+
+      if (!student) throw new Error('학생을 찾을 수 없습니다.');
+
+      return {
+        success: true,
+        data: {
+          studentId: student.student_id,
+          userId: student.user_id,
+          name: student.name,
+          loginId: student.login_id,
+          currentPoints: student.current_points || 0,
+          totalPoints: student.total_points || 0,
+          savingsPoints: student.savings_points || 0,
+          level: student.level || '씨앗',
+          avatar: student.avatar || '🦁',
+        },
+      };
+    } catch (error) {
+      console.error('Get student info error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // ==================== 포인트 관련 ====================
 
   /**
@@ -652,6 +692,114 @@ class PointBankAPI {
     } catch (error) {
       console.error('Purchase item error:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 🆕 여기에 getPurchaseHistory() 메서드 추가
+   */
+  async getPurchaseHistory(loginId, limit = 10) {
+    try {
+      window.POINTBANK_CONFIG.debugLog('Getting purchase history', {
+        loginId,
+        limit,
+      });
+
+      // 학생 정보 조회
+      const { data: student } = await supabase
+        .from('student_details')
+        .select('student_id')
+        .eq('login_id', loginId)
+        .single();
+
+      if (!student) throw new Error('학생을 찾을 수 없습니다.');
+
+      // 구매 내역 + 상품 정보 조인
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(
+          `
+          *,
+          shop_items (
+            name,
+            emoji,
+            image_url,
+            category
+          )
+        `
+        )
+        .eq('student_id', student.student_id)
+        .eq('type', 'purchase')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        window.POINTBANK_CONFIG.debugLog('Purchase history error', error);
+        throw error;
+      }
+
+      return {
+        success: true,
+        data: data
+          ? data.map((item) => ({
+              id: item.id,
+              item_name: item.shop_items?.name || item.item_name,
+              price: Math.abs(item.amount),
+              created_at: item.created_at,
+              emoji: item.shop_items?.emoji || '🎁',
+              image_url: item.shop_items?.image_url || null,
+              category: item.shop_items?.category || 'unknown',
+            }))
+          : [],
+      };
+    } catch (error) {
+      console.error('Get purchase history error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 🆕 여기에 checkWeeklyPurchaseLimit() 메서드 추가
+   */
+  async checkWeeklyPurchaseLimit(studentId) {
+    try {
+      // 이번 주 월요일 9시 계산
+      const now = new Date();
+      const currentDay = now.getDay();
+      const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+
+      const mondayMorning = new Date(now);
+      mondayMorning.setDate(now.getDate() - daysFromMonday);
+      mondayMorning.setHours(9, 0, 0, 0);
+
+      // 현재 시간이 월요일 9시 이전이면 이전 주로 설정
+      if (now < mondayMorning) {
+        mondayMorning.setDate(mondayMorning.getDate() - 7);
+      }
+
+      // 이번 주 구매 횟수 조회
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('type', 'purchase')
+        .gte('created_at', mondayMorning.toISOString());
+
+      if (error) throw error;
+
+      const purchaseCount = data ? data.length : 0;
+      const maxPurchases = 1; // 주 1회 제한
+
+      return {
+        canPurchase: purchaseCount < maxPurchases,
+        purchaseCount,
+        remainingPurchases: Math.max(0, maxPurchases - purchaseCount),
+        resetTime: mondayMorning.toISOString(),
+      };
+    } catch (error) {
+      console.error('Check purchase limit error:', error);
+      // 에러 시 구매 허용 (안전장치)
+      return { canPurchase: true, purchaseCount: 0, remainingPurchases: 1 };
     }
   }
 
