@@ -303,24 +303,24 @@ function displayHistory() {
     if (isSaveTransaction) {
       if (item.description === 'deposit') {
         amountClass = 'negative';
-        amountText = `-${Math.abs(item.amount).toLocaleString()}원`;
+        amountText = `-${Math.abs(item.amount).toLocaleString()}P`;
       } else if (item.description === 'withdraw') {
         amountClass = 'positive';
-        amountText = `${Math.abs(item.amount).toLocaleString()}원`;
+        amountText = `${Math.abs(item.amount).toLocaleString()}P`;
       } else if (item.description === 'interest') {
         amountClass = 'neutral';
-        amountText = `+${Math.abs(item.amount).toLocaleString()}원`;
+        amountText = `+${Math.abs(item.amount).toLocaleString()}P`;
       } else {
         amountClass = item.amount > 0 ? 'positive' : 'negative';
         amountText = `${item.amount > 0 ? '' : '-'}${Math.abs(
           item.amount
-        ).toLocaleString()}원`;
+        ).toLocaleString()}P`;
       }
     } else {
       amountClass = item.amount > 0 ? 'positive' : 'negative';
       amountText = `${item.amount > 0 ? '' : '-'}${Math.abs(
         item.amount
-      ).toLocaleString()}원`;
+      ).toLocaleString()}P`;
     }
 
     html += `
@@ -395,7 +395,7 @@ function updateSummaryHeader() {
     <div class="summary-divider">|</div>
     <div class="summary-total">총 ${
       filteredHistory.length
-    }건 (${totalAmount.toLocaleString()}원)</div>
+    }건 (${totalAmount.toLocaleString()}P)</div>
   `;
 }
 
@@ -414,14 +414,12 @@ function applyFilters() {
             item.description !== 'withdraw' &&
             item.description !== 'interest'
           );
-
         case 'spend':
           return (
             item.type === 'spend' &&
             item.description !== 'deposit' &&
             item.description !== 'withdraw'
           );
-
         case 'save':
           return (
             item.type === 'save' ||
@@ -429,27 +427,32 @@ function applyFilters() {
             item.description === 'withdraw' ||
             item.description === 'interest'
           );
-
         default:
           return true;
       }
     });
   }
 
-  // 기간 필터
+  // 기간 필터 - 수정됨!
   const now = new Date();
-  const periodDays = {
-    week: 7,
-    month: 30,
-    '3month': 90,
-    all: 9999,
-  };
+  now.setHours(23, 59, 59, 999); // 오늘 끝까지 포함
 
-  const daysLimit = periodDays[currentPeriod] || 30;
-  filtered = filtered.filter((item) => {
-    const daysDiff = Math.floor((now - item.date) / (1000 * 60 * 60 * 24));
-    return daysDiff <= daysLimit;
-  });
+  if (currentPeriod !== 'all') {
+    const periodDays = {
+      week: 7,
+      month: 30,
+      '3month': 90,
+    };
+
+    const daysLimit = periodDays[currentPeriod] || 30;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysLimit + 1); // +1로 오늘 포함
+    cutoffDate.setHours(0, 0, 0, 0);
+
+    filtered = filtered.filter((item) => {
+      return item.date >= cutoffDate;
+    });
+  }
 
   filteredHistory = filtered;
   console.log(`📍 필터링 결과: ${currentFilter} - ${filteredHistory.length}건`);
