@@ -8,6 +8,29 @@ let currentPeriod = 'month';
 let studentData = null;
 let isLoading = false;
 
+// ========== 동적 높이 조정 함수 추가 (여기!) ==========
+function adjustContainerPadding() {
+  const fixedTop = document.querySelector('.history-fixed-top');
+  const container = document.querySelector('.history-container');
+  const appHeader = document.querySelector('.app-header');
+
+  if (fixedTop && container && appHeader) {
+    // 고정 영역의 실제 높이 계산
+    const headerHeight = appHeader.offsetHeight || 65;
+    const fixedTopHeight = fixedTop.offsetHeight;
+    const totalHeight = headerHeight + fixedTopHeight - 60; // 20px 여유 공간
+
+    // 컨테이너의 padding-top 동적 설정
+    container.style.paddingTop = totalHeight + 'px';
+
+    console.log('📏 높이 조정:', {
+      headerHeight,
+      fixedTopHeight,
+      totalHeight,
+    });
+  }
+}
+
 // ========== 헬퍼 함수들 ==========
 
 // Supabase ISO 형식 날짜 파싱
@@ -400,6 +423,9 @@ function updateSummaryHeader() {
 }
 
 // 필터 적용
+// history.js - applyFilters 함수 수정
+
+// 필터 적용 함수 (수정 버전)
 function applyFilters() {
   let filtered = [...allHistory];
 
@@ -438,16 +464,34 @@ function applyFilters() {
   now.setHours(23, 59, 59, 999); // 오늘 끝까지 포함
 
   if (currentPeriod !== 'all') {
-    const periodDays = {
-      week: 7,
-      month: 30,
-      '3month': 90,
-    };
+    let cutoffDate;
 
-    const daysLimit = periodDays[currentPeriod] || 30;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysLimit + 1); // +1로 오늘 포함
-    cutoffDate.setHours(0, 0, 0, 0);
+    switch (currentPeriod) {
+      case 'today':
+        // 오늘 자정부터 현재까지
+        cutoffDate = new Date();
+        cutoffDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 6); // 7일 전 (오늘 포함)
+        cutoffDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 29); // 30일 전 (오늘 포함)
+        cutoffDate.setHours(0, 0, 0, 0);
+        break;
+      case '3month':
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 89); // 90일 전 (오늘 포함)
+        cutoffDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 29); // 기본값: 30일
+        cutoffDate.setHours(0, 0, 0, 0);
+    }
 
     filtered = filtered.filter((item) => {
       return item.date >= cutoffDate;
@@ -459,6 +503,75 @@ function applyFilters() {
 
   displayHistory();
   updateSummaryHeader();
+}
+
+// updateSummaryHeader 함수도 수정
+function updateSummaryHeader() {
+  const header = document.getElementById('summaryHeader');
+  if (!header) return;
+
+  // 현재 선택된 기간에 따른 날짜 범위 계산
+  const now = new Date();
+  let startDate, endDate;
+
+  switch (currentPeriod) {
+    case 'today':
+      // 오늘 날짜만
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      endDate = now;
+      break;
+    case 'week':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      endDate = now;
+      break;
+    case 'month':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      endDate = now;
+      break;
+    case '3month':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      endDate = now;
+      break;
+    case 'all':
+      if (filteredHistory.length > 0) {
+        const dates = filteredHistory.map((item) => item.date);
+        startDate = new Date(Math.min(...dates));
+        endDate = new Date(Math.max(...dates));
+      } else if (allHistory.length > 0) {
+        const dates = allHistory.map((item) => item.date);
+        startDate = new Date(Math.min(...dates));
+        endDate = new Date(Math.max(...dates));
+      } else {
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        endDate = now;
+      }
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      endDate = now;
+  }
+
+  // 총 금액 계산 (절대값)
+  const totalAmount = filteredHistory.reduce((sum, item) => {
+    return sum + Math.abs(item.amount);
+  }, 0);
+
+  // 기간 표시 포맷 개선
+  let periodText;
+  if (currentPeriod === 'today') {
+    periodText = `오늘 (${formatDate(startDate)})`;
+  } else {
+    periodText = `기간: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+  }
+
+  header.innerHTML = `
+    <div class="summary-period">${periodText}</div>
+    <div class="summary-divider">|</div>
+    <div class="summary-total">총 ${
+      filteredHistory.length
+    }건 (${totalAmount.toLocaleString()}P)</div>
+  `;
 }
 
 // 스켈레톤 리스트 생성
@@ -538,6 +651,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadStudentData();
     await loadHistory();
     setupEventListeners();
+
+    // ⭐ 동적 높이 조정 추가 (여기!)
+    setTimeout(() => {
+      adjustContainerPadding();
+    }, 100);
+
+    // ⭐ 윈도우 리사이즈 시에도 재조정 (여기!)
+    window.addEventListener('resize', adjustContainerPadding);
   } catch (error) {
     console.error('초기화 오류:', error);
   }

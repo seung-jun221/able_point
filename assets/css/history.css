@@ -1,4 +1,4 @@
-/* history.css - 통일감 있는 디자인 */
+/* history.css - 통일감 있는 디자인 (수정 버전) */
 
 /* 전체 배경 */
 body.with-both-nav {
@@ -10,7 +10,7 @@ body.with-both-nav {
   max-width: 500px;
   margin: 0 auto;
   padding: 20px;
-  padding-top: 260px; /* 고정 영역 높이 증가 (필터 + 기간 + 요약) */
+  padding-top: 280px; /* 수정: 260px → 280px (고정 영역 높이에 맞춤) */
   padding-bottom: 100px;
   box-sizing: border-box;
   position: relative;
@@ -227,120 +227,109 @@ body.with-both-nav {
   position: relative;
   z-index: 1;
   font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
+}
+
+.summary-divider {
+  color: #64748b;
+  margin: 0 12px;
+  opacity: 0.5;
 }
 
 /* ========== 거래 내역 리스트 ========== */
 .history-list-container {
   background: white;
-  border-radius: 16px;
-  padding: 12px;
-  box-shadow: 0 2px 12px rgba(30, 58, 95, 0.08);
-  width: 100%;
-  position: relative;
-  margin-top: 20px; /* 고정 영역과의 간격 조정 */
-  min-height: 200px; /* 최소 높이 설정 */
-  border: 1px solid rgba(30, 58, 95, 0.05);
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  min-height: 400px;
+  margin-top: 10px;
 }
 
-/* 거래 내역 아이템 - 카드 스타일 */
+/* 심플한 리스트 아이템 */
 .history-item-simple {
   display: flex;
   align-items: center;
   padding: 14px 12px;
-  margin: 4px;
-  margin-bottom: 8px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
-  transition: all 0.3s ease;
-  font-size: 14px;
-  position: relative;
-  border: 1px solid rgba(30, 58, 95, 0.08);
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s;
+  cursor: default;
 }
 
 .history-item-simple:hover {
-  background: linear-gradient(135deg, #e8f2ff 0%, #dbeafe 100%);
-  border-color: rgba(30, 58, 95, 0.2);
-  transform: translateX(3px);
-  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.1);
+  background: #f9fafb;
 }
 
 .history-item-simple:last-child {
-  margin-bottom: 0;
+  border-bottom: none;
 }
 
-/* 날짜/시간 */
-.item-datetime {
-  min-width: 85px;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-}
-
-/* 거래처/설명 */
-.item-description {
-  flex: 1;
-  padding: 0 12px;
-  color: #1e3a5f;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-}
-
-/* 금액 */
-.item-amount {
-  min-width: 80px;
-  text-align: right;
-  font-weight: 700;
-  font-size: 15px;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-}
-
-.item-amount.positive {
-  color: #059669; /* 진한 에메랄드 그린 */
-}
-
-.item-amount.negative {
-  color: #dc2626; /* 진한 레드 */
-}
-
-.item-amount.neutral {
-  color: #64748b; /* 중간 회색 */
-}
-
-/* 5개마다 구분선 */
+/* 굵은 구분선 (5개마다) */
 .list-thick-divider {
   height: 2px;
   background: linear-gradient(
     90deg,
     transparent,
-    #1e3a5f 20%,
-    #1e3a5f 80%,
+    #e5e7eb 20%,
+    #e5e7eb 80%,
     transparent
   );
-  margin: 16px 8px;
-  opacity: 0.2;
+  margin: 8px 0;
+}
+
+/* 리스트 컬럼들 */
+.item-datetime {
+  min-width: 85px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.item-description {
+  flex: 1;
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+  padding: 0 12px;
+}
+
+.item-amount {
+  min-width: 80px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.item-amount.positive {
+  color: #22c55e;
+}
+
+.item-amount.negative {
+  color: #ef4444;
+}
+
+.item-amount.neutral {
+  color: #6366f1;
 }
 
 /* ========== 빈 상태 ========== */
 .empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #9ca3af;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #94a3b8;
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 .empty-message {
   font-size: 14px;
-  color: #6b7280;
   font-weight: 500;
 }
 
@@ -369,12 +358,12 @@ body.with-both-nav {
   }
 }
 
-/* ========== 반응형 처리 ========== */
+/* ========== 반응형 처리 (수정됨) ========== */
 @media (max-width: 600px) {
   .history-container {
     max-width: 100%;
     padding: 10px;
-    padding-top: 240px; /* 모바일에서도 충분한 공간 확보 */
+    padding-top: 260px; /* 수정: 240px → 260px */
   }
 
   .history-fixed-top {
@@ -403,7 +392,7 @@ body.with-both-nav {
 @media (max-width: 480px) {
   .history-container {
     padding: 15px;
-    padding-top: 230px; /* 작은 화면에서도 충분한 공간 */
+    padding-top: 250px; /* 수정: 230px → 250px */
   }
 
   .history-fixed-top {
