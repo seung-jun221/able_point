@@ -896,7 +896,6 @@ function closePasswordModal() {
   if (confirmPassword) confirmPassword.value = '';
 }
 
-// 비밀번호 업데이트
 async function updatePassword() {
   const current = document.getElementById('currentPassword')?.value;
   const newPass = document.getElementById('newPassword')?.value;
@@ -918,8 +917,27 @@ async function updatePassword() {
   }
 
   try {
-    // API 호출 (실제 구현 필요)
-    // const result = await api.changePassword(studentId, current, newPass);
+    const loginId = localStorage.getItem('loginId');
+
+    // 현재 비밀번호 확인
+    const { data: user } = await supabase
+      .from('users')
+      .select('password')
+      .eq('login_id', loginId)
+      .single();
+
+    if (user.password !== current) {
+      showNotification('현재 비밀번호가 올바르지 않습니다.', 'error');
+      return;
+    }
+
+    // 새 비밀번호로 업데이트
+    const { error } = await supabase
+      .from('users')
+      .update({ password: newPass })
+      .eq('login_id', loginId);
+
+    if (error) throw error;
 
     showNotification('비밀번호가 변경되었습니다.', 'success');
     closePasswordModal();

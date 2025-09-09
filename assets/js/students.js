@@ -201,8 +201,8 @@ async function saveStudent() {
 
   try {
     if (currentEditId) {
-      // ============= 기존 학생 수정 - 변경사항 없음 =============
-      // users 테이블 업데이트
+      // ============= 기존 학생 수정 =============
+      // 1. users 테이블 업데이트
       const updateData = {
         name: name,
         login_id: loginId,
@@ -219,20 +219,31 @@ async function saveStudent() {
         .update(updateData)
         .eq('user_id', currentEditId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Users 테이블 업데이트 오류:', error);
+        throw error;
+      }
 
-      // students 테이블 업데이트 (실제 테이블)
+      // 2. students 테이블 업데이트 - ✅ name 필드도 추가!
       const { error: studentError } = await supabase
         .from('students')
         .update({
-          class_id: classId,
-          name: name, // ✅ students 테이블의 name도 업데이트
+          name: name, // ✅ name 필드 추가!
+          class_id: classId, // 기존 class_id
         })
         .eq('user_id', currentEditId);
 
-      // 에러 무시 (students 테이블이 없을 수도 있음)
-
-      alert('학생 정보가 수정되었습니다.');
+      // 3. 에러 처리 개선 - 무시하지 않고 확인
+      if (studentError) {
+        console.error('Students 테이블 업데이트 오류:', studentError);
+        // 에러가 있어도 users는 이미 업데이트됐으므로 부분 성공 메시지
+        alert(
+          '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 반 정보 수정 실패)'
+        );
+      } else {
+        // 모두 성공한 경우
+        alert('학생 정보가 모두 수정되었습니다.');
+      }
     } else {
       // ============= 신규 등록 - 수정된 부분 =============
       const userId = 'USR' + Date.now();
@@ -358,16 +369,36 @@ async function resetPassword(userId) {
   }
 }
 
-// 학생 삭제
 async function deleteStudent(userId) {
   if (!confirm('정말 삭제하시겠습니까?\n관련된 모든 데이터가 삭제됩니다.'))
     return;
 
   try {
-    // student_details 먼저 삭제
-    await supabase.from('student_details').delete().eq('user_id', userId);
+    // 1. student_id 먼저 조회
+    const { data: studentData } = await supabase
+      .from('students')
+      .select('student_id')
+      .eq('user_id', userId)
+      .single();
 
-    // users 삭제
+    if (studentData) {
+      // 2. points 테이블 삭제
+      await supabase
+        .from('points')
+        .delete()
+        .eq('student_id', studentData.student_id);
+
+      // 3. transactions 테이블 삭제
+      await supabase
+        .from('transactions')
+        .delete()
+        .eq('student_id', studentData.student_id);
+
+      // 4. students 테이블 삭제
+      await supabase.from('students').delete().eq('user_id', userId);
+    }
+
+    // 5. 마지막으로 users 삭제
     const { error } = await supabase
       .from('users')
       .delete()
