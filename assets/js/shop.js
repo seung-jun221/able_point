@@ -122,6 +122,7 @@ async function checkPurchaseLimit() {
 /**
  * 구매 제한 배너 업데이트 (비동기로 수정)
  */
+// shop.js에서 updatePurchaseLimitBanner 함수
 async function updatePurchaseLimitBanner() {
   const banner = document.getElementById('purchaseLimitBanner');
   const remainingSpan = document.getElementById('remainingPurchases');
@@ -130,38 +131,59 @@ async function updatePurchaseLimitBanner() {
   const resetInfo = document.getElementById('bannerResetInfo');
 
   // 로딩 표시
-  bannerMessage.innerHTML = '구매 제한 확인 중...';
+  if (bannerMessage) {
+    bannerMessage.innerHTML = '구매 제한 확인 중...';
+  }
 
-  const limitStatus = await checkPurchaseLimit(); // await 추가
+  try {
+    // ✅ await로 비동기 처리 완료 대기
+    const limitStatus = await checkPurchaseLimit();
 
-  // 남은 구매 횟수 표시
-  remainingSpan.textContent = limitStatus.remainingPurchases;
+    console.log('배너 업데이트 - 구매 제한 상태:', limitStatus);
 
-  // 다음 리셋 시간 계산
-  const nextReset = getNextResetTime();
-  resetInfo.textContent = `다음 리셋: ${nextReset}`;
+    if (remainingSpan) {
+      remainingSpan.textContent = limitStatus.remainingPurchases || 0;
+    }
 
-  if (limitStatus.canPurchase) {
-    banner.classList.remove('exhausted');
-    statusIcon.textContent = '✅';
-    bannerMessage.innerHTML = `이번 주 구매 가능 횟수: <span id="remainingPurchases">${limitStatus.remainingPurchases}</span>/1회`;
-  } else {
-    banner.classList.add('exhausted');
-    statusIcon.textContent = '🚫';
-    bannerMessage.innerHTML = `이번 주 구매 횟수를 모두 사용했습니다`;
+    // 다음 리셋 시간 계산
+    const nextReset = getNextResetTime();
+    if (resetInfo) {
+      resetInfo.textContent = `다음 리셋: ${nextReset}`;
+    }
+
+    if (limitStatus.canPurchase) {
+      banner?.classList.remove('exhausted');
+      if (statusIcon) statusIcon.textContent = '✅';
+      if (bannerMessage) {
+        bannerMessage.innerHTML = `이번 주 구매 가능 횟수: <span id="remainingPurchases">${limitStatus.remainingPurchases}</span>/1회`;
+      }
+    } else {
+      banner?.classList.add('exhausted');
+      if (statusIcon) statusIcon.textContent = '🚫';
+      if (bannerMessage) {
+        bannerMessage.innerHTML = `이번 주 구매 횟수를 모두 사용했습니다`;
+      }
+    }
+  } catch (error) {
+    console.error('배너 업데이트 오류:', error);
+    // 오류 시 기본 메시지 표시
+    if (bannerMessage) {
+      bannerMessage.innerHTML = '구매 제한 정보를 불러올 수 없습니다';
+    }
   }
 }
 
 /**
  * 구매 버튼 클릭 - async 추가 필수!
  */
+// shop.js의 purchaseItem 함수 수정
 async function purchaseItem(itemId, itemName, price, stock, imageUrl, emoji) {
   console.log('구매 시도:', { itemId, itemName, price, stock });
 
-  // 구매 제한 체크 - await 추가!
-  const limitStatus = await checkPurchaseLimit(); // ⭐ await 추가
+  // ✅ await 추가 - 비동기 처리 완료 대기
+  const limitStatus = await checkPurchaseLimit();
 
-  console.log('구매 제한 상태:', limitStatus); // 디버깅용
+  console.log('구매 제한 상태:', limitStatus);
 
   if (!limitStatus.canPurchase) {
     showPurchaseLimitModal();
