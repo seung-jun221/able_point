@@ -224,28 +224,60 @@ async function saveStudent() {
         throw error;
       }
 
-      // 2. students 테이블 업데이트 - ✅ name 필드도 추가!
-      const { error: studentError } = await supabase
+      // 2. students 테이블이 있는지 먼저 확인
+      const { data: existingStudent } = await supabase
         .from('students')
-        .update({
-          name: name, // ✅ name 필드 추가!
-          class_id: classId, // 기존 class_id
-        })
-        .eq('user_id', currentEditId);
+        .select('student_id')
+        .eq('user_id', currentEditId)
+        .maybeSingle();
 
-      // 3. 에러 처리 개선 - 무시하지 않고 확인
-      if (studentError) {
-        console.error('Students 테이블 업데이트 오류:', studentError);
-        // 에러가 있어도 users는 이미 업데이트됐으므로 부분 성공 메시지
-        alert(
-          '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 반 정보 수정 실패)'
-        );
+      if (existingStudent) {
+        // students 테이블에 데이터가 있으면 업데이트
+        const { error: studentError } = await supabase
+          .from('students')
+          .update({
+            name: name,
+            class_id: classId,
+          })
+          .eq('user_id', currentEditId);
+
+        if (studentError) {
+          console.error('Students 테이블 업데이트 오류:', studentError);
+          alert(
+            '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 반 정보 수정 실패)'
+          );
+        } else {
+          alert('학생 정보가 모두 수정되었습니다.');
+        }
       } else {
-        // 모두 성공한 경우
-        alert('학생 정보가 모두 수정되었습니다.');
+        // students 테이블에 데이터가 없으면 새로 생성
+        console.log('Students 테이블에 데이터 없음 - 새로 생성');
+        const studentId =
+          'STU' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+        const { error: createError } = await supabase.from('students').insert({
+          student_id: studentId,
+          user_id: currentEditId,
+          name: name,
+          class_id: classId,
+          current_points: 0,
+          total_points: 0,
+          savings_points: 0,
+          level: '씨앗',
+          avatar: '🦁',
+        });
+
+        if (createError) {
+          console.error('Students 테이블 생성 오류:', createError);
+          alert(
+            '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 학생 정보 생성 실패)'
+          );
+        } else {
+          alert('학생 정보가 수정되고 누락된 데이터가 복구되었습니다.');
+        }
       }
     } else {
-      // ============= 신규 등록 - 수정된 부분 =============
+      // ============= 신규 등록 =============
       const userId = 'USR' + Date.now();
       const studentId = 'STU' + Date.now();
 
@@ -259,8 +291,8 @@ async function saveStudent() {
         return;
       }
 
-      // users 테이블에 저장
-      const { error } = await supabase.from('users').insert({
+      // 1. users 테이블에 저장
+      const { error: userError } = await supabase.from('users').insert({
         user_id: userId,
         login_id: loginId,
         password: password,
@@ -270,33 +302,56 @@ async function saveStudent() {
         parent_phone: parentPhone,
       });
 
-      if (error) throw error;
-
-      // ✅ students 테이블에 저장 - 포인트 필드 추가!
-      const pointValue = parseInt(initialPoints) || 0;
-
-      const { error: studentError } = await supabase.from('students').insert({
-        student_id: studentId,
-        user_id: userId,
-        name: name, // ✅ students 테이블에도 name 필드 추가
-        class_id: classId,
-        current_points: pointValue, // ✅ 초기 포인트 설정
-        total_points: pointValue, // ✅ 초기 포인트 설정
-        savings_points: 0, // ✅ 저축 포인트는 0으로 시작
-        level: '씨앗', // ✅ 기본 레벨 설정
-        avatar: '🦁', // ✅ 기본 아바타 설정
-      });
-
-      // students 테이블 에러 처리 (선택사항)
-      if (studentError) {
-        console.error('Students 테이블 저장 오류:', studentError);
-        // users 테이블 롤백을 원하면 아래 주석 해제
-        // await supabase.from('users').delete().eq('user_id', userId);
-        // throw studentError;
+      if (userError) {
+        console.error('Users 테이블 저장 오류:', userError);
+        alert(`사용자 등록 실패: ${userError.message}`);
+        throw userError;
       }
 
-      // ✅ 초기 포인트가 있으면 points 테이블에 이력 추가
-      if (pointValue > 0 && !studentError) {
+      console.log('✅ Users 테이블 저장 성공');
+
+      // 2. students 테이블에 저장 - 에러 처리 강화!
+      const pointValue = parseInt(initialPoints) || 0;
+
+      const studentData = {
+        student_id: studentId,
+        user_id: userId,
+        name: name,
+        class_id: classId,
+        current_points: pointValue,
+        total_points: pointValue,
+        savings_points: 0,
+        level: '씨앗',
+        avatar: '🦁',
+      };
+
+      console.log('Students 테이블에 저장할 데이터:', studentData);
+
+      const { data: studentResult, error: studentError } = await supabase
+        .from('students')
+        .insert(studentData)
+        .select(); // 저장된 데이터 반환
+
+      if (studentError) {
+        console.error('❌ Students 테이블 저장 실패!');
+        console.error('에러 코드:', studentError.code);
+        console.error('에러 메시지:', studentError.message);
+        console.error('에러 상세:', studentError.details);
+        console.error('에러 힌트:', studentError.hint);
+
+        // users 테이블 롤백
+        await supabase.from('users').delete().eq('user_id', userId);
+
+        alert(
+          `학생 정보 저장 실패!\n\n${studentError.message}\n\n가능한 원인:\n1. students 테이블 RLS 정책\n2. 필수 필드 누락\n3. 데이터 타입 불일치`
+        );
+        throw studentError;
+      }
+
+      console.log('✅ Students 테이블 저장 성공:', studentResult);
+
+      // 3. 초기 포인트가 있으면 points 테이블에 이력 추가
+      if (pointValue > 0) {
         const transactionId =
           'TRX' + Date.now() + Math.random().toString(36).substr(2, 5);
 
@@ -310,14 +365,18 @@ async function saveStudent() {
         });
 
         if (pointError) {
-          console.error('포인트 이력 저장 오류:', pointError);
+          console.error('Points 테이블 저장 오류 (무시):', pointError);
+        } else {
+          console.log('✅ Points 테이블 저장 성공');
         }
       }
 
       alert(
-        `학생이 등록되었습니다.${
-          pointValue > 0 ? `\n초기 포인트 ${pointValue}P가 지급되었습니다.` : ''
-        }`
+        `✅ 학생이 성공적으로 등록되었습니다!\n\n` +
+          `이름: ${name}\n` +
+          `아이디: ${loginId}\n` +
+          `반: ${classId}\n` +
+          `초기 포인트: ${pointValue}P`
       );
     }
 
@@ -373,45 +432,138 @@ async function deleteStudent(userId) {
   if (!confirm('정말 삭제하시겠습니까?\n관련된 모든 데이터가 삭제됩니다.'))
     return;
 
+  console.log('삭제 시작 - userId:', userId);
+
   try {
-    // 1. student_id 먼저 조회
-    const { data: studentData } = await supabase
-      .from('students')
-      .select('student_id')
+    // 1. 먼저 users 테이블에서 login_id 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('login_id')
       .eq('user_id', userId)
       .single();
 
+    if (userError) {
+      console.error('users 테이블 조회 오류:', userError);
+      throw userError;
+    }
+
+    const loginId = userData.login_id;
+    console.log('찾은 login_id:', loginId);
+
+    // 2. students 테이블에서 student_id 조회
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('student_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
     if (studentData) {
-      // 2. points 테이블 삭제
-      await supabase
+      console.log('찾은 student_id:', studentData.student_id);
+
+      // 3. points 테이블 삭제
+      const { error: pointsError } = await supabase
         .from('points')
         .delete()
         .eq('student_id', studentData.student_id);
 
-      // 3. transactions 테이블 삭제
-      await supabase
+      if (pointsError) {
+        console.log('points 삭제 시도 중 오류 (무시):', pointsError.message);
+      } else {
+        console.log('points 테이블 삭제 완료');
+      }
+
+      // 4. transactions 테이블 삭제
+      const { error: transError } = await supabase
         .from('transactions')
         .delete()
         .eq('student_id', studentData.student_id);
 
-      // 4. students 테이블 삭제
-      await supabase.from('students').delete().eq('user_id', userId);
+      if (transError) {
+        console.log(
+          'transactions 삭제 시도 중 오류 (무시):',
+          transError.message
+        );
+      } else {
+        console.log('transactions 테이블 삭제 완료');
+      }
+
+      // 5. students 테이블 삭제
+      const { error: studentsDeleteError } = await supabase
+        .from('students')
+        .delete()
+        .eq('user_id', userId);
+
+      if (studentsDeleteError) {
+        console.error('students 테이블 삭제 오류:', studentsDeleteError);
+      } else {
+        console.log('students 테이블 삭제 완료');
+      }
+    } else {
+      console.log('students 테이블에 데이터 없음 - 건너뜀');
     }
 
-    // 5. 마지막으로 users 삭제
-    const { error } = await supabase
+    // 6. badge_claims 테이블 삭제
+    if (loginId) {
+      const { error: badgeError } = await supabase
+        .from('badge_claims')
+        .delete()
+        .eq('student_id', loginId);
+
+      if (badgeError) {
+        console.log(
+          'badge_claims 삭제 시도 중 오류 (무시):',
+          badgeError.message
+        );
+      } else {
+        console.log('badge_claims 테이블 삭제 완료');
+      }
+    }
+
+    // 7. 마지막으로 users 삭제
+    console.log('users 테이블 삭제 시도...');
+    const { error: usersError } = await supabase
       .from('users')
       .delete()
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (usersError) {
+      console.error('users 테이블 삭제 오류:', usersError);
+      alert(
+        `삭제 실패: ${usersError.message}\n\n자세한 내용은 콘솔을 확인하세요.`
+      );
+      throw usersError;
+    }
 
+    console.log('모든 삭제 완료!');
+
+    // ✅ 성공 메시지를 먼저 표시
     alert('학생이 삭제되었습니다.');
-    await loadStudents();
-    updateStatistics();
+
+    // ✅ 방법 1: 강제로 페이지 새로고침
+    window.location.reload();
+
+    // ✅ 방법 2: 만약 페이지 새로고침을 원하지 않으면 아래 코드 사용
+    // // 삭제된 학생을 배열에서 직접 제거
+    // students = students.filter(s => s.user_id !== userId);
+    // // 화면 업데이트
+    // displayStudents();
+    // updateStatistics();
   } catch (error) {
-    console.error('학생 삭제 실패:', error);
-    alert('삭제 중 오류가 발생했습니다.');
+    console.error('=== 삭제 중 최종 오류 ===');
+    console.error('오류 상세:', error);
+
+    if (error.message && error.message.includes('row-level security')) {
+      alert('삭제 권한이 없습니다.\nSupabase의 RLS 정책을 확인해주세요.');
+    } else if (
+      error.message &&
+      error.message.includes('violates foreign key')
+    ) {
+      alert('다른 테이블에서 이 학생을 참조하고 있어 삭제할 수 없습니다.');
+    } else {
+      alert(
+        `삭제 중 오류가 발생했습니다.\n\n${error.message || '알 수 없는 오류'}`
+      );
+    }
   }
 }
 
