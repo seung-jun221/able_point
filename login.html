@@ -349,46 +349,12 @@
     </div>
 
     <!-- 로그인 스크립트 -->
+    <!-- 로그인 스크립트 -->
     <script>
-      // API 로드 확인
+      // API 로드 확인 - 테스트 코드 제거
       if (!window.api) {
-        console.error('API가 로드되지 않았습니다.');
-        // API가 없을 경우 임시 처리
-        window.api = {
-          login: async function (loginId, password) {
-            // 테스트 계정만 허용 (임시)
-            if (
-              (loginId === 'S001' && password === '1234') ||
-              (loginId === 'EM301' && password === '1234')
-            ) {
-              return {
-                success: true,
-                data: {
-                  userId: 'U001',
-                  loginId: loginId,
-                  name: loginId === 'EM301' ? '홍길동' : '김학생',
-                  role: 'student',
-                  studentId: 'STU001',
-                  avatar: '🦁',
-                },
-              };
-            } else if (loginId === 'T001' && password === 'teacher123') {
-              return {
-                success: true,
-                data: {
-                  userId: 'U002',
-                  loginId: 'T001',
-                  name: '김선생',
-                  role: 'teacher',
-                },
-              };
-            }
-            return {
-              success: false,
-              error: '아이디 또는 비밀번호가 올바르지 않습니다.',
-            };
-          },
-        };
+        console.error('API가 로드되지 않았습니다. api.js 파일을 확인하세요.');
+        alert('시스템 오류: API를 불러올 수 없습니다.');
       }
 
       document
@@ -410,7 +376,7 @@
           loginBtn.disabled = true;
 
           try {
-            // API 호출
+            // API 호출 - 실제 api.js의 login 함수 사용
             const result = await window.api.login(loginId, password);
             console.log('로그인 결과:', result);
 
@@ -437,6 +403,8 @@
                   window.location.href = 'student/index.html';
                 } else if (result.data.role === 'teacher') {
                   window.location.href = 'teacher/index.html';
+                } else if (result.data.role === 'principal') {
+                  window.location.href = 'admin/index.html';
                 } else {
                   window.location.href = 'index.html';
                 }
@@ -464,9 +432,7 @@
         window.POINTBANK_CONFIG.env === 'development'
       ) {
         console.log('🔧 개발 모드');
-        console.log(
-          '📝 테스트 계정: S001 / 1234, EM301 / 1234, T001 / teacher123'
-        );
+        console.log('📝 DB에 등록된 계정으로 로그인하세요');
       }
     </script>
   </body>
