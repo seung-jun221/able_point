@@ -200,6 +200,7 @@ async function saveStudent() {
   }
 
   try {
+    // saveStudent 함수의 수정(currentEditId가 있을 때) 부분만 교체
     if (currentEditId) {
       // ============= 기존 학생 수정 =============
       // 1. users 테이블 업데이트
@@ -227,27 +228,63 @@ async function saveStudent() {
       // 2. students 테이블이 있는지 먼저 확인
       const { data: existingStudent } = await supabase
         .from('students')
-        .select('student_id')
+        .select('student_id, current_points, total_points') // 기존 포인트 정보도 가져옴
         .eq('user_id', currentEditId)
         .maybeSingle();
 
+      // 포인트 값 파싱
+      const newPoints = parseInt(initialPoints) || 0;
+
       if (existingStudent) {
+        // 기존 포인트와 새 포인트의 차이 계산
+        const oldPoints = existingStudent.current_points || 0;
+        const pointDifference = newPoints - oldPoints;
+
         // students 테이블에 데이터가 있으면 업데이트
         const { error: studentError } = await supabase
           .from('students')
           .update({
             name: name,
             class_id: classId,
+            current_points: newPoints, // ✅ 현재 포인트 업데이트
+            total_points:
+              (existingStudent.total_points || 0) +
+              Math.max(0, pointDifference), // ✅ 총 포인트는 증가분만 추가
           })
           .eq('user_id', currentEditId);
 
         if (studentError) {
           console.error('Students 테이블 업데이트 오류:', studentError);
           alert(
-            '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 반 정보 수정 실패)'
+            '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 포인트 수정 실패)'
           );
         } else {
-          alert('학생 정보가 모두 수정되었습니다.');
+          // 포인트 변경 이력 추가 (선택사항)
+          if (pointDifference !== 0) {
+            const transactionId =
+              'TRX' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+            const { error: pointError } = await supabase.from('points').insert({
+              transaction_id: transactionId,
+              student_id: existingStudent.student_id,
+              amount: pointDifference,
+              type: pointDifference > 0 ? 'earn' : 'penalty',
+              reason: `관리자 포인트 ${
+                pointDifference > 0 ? '추가' : '차감'
+              } (${oldPoints}P → ${newPoints}P)`,
+              created_at: new Date().toISOString(),
+            });
+
+            if (pointError) {
+              console.error('포인트 이력 저장 오류:', pointError);
+            } else {
+              console.log('✅ 포인트 이력 저장 완료');
+            }
+          }
+
+          alert(
+            `학생 정보가 모두 수정되었습니다.\n포인트: ${oldPoints}P → ${newPoints}P`
+          );
         }
       } else {
         // students 테이블에 데이터가 없으면 새로 생성
@@ -260,8 +297,8 @@ async function saveStudent() {
           user_id: currentEditId,
           name: name,
           class_id: classId,
-          current_points: 0,
-          total_points: 0,
+          current_points: newPoints, // ✅ 입력한 포인트로 설정
+          total_points: newPoints, // ✅ 총 포인트도 동일하게 설정
           savings_points: 0,
           level: '씨앗',
           avatar: '🦁',
@@ -273,7 +310,9 @@ async function saveStudent() {
             '학생 정보가 일부만 수정되었습니다.\n(기본 정보는 수정됨, 학생 정보 생성 실패)'
           );
         } else {
-          alert('학생 정보가 수정되고 누락된 데이터가 복구되었습니다.');
+          alert(
+            `학생 정보가 수정되고 누락된 데이터가 복구되었습니다.\n초기 포인트: ${newPoints}P`
+          );
         }
       }
     } else {
