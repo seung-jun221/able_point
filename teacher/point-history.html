@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>포인트 지급 관리 - 포인트 뱅크</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/teacher.css" />
+    <link rel="stylesheet" href="../assets/css/manage.css" />
+    <link rel="stylesheet" href="../assets/css/point-history.css" />
+
+    <!-- Supabase & API -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/api.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">🏦</div>
+            <span>포인트 뱅크</span>
+          </div>
+          <select class="class-selector" id="classSelector">
+            <option value="">전체 반</option>
+          </select>
+        </div>
+
+        <nav class="nav-menu">
+          <div class="nav-section" id="adminSection" style="display: none">
+            <div class="nav-section-title">관리자 메뉴</div>
+            <a href="manage.html" class="nav-item">
+              <span>👥</span>
+              <span>선생님 관리</span>
+            </a>
+            <a href="classes.html" class="nav-item">
+              <span>🏫</span>
+              <span>클래스 관리</span>
+            </a>
+            <a href="students.html" class="nav-item">
+              <span>🎓</span>
+              <span>학생 관리</span>
+            </a>
+            <a href="shop-manage.html" class="nav-item">
+              <span>🛍️</span>
+              <span>상점 관리</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">포인트 관리</div>
+            <a href="index.html" class="nav-item">
+              <span>💰</span>
+              <span>포인트 지급</span>
+            </a>
+            <a href="point-history.html" class="nav-item active">
+              <span>📊</span>
+              <span>지급 관리</span>
+            </a>
+            <a href="purchase-management.html" class="nav-item">
+              <span>📦</span>
+              <span>구매 관리</span>
+            </a>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <span class="user-name" id="teacherName">선생님</span>
+            <span class="user-role" id="userRole">Teacher</span>
+          </div>
+          <button class="logout-btn" onclick="logout()">
+            <span>🚪</span>
+            <span>로그아웃</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 메인 컨텐츠 -->
+      <div class="main-content">
+        <!-- 페이지 헤더 -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">포인트 지급 관리</h1>
+            <div class="breadcrumb">
+              <a href="index.html">대시보드</a>
+              <span class="separator">›</span>
+              <span class="current">지급 관리</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="btn-quick-points" onclick="goToDashboard()">
+              ⚡ 포인트 지급하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 선택된 반 정보 -->
+        <div class="selected-class-info" id="classInfo" style="display: none">
+          <div class="class-badge">
+            <span class="class-name" id="selectedClassName">전체</span>
+            <span class="student-count"
+              >학생 <span id="totalStudentCount">0</span>명</span
+            >
+          </div>
+          <div class="class-stats">
+            <span
+              >오늘 지급: <strong id="todayPaidCount">0</strong>/<span
+                id="totalStudentCount2"
+                >0</span
+              >명</span
+            >
+            <span class="separator">|</span>
+            <span
+              >미지급:
+              <strong class="text-warning" id="unpaidCount">0</strong>명</span
+            >
+          </div>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-icon icon-blue">📅</div>
+            <div class="summary-label">오늘 지급</div>
+            <div class="summary-value" id="todayTotal">0P</div>
+            <div class="summary-change" id="todaySummary">0명 완료</div>
+          </div>
+
+          <div class="summary-card clickable" onclick="showUnpaidStudents()">
+            <div class="summary-icon icon-orange">⚠️</div>
+            <div class="summary-label">미지급 학생</div>
+            <div class="summary-value" id="unpaidStudents">0명</div>
+            <div class="summary-change">클릭하여 확인 →</div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-icon icon-green">📊</div>
+            <div class="summary-label">주간 총계</div>
+            <div class="summary-value" id="weekTotal">0P</div>
+            <div class="summary-change" id="weekAverage">평균 0P/일</div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-icon icon-purple">🔄</div>
+            <div class="summary-label">최근 지급</div>
+            <div class="summary-value" id="lastPointTime">-</div>
+            <div class="summary-change" id="lastPointInfo">-</div>
+          </div>
+        </div>
+
+        <!-- 필터 영역 -->
+        <div class="filter-section">
+          <div class="filter-row">
+            <!-- 기간 선택 -->
+            <div class="date-filter">
+              <button class="date-btn active" data-range="today">오늘</button>
+              <button class="date-btn" data-range="week">이번주</button>
+              <button class="date-btn" data-range="month">이번달</button>
+              <button class="date-btn" data-range="custom">
+                <span>📅</span> 기간선택
+              </button>
+            </div>
+
+            <!-- 학생 검색 -->
+            <div class="search-container">
+              <input
+                type="text"
+                id="studentSearch"
+                class="search-input"
+                placeholder="🔍 학생 이름으로 검색..."
+                autocomplete="off"
+              />
+              <div id="searchResults" class="search-dropdown"></div>
+            </div>
+
+            <!-- 빠른 액션 -->
+            <button class="btn-quick-check" onclick="checkDuplicates()">
+              ✅ 중복 체크
+            </button>
+          </div>
+        </div>
+
+        <!-- 타임라인 섹션 -->
+        <div class="timeline-section">
+          <div class="timeline-header">
+            <h3 class="timeline-title">
+              포인트 지급 내역
+              <span class="date-range" id="currentDateRange"></span>
+            </h3>
+            <div class="timeline-actions">
+              <button class="btn-export" onclick="exportToExcel()">
+                📊 엑셀 다운로드
+              </button>
+              <button class="btn-refresh" onclick="refreshData()">
+                🔄 새로고침
+              </button>
+            </div>
+          </div>
+
+          <!-- 학생 필터 탭 -->
+          <div class="student-filter-tabs">
+            <button class="filter-tab active" data-filter="all">전체</button>
+            <button class="filter-tab" data-filter="paid">지급완료</button>
+            <button class="filter-tab warning" data-filter="unpaid">
+              미지급 <span class="badge" id="unpaidBadge">0</span>
+            </button>
+            <button class="filter-tab" data-filter="duplicate">중복의심</button>
+          </div>
+
+          <!-- 타임라인 컨테이너 -->
+          <div class="timeline-container" id="timelineContainer">
+            <div class="loading-spinner">
+              <span>데이터를 불러오는 중...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 하단 통계 패널 -->
+        <div class="stats-panel">
+          <div class="stats-title">📊 통계</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">최다 지급 학생</span>
+              <span class="stat-value" id="topStudent">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">평균 일일 지급</span>
+              <span class="stat-value" id="dailyAverage">0P</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">주요 지급 사유</span>
+              <span class="stat-value" id="topReason">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 미지급 학생 패널 -->
+    <div id="unpaidPanel" class="unpaid-panel">
+      <div class="panel-header">
+        <h4>🚨 미지급 학생 목록</h4>
+        <button class="btn-close" onclick="closeUnpaidPanel()">×</button>
+      </div>
+      <div class="unpaid-grid" id="unpaidGrid">
+        <!-- 동적 생성 -->
+      </div>
+      <div class="panel-footer">
+        <button class="btn-batch-attendance" onclick="batchAttendance()">
+          일괄 출석 처리
+        </button>
+      </div>
+    </div>
+
+    <!-- 커스텀 날짜 선택 모달 -->
+    <div id="dateModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>기간 선택</h3>
+          <button class="modal-close" onclick="closeDateModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>시작일</label>
+            <input type="date" id="startDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>종료일</label>
+            <input type="date" id="endDate" class="form-control" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeDateModal()">취소</button>
+          <button class="btn-primary" onclick="applyDateRange()">적용</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/js/point-history.js"></script>
+  </body>
+</html>

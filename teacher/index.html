@@ -75,11 +75,17 @@
           </a>
         </div>
 
+        <
         <div class="nav-section">
           <div class="nav-section-title">포인트 관리</div>
           <a href="index.html" class="nav-item active">
             <span>💰</span>
             <span>포인트 지급</span>
+          </a>
+          <!-- 🆕 새로 추가 -->
+          <a href="point-history.html" class="nav-item">
+            <span>📊</span>
+            <span>지급 관리</span>
           </a>
           <a href="purchase-management.html" class="nav-item">
             <span>📦</span>
@@ -132,11 +138,15 @@
           <div class="summary-change">전체 학생</div>
         </div>
 
-        <div class="summary-card">
+        <div
+          class="summary-card"
+          style="cursor: pointer"
+          onclick="location.href='point-history.html'"
+        >
           <div class="summary-icon icon-green">💰</div>
           <div class="summary-label">오늘 발행 포인트</div>
           <div class="summary-value" id="todayPoints">0P</div>
-          <div class="summary-change">오늘 지급한 포인트</div>
+          <div class="summary-change">오늘 지급한 포인트 →</div>
         </div>
 
         <div class="summary-card">

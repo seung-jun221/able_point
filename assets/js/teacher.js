@@ -49,6 +49,7 @@ let allStudents = [];
 let currentClass = '';
 let currentGrade = 'elementary';
 let selectedStudents = new Set(); // 선택된 학생 ID 저장
+let currentSelectedClass = ''; // 현재 선택된 반 저장
 
 // 🔽 여기에 추가
 let CLASS_LIST = {
@@ -181,6 +182,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('todayDate').textContent = dateStr;
 
+  // 🆕 sessionStorage에서 선택된 반 복원
+  const savedClass = sessionStorage.getItem('selectedClass');
+  if (savedClass) {
+    currentSelectedClass = savedClass;
+    const classSelector = document.getElementById('classSelector');
+    if (classSelector) {
+      classSelector.value = savedClass;
+      // 반 변경 이벤트 수동 트리거
+      classSelector.dispatchEvent(new Event('change'));
+    }
+  }
+
   // 토스트 알림 설정
   toastr.options = {
     closeButton: true,
@@ -206,6 +219,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   toastr.info(`안녕하세요, ${userName} 선생님!`, '환영합니다', {
     timeOut: 2000,
   });
+  // 🆕 빠른 액션 버튼 추가 - 맨 아래쪽에 추가
+  addQuickActions();
+
+  console.log('초기화 완료');
 });
 
 // ==================== 학생 관리 ====================
@@ -623,6 +640,13 @@ function setupEventListeners() {
     // 선택한 반 저장
     localStorage.setItem('lastSelectedClass', currentClass);
 
+    // 🆕 sessionStorage에 저장 추가
+    currentSelectedClass = e.target.value;
+    sessionStorage.setItem('selectedClass', e.target.value);
+
+    // 저장 확인 로그 (디버깅용)
+    console.log('반 선택 저장:', e.target.value);
+
     // 반 이름 표시 개선
     const selectedOption = e.target.options[e.target.selectedIndex];
     const className = selectedOption ? selectedOption.textContent : '전체';
@@ -964,3 +988,42 @@ document.addEventListener('visibilitychange', () => {
     updatePendingPurchaseBadge();
   }
 });
+
+// 포인트 지급 관리 페이지로 이동
+function goToPointHistory() {
+  // 현재 반 선택 상태 저장
+  if (currentClass) {
+    sessionStorage.setItem('selectedClass', currentClass);
+  }
+  window.location.href = 'point-history.html';
+}
+
+// 페이지 복귀 시 스크롤 위치 저장
+window.addEventListener('beforeunload', () => {
+  sessionStorage.setItem('dashboardScrollY', window.scrollY);
+});
+
+// 페이지 로드 시 스크롤 위치 복원
+window.addEventListener('load', () => {
+  const scrollY = sessionStorage.getItem('dashboardScrollY');
+  if (scrollY) {
+    window.scrollTo(0, parseInt(scrollY));
+    sessionStorage.removeItem('dashboardScrollY');
+  }
+});
+
+// 🆕 빠른 액션 버튼 추가 함수 - 여기에 추가
+function addQuickActions() {
+  const quickActionsContainer = document.querySelector('.quick-actions-grid');
+  if (quickActionsContainer) {
+    // 기존 버튼들 뒤에 추가
+    const historyButton = document.createElement('div');
+    historyButton.className = 'quick-action';
+    historyButton.innerHTML = `
+            <div class="quick-action-icon">📊</div>
+            <div class="quick-action-label">지급 내역 관리</div>
+        `;
+    historyButton.onclick = goToPointHistory;
+    quickActionsContainer.appendChild(historyButton);
+  }
+}
