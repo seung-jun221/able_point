@@ -897,12 +897,12 @@ function closePasswordModal() {
 }
 
 async function updatePassword() {
-  const current = document.getElementById('currentPassword')?.value;
-  const newPass = document.getElementById('newPassword')?.value;
-  const confirm = document.getElementById('confirmPassword')?.value;
+  const current = document.getElementById('currentPassword').value;
+  const newPass = document.getElementById('newPassword').value;
+  const confirm = document.getElementById('confirmPassword').value;
 
   if (!current || !newPass || !confirm) {
-    showNotification('모든 필드를 입력해주세요.', 'error');
+    showNotification('모든 항목을 입력해주세요.', 'error');
     return;
   }
 
@@ -917,31 +917,64 @@ async function updatePassword() {
   }
 
   try {
-    const loginId = localStorage.getItem('loginId');
+    // ✅ userId를 사용하도록 수정
+    const userId = localStorage.getItem('userId');
+
+    if (!userId) {
+      showNotification(
+        '사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.',
+        'error'
+      );
+      return;
+    }
+
+    // 디버깅을 위한 로그
+    console.log('비밀번호 변경 시도:', { userId });
 
     // 현재 비밀번호 확인
-    const { data: user } = await supabase
+    const { data: user, error: selectError } = await supabase
       .from('users')
       .select('password')
-      .eq('login_id', loginId)
+      .eq('user_id', userId) // ✅ user_id 사용
       .single();
 
-    if (user.password !== current) {
+    if (selectError) {
+      console.error('사용자 조회 오류:', selectError);
+      showNotification('사용자 정보를 확인할 수 없습니다.', 'error');
+      return;
+    }
+
+    if (!user || user.password !== current) {
       showNotification('현재 비밀번호가 올바르지 않습니다.', 'error');
       return;
     }
 
     // 새 비밀번호로 업데이트
-    const { error } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from('users')
       .update({ password: newPass })
-      .eq('login_id', loginId);
+      .eq('user_id', userId) // ✅ user_id로 업데이트
+      .select(); // 업데이트된 데이터 반환
 
-    if (error) throw error;
+    if (updateError) {
+      console.error('비밀번호 업데이트 오류:', updateError);
+      showNotification('비밀번호 변경에 실패했습니다.', 'error');
+      return;
+    }
 
+    console.log('비밀번호 업데이트 성공:', updateData);
+
+    // 성공 처리
     showNotification('비밀번호가 변경되었습니다.', 'success');
+
+    // 입력 필드 초기화
+    document.getElementById('currentPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+
     closePasswordModal();
   } catch (error) {
+    console.error('비밀번호 변경 오류:', error);
     showNotification('비밀번호 변경에 실패했습니다.', 'error');
   }
 }
