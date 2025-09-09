@@ -760,9 +760,14 @@ class PointBankAPI {
 
   /**
    * 🆕 여기에 checkWeeklyPurchaseLimit() 메서드 추가
-   */
+   /**
+/**
+ * 주간 구매 제한 확인 (더 엄격한 버전)
+ */
   async checkWeeklyPurchaseLimit(studentId) {
     try {
+      console.log(`[구매제한체크] 학생ID: ${studentId} 확인 시작`);
+
       // 이번 주 월요일 9시 계산
       const now = new Date();
       const currentDay = now.getDay();
@@ -777,44 +782,95 @@ class PointBankAPI {
         mondayMorning.setDate(mondayMorning.getDate() - 7);
       }
 
+      console.log(`[구매제한체크] 기준시간: ${mondayMorning.toISOString()}`);
+
       // 이번 주 구매 횟수 조회
       const { data, error } = await supabase
         .from('transactions')
-        .select('id')
+        .select('id, created_at, item_name')
         .eq('student_id', studentId)
         .eq('type', 'purchase')
         .gte('created_at', mondayMorning.toISOString());
 
-      if (error) {
-        console.error('Supabase 에러:', error);
-        // 에러 시에도 구매 차단 (안전)
+      // 디버깅용 상세 로그
+      console.log(`[구매제한체크] 쿼리 결과:`, {
+        error: error,
+        dataCount: data ? data.length : 'null',
+        data: data,
+      });
+
+      // 에러가 없고 데이터를 정상적으로 받은 경우
+      if (!error) {
+        const purchaseCount = data ? data.length : 0;
+        const maxPurchases = 1;
+
+        console.log(
+          `[구매제한체크] 이번 주 구매 횟수: ${purchaseCount}/${maxPurchases}`
+        );
+
+        // 이미 구매한 내역이 있으면 확실하게 차단
+        if (purchaseCount >= maxPurchases) {
+          console.log(`[구매제한체크] ❌ 구매 제한 도달 - 구매 불가`);
+          if (data && data.length > 0) {
+            console.log(
+              `[구매제한체크] 최근 구매: ${data[0].item_name} at ${data[0].created_at}`
+            );
+          }
+          return {
+            canPurchase: false,
+            purchaseCount: purchaseCount,
+            remainingPurchases: 0,
+            resetTime: mondayMorning.toISOString(),
+          };
+        }
+
+        // 구매 내역이 없는 경우에만 구매 허용
+        console.log(
+          `[구매제한체크] ✅ 구매 가능 (${maxPurchases - purchaseCount}회 남음)`
+        );
         return {
-          canPurchase: false,
-          purchaseCount: 1,
-          remainingPurchases: 0,
+          canPurchase: true,
+          purchaseCount: purchaseCount,
+          remainingPurchases: maxPurchases - purchaseCount,
+          resetTime: mondayMorning.toISOString(),
         };
       }
 
-      const purchaseCount = data ? data.length : 0;
-      const maxPurchases = 1;
+      // 에러가 발생한 경우
+      console.error(`[구매제한체크] ⚠️ 데이터베이스 에러:`, error);
 
-      console.log(
-        `구매 제한 확인 - 학생ID: ${studentId}, 이번주 구매: ${purchaseCount}/${maxPurchases}`
-      );
+      // 특정 에러 코드 체크 (테이블 없음, 권한 없음 등)
+      if (
+        error.code === 'PGRST116' ||
+        error.code === '42P01' ||
+        error.code === '42501'
+      ) {
+        console.log(`[구매제한체크] 첫 사용자 가능성 - 구매 1회 허용`);
+        return {
+          canPurchase: true,
+          purchaseCount: 0,
+          remainingPurchases: 1,
+          resetTime: mondayMorning.toISOString(),
+        };
+      }
 
+      // 기타 에러는 안전을 위해 구매 차단
+      console.log(`[구매제한체크] 알 수 없는 에러 - 안전을 위해 구매 차단`);
       return {
-        canPurchase: purchaseCount < maxPurchases,
-        purchaseCount,
-        remainingPurchases: Math.max(0, maxPurchases - purchaseCount),
+        canPurchase: false,
+        purchaseCount: 0,
+        remainingPurchases: 0,
         resetTime: mondayMorning.toISOString(),
       };
     } catch (error) {
-      console.error('checkWeeklyPurchaseLimit 에러:', error);
-      // 에러 발생 시 구매 차단
+      console.error(`[구매제한체크] 💥 시스템 에러:`, error);
+
+      // 시스템 에러는 안전을 위해 구매 차단
       return {
         canPurchase: false,
-        purchaseCount: 1,
+        purchaseCount: 0,
         remainingPurchases: 0,
+        resetTime: new Date().toISOString(),
       };
     }
   }

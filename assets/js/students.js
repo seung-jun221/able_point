@@ -201,6 +201,7 @@ async function saveStudent() {
 
   try {
     if (currentEditId) {
+      // ============= 기존 학생 수정 - 변경사항 없음 =============
       // users 테이블 업데이트
       const updateData = {
         name: name,
@@ -225,6 +226,7 @@ async function saveStudent() {
         .from('students')
         .update({
           class_id: classId,
+          name: name, // ✅ students 테이블의 name도 업데이트
         })
         .eq('user_id', currentEditId);
 
@@ -232,7 +234,7 @@ async function saveStudent() {
 
       alert('학생 정보가 수정되었습니다.');
     } else {
-      // 신규 등록
+      // ============= 신규 등록 - 수정된 부분 =============
       const userId = 'USR' + Date.now();
       const studentId = 'STU' + Date.now();
 
@@ -259,14 +261,53 @@ async function saveStudent() {
 
       if (error) throw error;
 
-      // students 테이블에 저장 (있다면)
-      await supabase.from('students').insert({
+      // ✅ students 테이블에 저장 - 포인트 필드 추가!
+      const pointValue = parseInt(initialPoints) || 0;
+
+      const { error: studentError } = await supabase.from('students').insert({
         student_id: studentId,
         user_id: userId,
+        name: name, // ✅ students 테이블에도 name 필드 추가
         class_id: classId,
+        current_points: pointValue, // ✅ 초기 포인트 설정
+        total_points: pointValue, // ✅ 초기 포인트 설정
+        savings_points: 0, // ✅ 저축 포인트는 0으로 시작
+        level: '씨앗', // ✅ 기본 레벨 설정
+        avatar: '🦁', // ✅ 기본 아바타 설정
       });
 
-      alert('학생이 등록되었습니다.');
+      // students 테이블 에러 처리 (선택사항)
+      if (studentError) {
+        console.error('Students 테이블 저장 오류:', studentError);
+        // users 테이블 롤백을 원하면 아래 주석 해제
+        // await supabase.from('users').delete().eq('user_id', userId);
+        // throw studentError;
+      }
+
+      // ✅ 초기 포인트가 있으면 points 테이블에 이력 추가
+      if (pointValue > 0 && !studentError) {
+        const transactionId =
+          'TRX' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+        const { error: pointError } = await supabase.from('points').insert({
+          transaction_id: transactionId,
+          student_id: studentId,
+          amount: pointValue,
+          type: 'earn',
+          reason: '신규 등록 초기 포인트',
+          created_at: new Date().toISOString(),
+        });
+
+        if (pointError) {
+          console.error('포인트 이력 저장 오류:', pointError);
+        }
+      }
+
+      alert(
+        `학생이 등록되었습니다.${
+          pointValue > 0 ? `\n초기 포인트 ${pointValue}P가 지급되었습니다.` : ''
+        }`
+      );
     }
 
     closeModal();

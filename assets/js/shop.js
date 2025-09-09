@@ -83,33 +83,37 @@ function getCurrentWeekKey() {
 
 /**
  * 구매 제한 체크 (DB 기반으로 수정)
+/**
+ * 구매 제한 체크 (shop.js)
  */
 async function checkPurchaseLimit() {
   try {
     const loginId = localStorage.getItem('loginId');
+    console.log('[Shop] 구매 제한 체크 시작:', loginId);
 
     // DB에서 실제 구매 내역 확인
     const studentResult = await api.getStudentPoints(loginId);
     if (!studentResult.success) {
-      console.error('학생 정보 조회 실패');
+      console.error('[Shop] 학생 정보 조회 실패');
       return { canPurchase: false, remainingPurchases: 0 };
     }
 
     const studentId = studentResult.data.studentId;
+    console.log('[Shop] 학생 ID:', studentId);
 
     // API의 checkWeeklyPurchaseLimit 호출
     const limitResult = await api.checkWeeklyPurchaseLimit(studentId);
 
-    console.log('구매 제한 체크:', limitResult);
+    console.log('[Shop] 구매 제한 체크 결과:', limitResult);
 
     return {
       canPurchase: limitResult.canPurchase,
       purchaseCount: limitResult.purchaseCount,
       remainingPurchases: limitResult.remainingPurchases,
-      currentWeek: getCurrentWeekKey(), // UI 표시용
+      currentWeek: getCurrentWeekKey(),
     };
   } catch (error) {
-    console.error('구매 제한 체크 실패:', error);
+    console.error('[Shop] 구매 제한 체크 실패:', error);
     // 에러 시 구매 차단 (안전장치)
     return { canPurchase: false, remainingPurchases: 0 };
   }
@@ -194,7 +198,8 @@ async function purchaseItem(itemId, itemName, price, stock, imageUrl, emoji) {
 }
 
 /**
- * 구매 확인 - recordPurchase() 제거
+/**
+ * 구매 확인
  */
 async function confirmPurchase() {
   if (!selectedItem) return;
@@ -210,19 +215,26 @@ async function confirmPurchase() {
     const result = await api.purchaseItem(loginId, selectedItem.id);
 
     if (result.success) {
+      // 🆕 수령 일정 정보 포함한 알림
       alert(
-        `구매가 완료되었습니다!\n\n상품명: ${
-          selectedItem.name
-        }\n결제 금액: ${selectedItem.price.toLocaleString()}P\n\n데스크에서 상품을 수령해주세요.`
+        `✅ 구매가 완료되었습니다!\n\n` +
+          `📦 상품명: ${selectedItem.name}\n` +
+          `💰 결제 금액: ${selectedItem.price.toLocaleString()}P\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━\n` +
+          `📍 선물 수령 안내\n` +
+          `• 수령 가능일: 매주 수요일, 목요일\n` +
+          `• 수령 장소: 데스크\n` +
+          `• 수령 불가 시간:\n` +
+          `  - 5:20~5:30 (하원 시간)\n` +
+          `  - 6:55~7:05 (하원 시간)\n` +
+          `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `위 시간을 피해서 데스크를 방문해주세요! 😊`
       );
 
       // 1초 후 페이지 새로고침
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-
-      // ❌ recordPurchase() 제거 - DB에 이미 저장됨
-      // recordPurchase();
 
       // 포인트 업데이트
       currentPoints -= selectedItem.price;
@@ -235,7 +247,7 @@ async function confirmPurchase() {
       }
 
       // 구매 제한 배너 업데이트
-      await updatePurchaseLimitBanner(); // await 추가
+      await updatePurchaseLimitBanner();
 
       // 상품 목록 새로고침
       await loadProducts();
