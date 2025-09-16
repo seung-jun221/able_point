@@ -57,6 +57,7 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
 .table-header {
@@ -72,31 +73,76 @@
   color: #1a1a1a;
 }
 
-/* 데이터 테이블 */
+/* 테이블 자체에 스크롤 추가 */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+/* 데이터 테이블 - 개선된 레이아웃 */
 .data-table {
   width: 100%;
+  min-width: 900px; /* 최소 너비 설정 */
+  table-layout: fixed; /* 컬럼 너비 고정 */
   border-collapse: collapse;
 }
 
+/* 컬럼 너비 재조정 - 연락처 공간 확보 */
+.data-table th:nth-child(1) {
+  width: 10%;
+} /* 이름 */
+.data-table th:nth-child(2) {
+  width: 10%;
+} /* 아이디 */
+.data-table th:nth-child(3) {
+  width: 10%;
+} /* 반 */
+.data-table th:nth-child(4) {
+  width: 8%;
+} /* 포인트 */
+.data-table th:nth-child(5) {
+  width: 15%;
+} /* 연락처 (11%→15%) */
+.data-table th:nth-child(6) {
+  width: 8%;
+} /* 상태 */
+.data-table th:nth-child(7) {
+  width: 11%;
+} /* 등록일 */
+.data-table th:nth-child(8) {
+  width: 28%;
+} /* 관리 (30%→28%) */
+
 .data-table th {
   text-align: left;
-  padding: 12px;
+  padding: 10px 8px;
   border-bottom: 2px solid #f0f0f0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .data-table td {
-  padding: 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
+  font-size: 13px;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .data-table tr:hover {
   background: #f9fafb;
+}
+
+/* 날짜 컬럼 */
+.date-compact {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 /* 권한 배지 */
@@ -119,6 +165,25 @@
 }
 
 /* 상태 배지 */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: #10b981;
+  color: white;
+}
+
+.badge-warning {
+  background: #f59e0b;
+  color: white;
+}
+
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -137,14 +202,64 @@
   color: #991b1b;
 }
 
-/* 액션 버튼 */
+/* 액션 버튼 - 개선된 스타일 */
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 
-.btn-edit,
-.btn-reset,
+.action-buttons button {
+  white-space: nowrap;
+}
+
+/* 작은 버튼 공통 스타일 */
+.btn-sm {
+  padding: 5px 10px !important;
+  font-size: 11px !important;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-edit {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #2563eb;
+}
+
+.btn-status {
+  background: #10b981;
+  color: white;
+}
+
+.btn-status:hover {
+  background: #059669;
+}
+
+.btn-reset {
+  background: #f59e0b;
+  color: white;
+}
+
+.btn-reset:hover {
+  background: #d97706;
+}
+
+.btn-delete-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-delete-danger:hover {
+  background: #dc2626;
+}
+
 .btn-toggle {
   padding: 6px 12px;
   border: 1px solid #e5e7eb;
@@ -153,16 +268,6 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.btn-edit:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.btn-reset:hover {
-  border-color: #f59e0b;
-  color: #f59e0b;
 }
 
 .btn-toggle:hover {
@@ -221,6 +326,12 @@
   background: #4f46e5;
 }
 
+/* 비활성 행 */
+.inactive-row {
+  opacity: 0.6;
+  background: #f8f9fa;
+}
+
 /* 빈 상태 */
 .empty-state {
   text-align: center;
@@ -244,7 +355,36 @@
   color: #d1d5db;
 }
 
-/* 반응형 */
+/* 반응형 - 개선 */
+@media (max-width: 1200px) {
+  /* 버튼 텍스트를 아이콘으로 변경 */
+  .btn-sm span {
+    display: none;
+  }
+
+  .btn-sm::before {
+    font-size: 13px;
+  }
+
+  .btn-edit::before {
+    content: '✏️';
+  }
+  .btn-reset::before {
+    content: '🔑';
+  }
+  .btn-status::before {
+    content: '🔄';
+  }
+  .btn-delete-danger::before {
+    content: '🗑️';
+  }
+
+  /* 컬럼 너비 재조정 */
+  .data-table th:nth-child(8) {
+    width: 20%;
+  }
+}
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
@@ -256,34 +396,115 @@
   }
 
   .data-table {
-    font-size: 13px;
+    font-size: 12px;
+    min-width: 700px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 4px;
   }
 
   .action-buttons {
-    flex-direction: column;
+    gap: 2px;
+  }
+
+  .btn-sm {
+    padding: 4px 6px !important;
+    font-size: 10px !important;
   }
 }
-/* 위험 동작 버튼 */
-.btn-delete-danger {
-  padding: 6px 12px;
+
+@media (max-width: 480px) {
+  .data-table {
+    min-width: 600px;
+  }
+
+  /* 모바일에서 일부 컬럼 숨김 */
+  .data-table th:nth-child(5),
+  .data-table td:nth-child(5) {
+    display: none; /* 연락처 숨김 */
+  }
+}
+
+/* ========== 드롭다운 관련 스타일 (정리본) ========== */
+
+/* 테이블 래퍼 추가 */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+/* 드롭다운 컨테이너 */
+.dropdown {
+  position: relative;
+}
+
+/* 더보기 버튼 */
+.btn-more {
   background: white;
-  border: 1px solid #fee2e2;
-  color: #ef4444;
-  border-radius: 8px;
-  font-size: 12px;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  padding: 5px 10px !important;
+  font-size: 16px !important;
+  line-height: 1;
+  min-width: 32px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-delete-danger:hover {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: white;
+.btn-more:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
-/* 삭제 확인을 위한 더블 클릭 방식도 고려 */
-.btn-delete-danger:focus {
+/* 드롭다운 메뉴 - position fixed */
+.dropdown-menu {
+  position: fixed !important;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  min-width: 180px;
+  z-index: 99999 !important;
+  display: none;
+}
+
+.dropdown-menu.active {
+  display: block;
+}
+
+.dropdown-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  color: #374151;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.dropdown-menu a:hover {
+  background: #f9fafb;
+}
+
+.dropdown-menu a span {
+  font-size: 14px;
+}
+
+.dropdown-menu a.text-danger {
+  color: #ef4444;
+}
+
+.dropdown-menu a.text-danger:hover {
   background: #fef2f2;
-  border-color: #dc2626;
-  outline: none;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
 }

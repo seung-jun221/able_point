@@ -376,6 +376,17 @@
           loginBtn.disabled = true;
 
           try {
+            // 🔴 계정 상태 먼저 확인 (추가)
+            const statusCheck = await window.api.checkAccountStatus(loginId);
+            if (!statusCheck.success) {
+              errorDiv.textContent =
+                statusCheck.message || '계정을 사용할 수 없습니다.';
+              errorDiv.classList.add('show');
+              loginBtn.innerHTML = originalContent;
+              loginBtn.disabled = false;
+              return; // 로그인 중단
+            }
+
             // API 호출 - 실제 api.js의 login 함수 사용
             const result = await window.api.login(loginId, password);
             console.log('로그인 결과:', result);

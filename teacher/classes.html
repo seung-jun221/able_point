@@ -21,32 +21,102 @@
       <!-- 사이드바 -->
       <div class="sidebar">
         <div class="sidebar-header">
-          <div class="logo">
-            <div class="logo-icon">🏦</div>
-            <span>포인트 뱅크 관리</span>
+          <!-- 로고 영역 -->
+          <div class="logo-container">
+            <div class="logo-image">
+              <img src="../assets/images/able-logo.png" alt="에이블수학학원" />
+            </div>
+            <div class="logo-subtitle">포인트뱅크</div>
+          </div>
+
+          <!-- 반 선택 영역 -->
+          <div class="class-selector-wrapper">
+            <label class="class-selector-label">반 선택</label>
+            <select class="class-selector" id="classSelector">
+              <option value="">전체 반</option>
+              <!-- 동적 로드됨 -->
+            </select>
           </div>
         </div>
 
         <nav class="nav-menu">
-          <a href="index.html" class="nav-item">
-            <span>📊</span>
-            <span>대시보드</span>
-          </a>
-          <a href="manage.html" class="nav-item">
-            <span>👥</span>
-            <span>선생님 관리</span>
-          </a>
-          <a href="classes.html" class="nav-item active">
-            <span>🏫</span>
-            <span>클래스 관리</span>
-          </a>
-          <a href="students.html" class="nav-item">
-            <span>🎓</span>
-            <span>학생 관리</span>
-          </a>
+          <!-- 대시보드 (모든 선생님) -->
+          <div class="nav-section">
+            <a href="index.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span>대시보드</span>
+            </a>
+          </div>
+
+          <!-- 포인트 관리 (모든 선생님) -->
+          <div class="nav-section">
+            <div class="nav-section-title">포인트</div>
+            <a href="index.html" class="nav-item">
+              <span class="nav-icon">💰</span>
+              <span>포인트 지급</span>
+            </a>
+            <a href="point-history.html" class="nav-item">
+              <span class="nav-icon">📋</span>
+              <span>지급 내역</span>
+            </a>
+            <a href="interest-management.html" class="nav-item">
+              <span class="nav-icon">💵</span>
+              <span>이자 지급</span>
+            </a>
+          </div>
+
+          <!-- 상점 관리 (모든 선생님) -->
+          <div class="nav-section">
+            <div class="nav-section-title">상점</div>
+            <a href="purchase-management.html" class="nav-item">
+              <span class="nav-icon">📦</span>
+              <span>구매 관리</span>
+              <span class="nav-badge" id="pendingBadge" style="display: none"
+                >0</span
+              >
+            </a>
+          </div>
+
+          <!-- 리포트 (모든 선생님) -->
+          <div class="nav-section">
+            <div class="nav-section-title">리포트</div>
+            <a href="ranking.html" class="nav-item">
+              <span class="nav-icon">🏆</span>
+              <span>랭킹</span>
+            </a>
+            <a href="history.html" class="nav-item">
+              <span class="nav-icon">📜</span>
+              <span>포인트 내역</span>
+            </a>
+          </div>
+
+          <!-- 관리자 전용 메뉴 (원장만 표시) -->
+          <div class="nav-section" id="adminSection" style="display: none">
+            <div class="nav-section-title">관리</div>
+            <a href="manage.html" class="nav-item">
+              <span class="nav-icon">👥</span>
+              <span>선생님</span>
+            </a>
+            <a href="classes.html" class="nav-item">
+              <span class="nav-icon">🏫</span>
+              <span>반 설정</span>
+            </a>
+            <a href="students.html" class="nav-item">
+              <span class="nav-icon">🎓</span>
+              <span>학생</span>
+            </a>
+            <a href="shop-manage.html" class="nav-item">
+              <span class="nav-icon">🛍️</span>
+              <span>상품</span>
+            </a>
+          </div>
         </nav>
 
         <div class="sidebar-footer">
+          <div class="user-info">
+            <span class="user-name" id="teacherName">선생님</span>
+            <span class="user-role" id="userRole">Teacher</span>
+          </div>
           <button class="logout-btn" onclick="logout()">
             <span>🚪</span>
             <span>로그아웃</span>
@@ -192,5 +262,6 @@
     </div>
 
     <script src="../assets/js/classes.js"></script>
+    <script src="../assets/js/teacher-common.js"></script>
   </body>
 </html>

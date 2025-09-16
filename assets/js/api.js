@@ -286,6 +286,63 @@ class PointBankAPI {
     }
   }
 
+  /**
+   * 학생 상태 변경 - 휴원/퇴원 처리
+   */
+  async updateStudentStatus(studentId, status, reason = '') {
+    try {
+      // status에 따라 is_active 설정
+      const isActive = status === 'active';
+
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          status: status,
+          is_active: isActive, // 기존 컬럼 활용
+          status_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', studentId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('상태 변경 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 로그인 시 계정 상태 확인
+   */
+  async checkAccountStatus(loginId) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('is_active, status')
+        .eq('login_id', loginId)
+        .single();
+
+      if (error) throw error;
+
+      // is_active가 false면 로그인 차단
+      if (!data.is_active) {
+        const message =
+          data.status === 'inactive'
+            ? '휴원 중인 계정입니다.'
+            : '퇴원한 계정입니다.';
+        return {
+          success: false,
+          message: message,
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
   // ==================== 포인트 관련 ====================
 
   /**

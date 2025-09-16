@@ -72,15 +72,15 @@ function updateClassSelects() {
   }
 }
 
-// students.js의 loadStudents 함수 수정
 async function loadStudents() {
   try {
-    // 간단한 쿼리로 변경
+    // is_active 상관없이 모든 학생 조회 (관리 목적)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('role', 'student')
-      .order('created_at', { ascending: false });
+      .order('is_active', { ascending: false }) // 활성 학생 우선 정렬
+      .order('name');
 
     if (userError) throw userError;
 
@@ -97,6 +97,8 @@ async function loadStudents() {
         class_id: details?.class_id,
         class_name: details?.classes?.class_name || '-',
         current_points: details?.current_points || 0,
+        status: user.status || 'active', // 상태 추가
+        is_active: user.is_active !== false, // 기본값 true
       };
     });
 
@@ -106,7 +108,7 @@ async function loadStudents() {
   }
 }
 
-// 학생 목록 표시
+// 학생 목록 표시 - 기존 기능 유지하면서 상태 관리 추가
 function displayStudents(filteredStudents = null) {
   const tbody = document.getElementById('studentTableBody');
   const displayData = filteredStudents || students;
@@ -114,7 +116,7 @@ function displayStudents(filteredStudents = null) {
   if (displayData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty-state">
+        <td colspan="8" class="empty-state">
           <div class="empty-state-icon">🎓</div>
           <div class="empty-state-text">등록된 학생이 없습니다</div>
         </td>
@@ -124,35 +126,140 @@ function displayStudents(filteredStudents = null) {
   }
 
   tbody.innerHTML = displayData
-    .map(
-      (student) => `
-  <tr>
-    <td><strong>${student.name}</strong></td>
-    <td>${student.login_id}</td>
-    <td>${student.class_name || '-'}</td>
-    <td>${student.current_points || 0}P</td>
-    <td>${student.phone || '-'}</td>
-    <td>${formatDate(student.created_at)}</td>
-    <td>
-      <div class="action-buttons">
-        <button class="btn-edit" onclick="editStudent('${student.user_id}')">
-          수정
-        </button>
-        <button class="btn-reset" onclick="resetPassword('${student.user_id}')">
-          비밀번호
-        </button>
-        <button class="btn-delete-danger" onclick="deleteStudent('${
-          student.user_id
-        }')">
-          삭제
-        </button>
-      </div>
-    </td>
-  </tr>
-`
-    )
+    .map((student, index) => {
+      const isInactive = !student.is_active;
+      const statusBadge = student.is_active
+        ? '<span class="badge badge-success">재원</span>'
+        : '<span class="badge badge-warning">휴원</span>';
+
+      // 날짜 간소화 (YYYY-MM-DD만 표시)
+      const simpleDate = student.created_at
+        ? student.created_at.split('T')[0]
+        : '-';
+
+      // 전화번호 포맷팅 (하이픈 추가)
+      const phone = formatPhoneNumber(student.phone || '');
+
+      return `
+        <tr class="${isInactive ? 'inactive-row' : ''}">
+          <td><strong>${student.name}</strong></td>
+          <td>${student.login_id}</td>
+          <td>${student.class_name || '-'}</td>
+          <td>${student.current_points || 0}P</td>
+          <td>${phone}</td>
+          <td>${statusBadge}</td>
+          <td class="date-compact">${simpleDate}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-sm btn-edit" onclick="editStudent('${
+                student.user_id
+              }')" title="수정">
+                수정
+              </button>
+              <div class="dropdown">
+                <button class="btn-sm btn-more" onclick="toggleDropdown('dropdown-${index}')" title="더보기">
+                  ⋮
+                </button>
+                <div id="dropdown-${index}" class="dropdown-menu">
+                  ${
+                    student.is_active
+                      ? `<a onclick="resetPassword('${student.user_id}'); closeDropdowns();">
+                      <span>🔑</span> 비밀번호 초기화
+                    </a>`
+                      : ''
+                  }
+                  <a onclick="toggleStudentStatus('${student.user_id}', ${
+        student.is_active
+      }); closeDropdowns();">
+                    <span>🔄</span> ${
+                      student.is_active ? '휴원 처리' : '재원 처리'
+                    }
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="text-danger" onclick="deleteStudent('${
+                    student.user_id
+                  }'); closeDropdowns();">
+                    <span>🗑️</span> 삭제
+                  </a>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
     .join('');
 }
+
+// 전화번호 포맷팅 함수 추가
+function formatPhoneNumber(phone) {
+  if (!phone) return '-';
+
+  // 숫자만 추출
+  const numbers = phone.replace(/[^0-9]/g, '');
+
+  if (numbers.length === 10) {
+    // 010-000-0000
+    return numbers.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  } else if (numbers.length === 11) {
+    // 010-0000-0000
+    return numbers.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  } else if (numbers.length === 9) {
+    // 02-000-0000
+    return numbers.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+  } else {
+    return phone; // 원본 반환
+  }
+}
+
+// 드롭다운 토글 함수 개선
+function toggleDropdown(dropdownId) {
+  const dropdown = document.getElementById(dropdownId);
+  const button = event.target; // 클릭한 버튼
+  const allDropdowns = document.querySelectorAll('.dropdown-menu');
+
+  // 다른 드롭다운 모두 닫기
+  allDropdowns.forEach((d) => {
+    if (d.id !== dropdownId) {
+      d.classList.remove('active');
+    }
+  });
+
+  // 현재 드롭다운 토글
+  dropdown.classList.toggle('active');
+
+  // position: fixed일 때 위치 계산
+  if (dropdown.classList.contains('active')) {
+    const buttonRect = button.getBoundingClientRect();
+    const dropdownHeight = 150; // 예상 높이
+
+    // 버튼 위치 기준으로 드롭다운 위치 설정
+    dropdown.style.left = buttonRect.left - 150 + 'px'; // 버튼 왼쪽에 정렬
+
+    // 화면 하단 체크
+    if (buttonRect.bottom + dropdownHeight > window.innerHeight) {
+      // 위로 표시
+      dropdown.style.top = buttonRect.top - dropdownHeight + 'px';
+    } else {
+      // 아래로 표시
+      dropdown.style.top = buttonRect.bottom + 'px';
+    }
+  }
+}
+
+// 모든 드롭다운 닫기
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown-menu').forEach((d) => {
+    d.classList.remove('active');
+  });
+}
+
+// 외부 클릭 시 드롭다운 닫기
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown')) {
+    closeDropdowns();
+  }
+});
 
 // 통계 업데이트
 function updateStatistics() {
@@ -653,5 +760,24 @@ function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
     localStorage.clear();
     window.location.href = '../login.html';
+  }
+}
+
+// 학생 상태 토글 함수
+async function toggleStudentStatus(userId, currentStatus) {
+  const newStatus = currentStatus ? 'inactive' : 'active';
+  const message = currentStatus
+    ? '휴원 처리하시겠습니까?'
+    : '재원 처리하시겠습니까?';
+
+  if (confirm(message)) {
+    const result = await api.updateStudentStatus(userId, newStatus);
+
+    if (result.success) {
+      alert('상태가 변경되었습니다.');
+      loadStudents(); // 목록 새로고침
+    } else {
+      alert('상태 변경 실패: ' + result.error);
+    }
   }
 }
