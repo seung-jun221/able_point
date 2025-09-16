@@ -88,20 +88,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 학생 데이터 로드 - 수정
 async function loadStudentData() {
   try {
-    // ✅ loginId를 사용하여 조회
+    const loginId = localStorage.getItem('loginId');
     const result = await api.getStudentPoints(loginId);
 
     if (result.success) {
       studentData = result.data;
-      console.log('학생 데이터:', studentData);
+      console.log('학생 데이터 로드 성공:', studentData);
 
-      // UI 업데이트
-      document.getElementById('totalPoints').textContent =
-        (studentData.currentPoints || 0).toLocaleString() + 'P';
-      document.getElementById('savingsAmount').textContent =
-        (studentData.savingsPoints || 0).toLocaleString() + 'P';
-      document.getElementById('totalEarned').textContent =
-        (studentData.totalPoints || 0).toLocaleString() + 'P';
+      // 각 요소가 존재하는 경우에만 업데이트
+      const totalPointsEl = document.getElementById('totalPoints');
+      if (totalPointsEl) {
+        totalPointsEl.textContent =
+          (studentData.currentPoints || 0).toLocaleString() + 'P';
+      }
+
+      const savingsAmountEl = document.getElementById('savingsAmount');
+      if (savingsAmountEl) {
+        savingsAmountEl.textContent =
+          (studentData.savingsPoints || 0).toLocaleString() + 'P';
+      }
+
+      const totalEarnedEl = document.getElementById('totalEarned');
+      if (totalEarnedEl) {
+        totalEarnedEl.textContent =
+          (studentData.totalPoints || 0).toLocaleString() + 'P';
+      }
 
       const totalSpent = Math.max(
         0,
@@ -109,23 +120,32 @@ async function loadStudentData() {
           studentData.currentPoints -
           studentData.savingsPoints
       );
-      document.getElementById('totalSpent').textContent =
-        totalSpent.toLocaleString() + 'P';
+
+      const totalSpentEl = document.getElementById('totalSpent');
+      if (totalSpentEl) {
+        totalSpentEl.textContent = totalSpent.toLocaleString() + 'P';
+      }
 
       // 레벨 표시
-      const levelText = getLevelDisplay(studentData.level);
-      document.getElementById('userLevel').textContent = levelText;
+      const userLevelEl = document.getElementById('userLevel');
+      if (userLevelEl) {
+        const levelText = getLevelDisplay(studentData.level);
+        userLevelEl.textContent = levelText;
+      }
 
       // 아바타 표시
-      if (studentData.avatar) {
-        document.getElementById('userAvatar').textContent = studentData.avatar;
+      const userAvatarEl = document.getElementById('userAvatar');
+      if (studentData.avatar && userAvatarEl) {
+        userAvatarEl.textContent = studentData.avatar;
       }
+
+      // 🔴 예상 이자 계산 - 항상 실행
+      calculateMainPageInterest(studentData);
 
       // 오늘 획득 포인트 계산
       await calculateTodayPoints();
     } else {
       console.error('학생 데이터 로드 실패:', result.error);
-      alert('데이터를 불러올 수 없습니다.');
     }
   } catch (error) {
     console.error('데이터 로드 오류:', error);
@@ -405,4 +425,66 @@ function startEventCountdown() {
 
   updateCountdown();
   setInterval(updateCountdown, 60000); // 1분마다 업데이트
+}
+
+// 🔴 메인 페이지용 이자 계산 함수 수정
+function calculateMainPageInterest(data) {
+  console.log('이자 계산 시작:', data); // 디버깅용
+
+  if (!data || !data.savingsPoints || data.savingsPoints === 0) {
+    const expectedEl = document.getElementById('expectedInterest');
+    if (expectedEl) {
+      expectedEl.textContent = '0';
+    }
+    return;
+  }
+
+  const level = data.level || '씨앗';
+
+  // 월이율 설정
+  const MONTHLY_RATES = {
+    씨앗: 2.0,
+    새싹: 2.5,
+    나무: 3.0,
+    큰나무: 3.5,
+    별: 4.0,
+    다이아몬드: 5.0,
+  };
+
+  const monthlyRate = MONTHLY_RATES[level] || 2.0;
+
+  // 주간 이자 계산 (월이율 / 4주)
+  const weeklyInterest = Math.floor(
+    (data.savingsPoints * (monthlyRate / 100)) / 4
+  );
+
+  // 최소 이자 보장
+  let expectedInterest = weeklyInterest;
+  if (data.savingsPoints >= 100) {
+    expectedInterest = Math.max(5, weeklyInterest);
+  }
+
+  console.log('계산된 이자:', expectedInterest); // 디버깅용
+
+  // DOM 업데이트 - 안전하게
+  const interestElement = document.getElementById('expectedInterest');
+  if (interestElement) {
+    interestElement.textContent = expectedInterest;
+    console.log('DOM 업데이트 완료'); // 디버깅용
+  } else {
+    console.error('expectedInterest 요소를 찾을 수 없음');
+  }
+
+  // 다음 월요일 날짜 업데이트
+  const today = new Date();
+  const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + daysUntilMonday);
+
+  const dateElement = document.getElementById('nextInterestDate');
+  if (dateElement) {
+    const month = nextMonday.getMonth() + 1;
+    const date = nextMonday.getDate();
+    dateElement.textContent = `${month}월 ${date}일 월요일`;
+  }
 }

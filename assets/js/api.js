@@ -1401,6 +1401,612 @@ class PointBankAPI {
       };
     }
   }
+
+  // ==================== 이자 지급 관련 API ====================
+
+  /**
+   * 이번 주 이자 지급 처리 (메인 함수)
+   */
+  async processWeeklyInterest() {
+    try {
+      window.POINTBANK_CONFIG.debugLog(
+        'Starting weekly interest processing...'
+      );
+
+      // 1. 중복 지급 체크
+      const thisMonday = this.getThisMonday();
+      const { data: existing, error: checkError } = await supabase
+        .from('interest_payments')
+        .select('payment_id')
+        .eq('payment_date', thisMonday)
+        .limit(1);
+
+      if (checkError) {
+        window.POINTBANK_CONFIG.debugLog('Check error:', checkError);
+      }
+
+      if (existing && existing.length > 0) {
+        return {
+          success: false,
+          error: '이번 주 이자는 이미 지급되었습니다',
+          alreadyPaid: true,
+        };
+      }
+
+      // 2. 활성 저축 계좌 조회
+      const { data: accounts, error } = await supabase
+        .from('savings')
+        .select(
+          `
+          *,
+          students!inner (
+            student_id,
+            name,
+            level,
+            class_id
+          )
+        `
+        )
+        .gt('balance', 0);
+
+      if (error) {
+        window.POINTBANK_CONFIG.debugLog('Account fetch error:', error);
+        throw error;
+      }
+
+      window.POINTBANK_CONFIG.debugLog(
+        `Found ${accounts?.length || 0} accounts with balance`
+      );
+
+      const results = [];
+      const errors = [];
+
+      // 3. 각 계좌별 이자 계산 및 지급
+      for (const account of accounts || []) {
+        try {
+          const interestData = this.calculateAccountInterest(account);
+
+          if (interestData.amount > 0) {
+            // 이자 지급
+            await this.payInterest(account, interestData);
+            results.push({
+              studentName: account.students.name,
+              studentId: account.student_id,
+              level: account.students.level,
+              balance: account.balance,
+              amount: interestData.amount,
+              daysHeld: interestData.daysHeld,
+              rate: interestData.rate,
+            });
+          }
+        } catch (err) {
+          window.POINTBANK_CONFIG.debugLog('Individual payment error:', err);
+          errors.push({
+            studentId: account.student_id,
+            error: err.message,
+          });
+        }
+      }
+
+      window.POINTBANK_CONFIG.debugLog(
+        `Processed ${results.length} payments successfully`
+      );
+
+      return {
+        success: true,
+        data: results,
+        errors: errors,
+        summary: {
+          totalAccounts: results.length,
+          totalAmount: results.reduce((sum, r) => sum + r.amount, 0),
+          averageAmount:
+            results.length > 0
+              ? Math.floor(
+                  results.reduce((sum, r) => sum + r.amount, 0) / results.length
+                )
+              : 0,
+        },
+      };
+    } catch (error) {
+      console.error('이자 지급 처리 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 개별 계좌 이자 계산 (일할 계산 포함)
+   */
+  calculateAccountInterest(account) {
+    const level = account.students?.level || '씨앗';
+
+    // 레벨별 월이율 설정
+    const MONTHLY_RATES = {
+      씨앗: 2.0,
+      새싹: 2.5,
+      나무: 3.0,
+      큰나무: 3.5,
+      별: 4.0,
+      다이아몬드: 5.0,
+    };
+
+    const monthlyRate = MONTHLY_RATES[level] || 2.0;
+
+    // ⚠️ 수정: 다음 주 월요일 기준으로 계산
+    const nextMonday = new Date(this.getNextMonday());
+    const lastMonday = new Date(this.getLastMonday());
+    const accountCreated = new Date(account.created_at);
+    const lastDeposit = account.last_deposit_date
+      ? new Date(account.last_deposit_date)
+      : accountCreated;
+
+    let daysHeld = 7; // 기본값
+
+    // 이번 주 중간에 저축 시작한 경우
+    if (lastDeposit > lastMonday) {
+      // ⚠️ 수정: 다음 월요일까지 며칠 보유하게 되는지 계산
+      const msPerDay = 1000 * 60 * 60 * 24;
+      daysHeld = Math.ceil((nextMonday - lastDeposit) / msPerDay);
+      daysHeld = Math.min(7, Math.max(1, daysHeld)); // 최소 1일, 최대 7일
+    }
+
+    // 주간 이자 계산 (월이율 / 4주)
+    const fullWeekInterest = Math.floor(
+      (account.balance * (monthlyRate / 100)) / 4
+    );
+    const proRatedInterest = Math.floor(fullWeekInterest * (daysHeld / 7));
+
+    // 최소 이자 보장 (1일 이상 보유 & 잔액 100P 이상)
+    let finalInterest = proRatedInterest;
+    if (daysHeld >= 1 && account.balance >= 100) {
+      finalInterest = Math.max(5, proRatedInterest);
+    }
+
+    window.POINTBANK_CONFIG.debugLog('Interest calculation:', {
+      studentId: account.student_id,
+      level,
+      monthlyRate,
+      daysHeld,
+      fullWeekInterest,
+      finalInterest,
+      lastDeposit: lastDeposit.toISOString(),
+      nextMonday: nextMonday.toISOString(),
+    });
+
+    return {
+      amount: finalInterest,
+      rate: monthlyRate,
+      daysHeld: daysHeld,
+      balance: account.balance,
+    };
+  }
+
+  /**
+   * 이자 지급 실행
+   */
+  async payInterest(account, interestData) {
+    try {
+      // 1. 저축 잔액 업데이트
+      const { error: updateError } = await supabase
+        .from('savings')
+        .update({
+          balance: account.balance + interestData.amount,
+          last_interest_date: this.getThisMonday(),
+          total_interest_earned:
+            (account.total_interest_earned || 0) + interestData.amount,
+        })
+        .eq('savings_id', account.savings_id);
+
+      if (updateError) throw updateError;
+
+      // 2. 거래 내역 생성 (transactions 테이블)
+      const { error: transError } = await supabase.from('transactions').insert({
+        transaction_id: `INT_${Date.now()}_${account.student_id}`,
+        student_id: account.student_id,
+        type: 'interest',
+        amount: interestData.amount,
+        item_name: `저축 이자 (월 ${interestData.rate}% / ${interestData.daysHeld}일)`,
+        created_at: new Date().toISOString(),
+      });
+
+      if (transError) {
+        window.POINTBANK_CONFIG.debugLog('Transaction error:', transError);
+      }
+
+      // 3. 이자 지급 기록
+      const { error: paymentError } = await supabase
+        .from('interest_payments')
+        .insert({
+          student_id: account.student_id,
+          payment_date: this.getThisMonday(),
+          balance_amount: interestData.balance,
+          days_held: interestData.daysHeld,
+          interest_rate: interestData.rate,
+          interest_amount: interestData.amount,
+        });
+
+      if (paymentError) {
+        window.POINTBANK_CONFIG.debugLog('Payment record error:', paymentError);
+      }
+
+      // 4. 포인트 내역에도 기록
+      const { error: pointsError } = await supabase.from('points').insert({
+        student_id: account.student_id,
+        amount: interestData.amount,
+        type: 'interest',
+        reason: `주간 저축 이자 (${account.students.level})`,
+        teacher_id: 'SYSTEM',
+      });
+
+      if (pointsError) {
+        window.POINTBANK_CONFIG.debugLog('Points record error:', pointsError);
+      }
+
+      // 5. 저축 거래 내역 기록
+      const { error: savTransError } = await supabase
+        .from('savings_transactions')
+        .insert({
+          savings_id: account.savings_id,
+          student_id: account.student_id,
+          type: 'interest',
+          amount: interestData.amount,
+          balance_before: account.balance,
+          balance_after: account.balance + interestData.amount,
+        });
+
+      if (savTransError) {
+        window.POINTBANK_CONFIG.debugLog(
+          'Savings transaction error:',
+          savTransError
+        );
+      }
+    } catch (error) {
+      console.error('이자 지급 실행 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 이자 지급 미리보기
+   */
+  async previewInterest() {
+    try {
+      // 활성 저축 계좌 조회
+      const { data: accounts, error } = await supabase
+        .from('savings')
+        .select(
+          `
+          *,
+          students!inner (
+            student_id,
+            name,
+            level,
+            class_id
+          )
+        `
+        )
+        .gt('balance', 0);
+
+      if (error) throw error;
+
+      const preview = [];
+      let totalAmount = 0;
+
+      for (const account of accounts || []) {
+        const interestData = this.calculateAccountInterest(account);
+
+        preview.push({
+          studentName: account.students.name,
+          level: account.students.level,
+          balance: account.balance,
+          rate: interestData.rate,
+          daysHeld: interestData.daysHeld,
+          estimatedInterest: interestData.amount,
+        });
+
+        totalAmount += interestData.amount;
+      }
+
+      return {
+        success: true,
+        data: preview,
+        summary: {
+          totalAccounts: preview.length,
+          totalAmount: totalAmount,
+          averageAmount:
+            preview.length > 0 ? Math.floor(totalAmount / preview.length) : 0,
+        },
+      };
+    } catch (error) {
+      console.error('미리보기 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 이자 지급 내역 조회
+   */
+  async getInterestHistory(startDate = null, endDate = null) {
+    try {
+      let query = supabase
+        .from('interest_payments')
+        .select(
+          `
+          *,
+          students!inner (
+            name,
+            class_id
+          )
+        `
+        )
+        .order('payment_date', { ascending: false });
+
+      if (startDate) {
+        query = query.gte('payment_date', startDate);
+      }
+      if (endDate) {
+        query = query.lte('payment_date', endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('이자 내역 조회 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // === 날짜 헬퍼 함수들 ===
+  getThisMonday() {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0];
+  }
+
+  getLastMonday() {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff - 7);
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0];
+  }
+
+  getNextMonday() {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 0 ? 1 : 8 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0];
+  }
+
+  // ==================== 포인트 선물 관련 ====================
+
+  /**
+   * 포인트 선물 전송
+   */
+  async sendGift(senderLoginId, receiverStudentId, amount, message = '') {
+    try {
+      // 1. 보내는 사람 정보 조회
+      const { data: sender } = await supabase
+        .from('student_details')
+        .select('*')
+        .eq('login_id', senderLoginId)
+        .single();
+
+      if (!sender) throw new Error('보내는 학생 정보를 찾을 수 없습니다.');
+
+      // 2. 포인트 확인
+      if (sender.current_points < amount) {
+        return { success: false, error: '포인트가 부족합니다.' };
+      }
+
+      // 3. 최소 금액 확인
+      if (amount < 10) {
+        return { success: false, error: '최소 10P 이상 선물 가능합니다.' };
+      }
+
+      // 4. 주간 제한 확인 (300P)
+      const weeklyUsed = await this.getWeeklyGiftAmount(sender.student_id);
+      if (weeklyUsed + amount > 300) {
+        return {
+          success: false,
+          error: `이번 주 선물 가능 금액을 초과했습니다. (남은 금액: ${
+            300 - weeklyUsed
+          }P)`,
+        };
+      }
+
+      // 5. 받는 사람 정보 조회
+      const { data: receiver } = await supabase
+        .from('students')
+        .select('*')
+        .eq('student_id', receiverStudentId)
+        .single();
+
+      if (!receiver) throw new Error('받는 학생을 찾을 수 없습니다.');
+
+      // 6. 같은 반 확인
+      const { data: receiverDetail } = await supabase
+        .from('student_details')
+        .select('class_id, name')
+        .eq('student_id', receiverStudentId)
+        .single();
+
+      if (sender.class_id !== receiverDetail.class_id) {
+        return {
+          success: false,
+          error: '같은 반 친구에게만 선물할 수 있습니다.',
+        };
+      }
+
+      // 7. 트랜잭션 처리
+      // 7-1. 보내는 사람 포인트 차감
+      await supabase
+        .from('students')
+        .update({
+          current_points: sender.current_points - amount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('student_id', sender.student_id);
+
+      // 7-2. 받는 사람 포인트 증가
+      await supabase
+        .from('students')
+        .update({
+          current_points: receiver.current_points + amount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('student_id', receiverStudentId);
+
+      // 7-3. 선물 내역 기록
+      await supabase.from('point_gifts').insert({
+        sender_id: sender.student_id,
+        receiver_id: receiverStudentId,
+        amount: amount,
+        message: message || null,
+      });
+
+      // 7-4. 거래 내역 기록 (보내는 사람)
+      await supabase.from('transactions').insert({
+        transaction_id: `GIFT_SEND_${Date.now()}`,
+        student_id: sender.student_id,
+        type: 'gift_sent',
+        amount: -amount,
+        item_name: `포인트 선물 (to ${receiverDetail.name})`,
+        created_at: new Date().toISOString(),
+      });
+
+      // 7-5. 거래 내역 기록 (받는 사람)
+      await supabase.from('transactions').insert({
+        transaction_id: `GIFT_RECV_${Date.now()}`,
+        student_id: receiverStudentId,
+        type: 'gift_received',
+        amount: amount,
+        item_name: `포인트 선물 (from ${sender.name})`,
+        created_at: new Date().toISOString(),
+      });
+
+      return {
+        success: true,
+        data: {
+          senderName: sender.name,
+          receiverName: receiverDetail.name,
+          amount: amount,
+        },
+      };
+    } catch (error) {
+      console.error('선물 전송 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 이번 주 선물한 금액 조회
+   */
+  async getWeeklyGiftAmount(studentId) {
+    try {
+      // 월요일 기준 주 시작일 계산
+      const now = new Date();
+      const day = now.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+
+      const { data } = await supabase
+        .from('point_gifts')
+        .select('amount')
+        .eq('sender_id', studentId)
+        .gte('created_at', monday.toISOString());
+
+      const total = data ? data.reduce((sum, gift) => sum + gift.amount, 0) : 0;
+      return total;
+    } catch (error) {
+      console.error('주간 선물 금액 조회 실패:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * 같은 반 친구 목록 조회
+   */
+  async getClassmates(loginId) {
+    try {
+      // 현재 학생 정보 조회
+      const { data: currentStudent } = await supabase
+        .from('student_details')
+        .select('student_id, class_id')
+        .eq('login_id', loginId)
+        .single();
+
+      if (!currentStudent) throw new Error('학생 정보를 찾을 수 없습니다.');
+
+      // 같은 반 학생들 조회
+      const { data: classmates } = await supabase
+        .from('student_details')
+        .select('student_id, name, avatar, login_id')
+        .eq('class_id', currentStudent.class_id)
+        .neq('student_id', currentStudent.student_id)
+        .order('name');
+
+      return {
+        success: true,
+        data: classmates || [],
+      };
+    } catch (error) {
+      console.error('반 친구 조회 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 선물 내역 조회
+   */
+  async getGiftHistory(loginId) {
+    try {
+      const { data: student } = await supabase
+        .from('student_details')
+        .select('student_id')
+        .eq('login_id', loginId)
+        .single();
+
+      if (!student) throw new Error('학생 정보를 찾을 수 없습니다.');
+
+      // 보낸 선물과 받은 선물 모두 조회
+      const { data: gifts } = await supabase
+        .from('point_gifts')
+        .select(
+          `
+          *,
+          sender:students!sender_id(name, avatar),
+          receiver:students!receiver_id(name, avatar)
+        `
+        )
+        .or(
+          `sender_id.eq.${student.student_id},receiver_id.eq.${student.student_id}`
+        )
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      return {
+        success: true,
+        data: gifts || [],
+      };
+    } catch (error) {
+      console.error('선물 내역 조회 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // API 인스턴스 생성

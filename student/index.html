@@ -514,5 +514,88 @@
         }
       });
     </script>
+
+    <!-- 포인트 선물 모달 -->
+    <div id="giftModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🎁 포인트 선물하기</h3>
+          <button class="modal-close" onclick="closeGiftModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- 주간 제한 안내 -->
+          <div class="gift-limit-info">
+            <div class="limit-bar">
+              <div class="limit-text">
+                이번 주 선물 가능: <strong id="weeklyRemaining">300</strong>P /
+                300P
+              </div>
+              <div class="limit-progress" id="limitProgress"></div>
+            </div>
+          </div>
+
+          <!-- 친구 선택 -->
+          <div class="form-group">
+            <label>받는 친구</label>
+            <select id="giftReceiver" class="form-control">
+              <option value="">친구를 선택하세요</option>
+            </select>
+          </div>
+
+          <!-- 금액 입력 -->
+          <div class="form-group">
+            <label>선물 금액</label>
+            <div class="amount-input-group">
+              <input
+                type="number"
+                id="giftAmount"
+                class="form-control"
+                min="10"
+                max="300"
+                step="10"
+                placeholder="최소 10P"
+              />
+              <div class="quick-amounts">
+                <button class="quick-btn" onclick="setGiftAmount(10)">
+                  10P
+                </button>
+                <button class="quick-btn" onclick="setGiftAmount(50)">
+                  50P
+                </button>
+                <button class="quick-btn" onclick="setGiftAmount(100)">
+                  100P
+                </button>
+              </div>
+            </div>
+            <small class="form-hint"
+              >보유 포인트: <span id="currentBalance">0</span>P</small
+            >
+          </div>
+
+          <!-- 메시지 -->
+          <div class="form-group">
+            <label>메시지 <span class="optional">(선택)</span></label>
+            <textarea
+              id="giftMessage"
+              class="form-control"
+              maxlength="50"
+              rows="2"
+              placeholder="응원 메시지를 남겨주세요"
+            ></textarea>
+            <small class="char-count"><span id="charCount">0</span>/50</small>
+          </div>
+
+          <!-- 버튼 -->
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeGiftModal()">
+              취소
+            </button>
+            <button class="btn btn-primary" onclick="sendGift()">
+              <span>🎁</span> 선물하기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

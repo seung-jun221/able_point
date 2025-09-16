@@ -685,3 +685,277 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+/* ========== 포인트 선물 모달 개선 ========== */
+#giftModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+#giftModal.active {
+  display: flex;
+}
+
+#giftModal .modal-content {
+  background: white;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+#giftModal .modal-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#giftModal .modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#giftModal .modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+#giftModal .modal-close:hover {
+  background: #f1f5f9;
+}
+
+#giftModal .modal-body {
+  padding: 24px;
+}
+
+/* 주간 제한 정보 */
+.gift-limit-info {
+  background: linear-gradient(135deg, #fa709a10, #fee14010);
+  border: 1px solid #fa709a30;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.limit-text {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.limit-text strong {
+  color: #fa709a;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.limit-progress {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.limit-progress::before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, #fa709a, #fee140);
+  border-radius: 8px;
+  transition: width 0.3s;
+  width: var(--progress, 0%);
+}
+
+/* 폼 그룹 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+/* 친구 선택 드롭다운 */
+#giftReceiver {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#giftReceiver:hover {
+  border-color: #fa709a;
+}
+
+#giftReceiver:focus {
+  outline: none;
+  border-color: #fa709a;
+  box-shadow: 0 0 0 3px #fa709a20;
+}
+
+/* 금액 입력 */
+#giftAmount {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+#giftAmount:focus {
+  outline: none;
+  border-color: #fa709a;
+  box-shadow: 0 0 0 3px #fa709a20;
+}
+
+/* 빠른 금액 선택 */
+.quick-amounts {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.quick-btn {
+  flex: 1;
+  padding: 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-btn:hover {
+  background: linear-gradient(135deg, #fa709a, #fee140);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-2px);
+}
+
+/* 메시지 입력 */
+#giftMessage {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  resize: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+#giftMessage:focus {
+  outline: none;
+  border-color: #fa709a;
+  box-shadow: 0 0 0 3px #fa709a20;
+}
+
+/* 힌트 텍스트 */
+.form-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.form-hint span {
+  color: #fa709a;
+  font-weight: 600;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* 모달 푸터 */
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.modal-footer .btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #fa709a, #fee140);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(250, 112, 154, 0.3);
+}
+
+.optional {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: normal;
+}

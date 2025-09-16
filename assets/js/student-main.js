@@ -528,21 +528,137 @@ function showAllHistory() {
   location.href = 'history.html';
 }
 
-// 친구 선물 모달
-function showGift() {
-  const modal = document.getElementById('transferModal');
-  if (modal) {
-    modal.classList.add('active');
-    // 보유 포인트 업데이트
-    const currentPoints = studentData?.currentPoints || 0;
-    const availableElement = document.getElementById('availablePoints');
-    if (availableElement) {
-      availableElement.textContent = currentPoints.toLocaleString();
-    }
+// ========== 포인트 선물 기능 ==========
 
-    // 친구 목록 로드
-    loadFriendsList();
+// 선물 모달 열기
+async function showGiftModal() {
+  const loginId = localStorage.getItem('loginId');
+
+  // 현재 학생 정보 확인
+  if (!studentData) {
+    await loadStudentData();
   }
+
+  // 반 친구 목록 로드
+  const result = await api.getClassmates(loginId);
+
+  if (result.success && result.data.length > 0) {
+    const select = document.getElementById('giftReceiver');
+    select.innerHTML = '<option value="">친구를 선택하세요</option>';
+
+    result.data.forEach((friend) => {
+      const option = document.createElement('option');
+      option.value = friend.student_id;
+      option.textContent = `${friend.avatar || '🦁'} ${friend.name}`;
+      select.appendChild(option);
+    });
+  } else {
+    alert('같은 반 친구가 없습니다.');
+    return;
+  }
+
+  // 주간 제한 확인
+  const weeklyUsed = await api.getWeeklyGiftAmount(studentData.studentId);
+  const remaining = Math.max(0, 300 - weeklyUsed);
+
+  document.getElementById('weeklyRemaining').textContent = remaining;
+
+  // 프로그레스 바 업데이트 (CSS 변수 사용)
+  const progress = document.getElementById('limitProgress');
+  if (progress) {
+    const percentage = ((300 - remaining) / 300) * 100;
+    progress.style.setProperty('--progress', `${percentage}%`);
+  }
+
+  // 현재 잔액 표시
+  document.getElementById('currentBalance').textContent =
+    studentData.currentPoints.toLocaleString();
+
+  // 메시지 입력 이벤트 설정
+  const messageInput = document.getElementById('giftMessage');
+  if (messageInput && !messageInput.hasListener) {
+    messageInput.hasListener = true;
+    messageInput.addEventListener('input', (e) => {
+      const charCount = document.getElementById('charCount');
+      if (charCount) {
+        charCount.textContent = e.target.value.length;
+      }
+    });
+  }
+
+  // 모달 열기
+  document.getElementById('giftModal').classList.add('active');
+}
+
+// 선물 전송
+async function sendGift() {
+  const receiverId = document.getElementById('giftReceiver').value;
+  const amount = parseInt(document.getElementById('giftAmount').value);
+  const message = document.getElementById('giftMessage').value.trim();
+
+  // 유효성 검사
+  if (!receiverId) {
+    alert('친구를 선택해주세요.');
+    return;
+  }
+
+  if (!amount || amount < 10) {
+    alert('최소 10P 이상 선물 가능합니다.');
+    return;
+  }
+
+  if (amount > studentData.currentPoints) {
+    alert('포인트가 부족합니다.');
+    return;
+  }
+
+  // 확인 다이얼로그
+  const receiverOption = document.querySelector(
+    `#giftReceiver option[value="${receiverId}"]`
+  );
+  const receiverName = receiverOption ? receiverOption.textContent : '친구';
+
+  if (!confirm(`${receiverName}님에게 ${amount}P를 선물하시겠습니까?`)) {
+    return;
+  }
+
+  // 전송
+  const result = await api.sendGift(
+    localStorage.getItem('loginId'),
+    receiverId,
+    amount,
+    message
+  );
+
+  if (result.success) {
+    alert(`${result.data.receiverName}님에게 ${amount}P를 선물했습니다!`);
+    closeGiftModal();
+    location.reload(); // 페이지 새로고침으로 포인트 업데이트
+  } else {
+    alert(result.error);
+  }
+}
+
+// 모달 닫기
+function closeGiftModal() {
+  const modal = document.getElementById('giftModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.getElementById('giftAmount').value = '';
+    document.getElementById('giftMessage').value = '';
+    const charCount = document.getElementById('charCount');
+    if (charCount) charCount.textContent = '0';
+  }
+}
+
+// 금액 빠른 선택
+function setGiftAmount(amount) {
+  document.getElementById('giftAmount').value = amount;
+}
+
+// showGift 함수 (기존 버튼 호환용)
+function showGift() {
+  showGiftModal();
 }
 
 // 친구 목록 로드
@@ -605,3 +721,16 @@ async function sendTransfer() {
     alert(result.error || '선물하기에 실패했습니다.');
   }
 }
+// ========== 페이지 로드 시 실행 ==========
+document.addEventListener('DOMContentLoaded', () => {
+  // 메시지 글자수 카운트 기능
+  const messageInput = document.getElementById('giftMessage');
+  if (messageInput) {
+    messageInput.addEventListener('input', (e) => {
+      const charCount = document.getElementById('charCount');
+      if (charCount) {
+        charCount.textContent = e.target.value.length;
+      }
+    });
+  }
+});

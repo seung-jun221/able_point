@@ -348,28 +348,29 @@ function calculateNextInterest() {
     return;
   }
 
-  const policy =
-    SAVINGS_POLICY[window.studentData.level] || SAVINGS_POLICY['씨앗'];
-  const totalRate = cofixRate + policy.bonusRate;
-  const weeklyRate = totalRate / 52;
+  const level = window.studentData.level || '씨앗';
 
-  let expectedInterest = Math.floor(
-    window.studentData.savingsPoints * (weeklyRate / 100)
+  // 🔴 수정: 월이율 직접 사용
+  const MONTHLY_RATES = {
+    씨앗: 2.0,
+    새싹: 2.5,
+    나무: 3.0,
+    큰나무: 3.5,
+    별: 4.0,
+    다이아몬드: 5.0,
+  };
+
+  const monthlyRate = MONTHLY_RATES[level] || 2.0;
+
+  // 🔴 수정: 월이율을 4주로 나누어 주간 이자 계산
+  const weeklyInterest = Math.floor(
+    (window.studentData.savingsPoints * (monthlyRate / 100)) / 4
   );
 
-  if (currentDeposit && window.studentData.savingsPoints > 0) {
-    const days = Math.floor(
-      (new Date() - currentDeposit.startDate) / (1000 * 60 * 60 * 24)
-    );
-    if (days >= 28) {
-      expectedInterest = Math.floor(
-        expectedInterest * WITHDRAWAL_POLICY.longTermBonus.days28
-      );
-    } else if (days >= 14) {
-      expectedInterest = Math.floor(
-        expectedInterest * WITHDRAWAL_POLICY.longTermBonus.days14
-      );
-    }
+  // 🔴 수정: 최소 이자 보장
+  let expectedInterest = weeklyInterest;
+  if (window.studentData.savingsPoints >= 100) {
+    expectedInterest = Math.max(5, weeklyInterest);
   }
 
   const interestElement = document.getElementById('expectedInterest');
@@ -377,6 +378,7 @@ function calculateNextInterest() {
     interestElement.textContent = `+${expectedInterest}P`;
   }
 
+  // 다음 월요일 날짜 표시
   const today = new Date();
   const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
   const nextMonday = new Date(today);
@@ -384,8 +386,10 @@ function calculateNextInterest() {
 
   const dateElement = document.getElementById('nextInterestDate');
   if (dateElement) {
-    const options = { month: 'long', day: 'numeric', weekday: 'long' };
-    dateElement.textContent = nextMonday.toLocaleDateString('ko-KR', options);
+    const month = nextMonday.getMonth() + 1;
+    const date = nextMonday.getDate();
+    // 표시만 "오후 3시" 추가
+    dateElement.textContent = `${month}월 ${date}일 월요일 오후 3시`;
   }
 }
 
