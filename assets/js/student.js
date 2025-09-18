@@ -279,35 +279,142 @@ function getLevelDisplay(level) {
 }
 
 // 랭킹 로드 함수
+// assets/js/student.js 파일에서 loadRanking() 함수를 찾아서 아래 코드로 교체
+// 랭킹 페이지와 동일한 API를 사용하여 일관성 유지
+
 async function loadRanking() {
   const rankingList = document.getElementById('rankingList');
   if (!rankingList) return;
 
   try {
-    const result = await api.getRanking();
-    if (result.success && result.data) {
-      // 상위 5명만 표시
-      const top5 = result.data.slice(0, 5);
-      rankingList.innerHTML = top5
+    // 주간 랭킹 API 직접 호출 (랭킹 페이지와 동일)
+    const weeklyResult = await api.getWeeklyRanking();
+
+    if (weeklyResult.success && weeklyResult.data) {
+      const myId =
+        localStorage.getItem('studentId') || localStorage.getItem('loginId');
+
+      // 주간 포인트 기준으로 정렬 (이미 정렬되어 있을 수도 있지만 확실히 함)
+      const sortedRanking = weeklyResult.data
+        .sort((a, b) => (b.weeklyPoints || 0) - (a.weeklyPoints || 0))
+        .slice(0, 5); // 상위 5명만
+
+      if (sortedRanking.length === 0) {
+        rankingList.innerHTML =
+          '<div class="no-data">이번 주 랭킹 데이터가 없습니다</div>';
+        return;
+      }
+
+      // 랭킹 표시
+      rankingList.innerHTML = sortedRanking
         .map(
           (student, index) => `
-        <div class="rank-item ${
-          student.studentId === localStorage.getItem('studentId') ? 'me' : ''
-        }">
-          <div class="rank-number rank-${index + 1}">${index + 1}</div>
-          <div class="rank-info">
-            <div class="rank-name">${student.name}</div>
-            <div class="rank-points">${student.currentPoints.toLocaleString()}P</div>
+          <div class="rank-item ${student.studentId === myId ? 'me' : ''}">
+            <div class="rank-number rank-${index + 1}">${index + 1}</div>
+            <div class="rank-info">
+              <div class="rank-name">${student.name}</div>
+              <div class="rank-points">${(
+                student.weeklyPoints || 0
+              ).toLocaleString()}P</div>
+            </div>
           </div>
-        </div>
-      `
+        `
         )
         .join('');
+
+      console.log('주간 랭킹 로드 완료:', sortedRanking);
+    } else {
+      // API 실패 시 폴백: 기존 방식으로 계산
+      console.log('주간 랭킹 API 실패, 대체 방식 시도');
+      await loadRankingFallback();
     }
   } catch (error) {
     console.error('랭킹 로드 오류:', error);
-    rankingList.innerHTML =
-      '<div class="no-data">랭킹을 불러올 수 없습니다</div>';
+
+    // 오류 발생 시 대체 방식 시도
+    try {
+      await loadRankingFallback();
+    } catch (fallbackError) {
+      console.error('대체 방식도 실패:', fallbackError);
+      rankingList.innerHTML =
+        '<div class="no-data">랭킹을 불러올 수 없습니다</div>';
+    }
+  }
+}
+
+// 대체 방식 (API가 실패할 경우를 대비)
+async function loadRankingFallback() {
+  const rankingList = document.getElementById('rankingList');
+  if (!rankingList) return;
+
+  // 이번 주 월요일 계산
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const monday = new Date(now);
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  monday.setDate(now.getDate() - daysToSubtract);
+  monday.setHours(0, 0, 0, 0);
+
+  // 누적 랭킹 데이터에서 상위 학생들만 가져와서 주간 포인트 계산
+  const result = await api.getRanking();
+
+  if (result.success && result.data) {
+    const myId =
+      localStorage.getItem('studentId') || localStorage.getItem('loginId');
+    const weeklyRankings = [];
+
+    // 상위 10명만 체크 (성능 고려)
+    for (const student of result.data.slice(0, 10)) {
+      try {
+        const historyResult = await api.getPointHistory(student.studentId);
+
+        if (historyResult.success && historyResult.data) {
+          const weeklyPoints = historyResult.data
+            .filter((item) => {
+              const itemDate = new Date(item.date);
+              return itemDate >= monday && parseInt(item.amount) > 0;
+            })
+            .reduce((sum, item) => sum + parseInt(item.amount), 0);
+
+          if (weeklyPoints > 0) {
+            weeklyRankings.push({
+              name: student.name,
+              studentId: student.studentId,
+              weeklyPoints: weeklyPoints,
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`학생 ${student.name} 계산 실패:`, err);
+      }
+    }
+
+    // 정렬 후 상위 5명 표시
+    const top5 = weeklyRankings
+      .sort((a, b) => b.weeklyPoints - a.weeklyPoints)
+      .slice(0, 5);
+
+    if (top5.length === 0) {
+      rankingList.innerHTML =
+        '<div class="no-data">이번 주 활동이 없습니다</div>';
+      return;
+    }
+
+    rankingList.innerHTML = top5
+      .map(
+        (student, index) => `
+        <div class="rank-item ${student.studentId === myId ? 'me' : ''}">
+          <div class="rank-number rank-${index + 1}">${index + 1}</div>
+          <div class="rank-info">
+            <div class="rank-name">${student.name}</div>
+            <div class="rank-points">${student.weeklyPoints.toLocaleString()}P</div>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+  } else {
+    throw new Error('데이터 로드 실패');
   }
 }
 
