@@ -1380,45 +1380,42 @@ class PointBankAPI {
     try {
       window.POINTBANK_CONFIG.debugLog('Getting class list');
 
-      // students 테이블에서 고유한 class_id 가져오기
-      const { data: students, error } = await supabase
-        .from('students')
-        .select('class_id')
-        .not('class_id', 'is', null)
-        .order('class_id');
+      // classes 테이블에서 직접 가져오기 (students 테이블 대신)
+      const { data: classes, error } = await supabase
+        .from('classes')
+        .select('class_id, class_name, class_code, grade, student_count')
+        .eq('status', 'active') // 활성 반만
+        .order('class_code');
 
       if (error) throw error;
 
-      // 중복 제거 및 반 목록 생성
-      const uniqueClasses = [...new Set(students.map((s) => s.class_id))];
-
-      // 반 정보 구조화
       const classList = {
         elementary: [],
         middle: [],
       };
 
-      uniqueClasses.forEach((classId) => {
-        if (!classId || classId.length < 2) return;
+      classes.forEach((cls) => {
+        const classCode = cls.class_code;
+        if (!classCode || classCode.length < 2) return;
 
-        // 첫 글자로 초등/중등 구분
-        const isElementary = classId[0] === 'E';
-        const isMiddle = classId[0] === 'M';
-
-        // 두 번째 글자로 요일 구분
-        const dayCode = classId[1];
+        // class_code 기준으로 판단
+        const isElementary = classCode[0] === 'E';
+        const isMiddle = classCode[0] === 'M';
+        const dayCode = classCode[1];
         const dayText =
           dayCode === 'M' ? '월수' : dayCode === 'F' ? '화목' : '';
+        const classNumber = classCode.substring(2) || '';
 
-        // 반 번호
-        const classNumber = classId.substring(2) || '';
-
-        // 반 정보 객체 생성
+        // 반 정보 객체 생성 (기존과 동일한 구조 유지)
         const classInfo = {
-          value: classId,
-          label: `${classId}반${dayText ? ` (${dayText})` : ''}`,
-          dayType: dayCode, // M 또는 F
+          value: cls.class_id, // 실제 ID 사용 (CLS...)
+          label: `${classCode}반${dayText ? ` (${dayText})` : ''}`, // 기존과 동일한 형식
+          dayType: dayCode,
           classNumber: classNumber,
+          // 추가 정보 (필요시 사용)
+          className: cls.class_name,
+          classCode: classCode,
+          studentCount: cls.student_count || 0,
         };
 
         if (isElementary) {
@@ -1431,11 +1428,9 @@ class PointBankAPI {
       // 정렬 (요일 -> 반 번호 순)
       const sortClasses = (classes) => {
         return classes.sort((a, b) => {
-          // 월수(M)를 화목(F)보다 먼저
           if (a.dayType !== b.dayType) {
             return a.dayType === 'M' ? -1 : 1;
           }
-          // 같은 요일이면 반 번호순
           return a.classNumber.localeCompare(b.classNumber);
         });
       };

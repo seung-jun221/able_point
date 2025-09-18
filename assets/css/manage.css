@@ -338,16 +338,14 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 선생님 관리 - 수정 버튼 */
-.btn-teacher-edit,
-.btn-action.btn-edit[onclick*='editTeacher'] {
+/* 선생님 관리 - 수정 버튼 (더 높은 우선순위) */
+.teacher-action-buttons .btn-teacher-action.btn-edit {
   color: #3b82f6 !important;
   background: white !important;
-  border-color: #dbeafe !important;
+  border: 1px solid #dbeafe !important;
 }
 
-.btn-teacher-edit:hover,
-.btn-action.btn-edit[onclick*='editTeacher']:hover {
+.teacher-action-buttons .btn-teacher-action.btn-edit:hover {
   background: #eff6ff !important;
   border-color: #3b82f6 !important;
   color: #2563eb !important;

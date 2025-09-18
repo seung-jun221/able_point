@@ -515,3 +515,39 @@
     transform: rotate(360deg);
   }
 }
+/* SVG 아이콘 스타일 */
+.nav-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  transition: all 0.3s ease;
+}
+
+/* 기본 상태 - 회색 */
+.nav-item .nav-icon svg {
+  stroke: #8e8e93;
+  color: #8e8e93;
+}
+
+/* 활성 상태 - 메인 컬러 */
+.nav-item.active .nav-icon svg {
+  stroke: #fa709a;
+  color: #fa709a;
+}
+
+/* 호버 효과 */
+.nav-item:hover .nav-icon svg {
+  stroke: #fa709a;
+  color: #fa709a;
+}
+
+/* 저축 아이콘은 fill 사용 */
+.nav-item[data-page='savings'] .nav-icon svg {
+  stroke: none;
+  fill: currentColor;
+}
+
+/* 애니메이션 */
+.nav-item:active .nav-icon {
+  transform: scale(0.95);
+}

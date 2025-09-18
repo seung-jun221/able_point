@@ -349,45 +349,114 @@
       </div>
     </div>
 
-    <!-- 하단 네비게이션 -->
-    <div class="app-nav">
-      <div class="nav-item active" data-page="home">
-        <span class="nav-icon">🏠</span>
+    <!-- 변경할 코드 (SVG 버전) -->
+    <nav class="app-nav">
+      <a href="index.html" class="nav-item active" data-page="home">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+            />
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M9 22V12h6v10"
+            />
+          </svg>
+        </span>
         <span class="nav-label">홈</span>
-      </div>
-      <div
-        class="nav-item"
-        data-page="savings"
-        onclick="location.href='savings.html'"
-      >
-        <span class="nav-icon">💰</span>
+      </a>
+
+      <a href="savings.html" class="nav-item" data-page="savings">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path
+              fill="currentColor"
+              d="M19 5h-2V4c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v1H5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zM9 4h6v1H9V4zm10 7H5c-.55 0-1-.45-1-1V7c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1z"
+            />
+            <path
+              fill="currentColor"
+              d="M4 12v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8H4zm8 4.5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"
+            />
+          </svg>
+        </span>
         <span class="nav-label">저축</span>
-      </div>
-      <div
-        class="nav-item"
-        data-page="shop"
-        onclick="location.href='shop.html'"
-      >
-        <span class="nav-icon">🛍️</span>
+      </a>
+
+      <a href="shop.html" class="nav-item" data-page="shop">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"
+            />
+            <line
+              stroke="currentColor"
+              stroke-width="1.5"
+              x1="3"
+              y1="6"
+              x2="21"
+              y2="6"
+            />
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M16 10a4 4 0 0 1-8 0"
+            />
+          </svg>
+        </span>
         <span class="nav-label">상점</span>
-      </div>
-      <div
-        class="nav-item"
-        data-page="ranking"
-        onclick="location.href='ranking.html'"
-      >
-        <span class="nav-icon">🏆</span>
+      </a>
+
+      <a href="ranking.html" class="nav-item" data-page="ranking">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M6 9H4.5a2.5 2.5 0 0 1 0-5C5.88 4 7 5.12 7 6.5V9zm0 0h12m0 0h1.5a2.5 2.5 0 0 0 0-5C18.12 4 17 5.12 17 6.5V9z"
+            />
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M6 9v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9M10 16h4"
+            />
+          </svg>
+        </span>
         <span class="nav-label">랭킹</span>
-      </div>
-      <div
-        class="nav-item"
-        data-page="profile"
-        onclick="location.href='profile.html'"
-      >
-        <span class="nav-icon">👤</span>
+      </a>
+
+      <a href="profile.html" class="nav-item" data-page="profile">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+            />
+            <circle
+              stroke="currentColor"
+              fill="none"
+              stroke-width="1.5"
+              cx="12"
+              cy="7"
+              r="4"
+            />
+          </svg>
+        </span>
         <span class="nav-label">내정보</span>
-      </div>
-    </div>
+      </a>
+    </nav>
 
     <!-- 모달: 포인트 선물 -->
     <div id="transferModal" class="modal">
