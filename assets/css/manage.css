@@ -1,4 +1,4 @@
-/* ==================== 선생님 관리 페이지 스타일 ==================== */
+/* ==================== 선생님/학생 관리 페이지 공통 스타일 ==================== */
 
 /* 통계 그리드 */
 .stats-grid {
@@ -83,56 +83,94 @@
 /* 데이터 테이블 - 개선된 레이아웃 */
 .data-table {
   width: 100%;
-  min-width: 900px; /* 최소 너비 설정 */
-  table-layout: fixed; /* 컬럼 너비 고정 */
   border-collapse: collapse;
+  table-layout: fixed; /* 컬럼 너비 고정으로 안정화 */
 }
 
-/* 컬럼 너비 재조정 - 연락처 공간 확보 */
-.data-table th:nth-child(1) {
-  width: 10%;
+/* 선생님 관리 테이블 컬럼 너비 */
+.data-table.teacher-table th:nth-child(1),
+.data-table.teacher-table td:nth-child(1) {
+  width: 15%;
 } /* 이름 */
-.data-table th:nth-child(2) {
+.data-table.teacher-table th:nth-child(2),
+.data-table.teacher-table td:nth-child(2) {
+  width: 15%;
+} /* 아이디 */
+.data-table.teacher-table th:nth-child(3),
+.data-table.teacher-table td:nth-child(3) {
+  width: 12%;
+} /* 권한 */
+.data-table.teacher-table th:nth-child(4),
+.data-table.teacher-table td:nth-child(4) {
+  width: 12%;
+} /* 상태 */
+.data-table.teacher-table th:nth-child(5),
+.data-table.teacher-table td:nth-child(5) {
+  width: 15%;
+} /* 등록일 */
+.data-table.teacher-table th:nth-child(6),
+.data-table.teacher-table td:nth-child(6) {
+  width: 31%;
+} /* 액션 */
+
+/* 학생 관리 테이블 컬럼 너비 */
+.data-table.student-table th:nth-child(1),
+.data-table.student-table td:nth-child(1) {
+  width: 12%;
+} /* 이름 */
+.data-table.student-table th:nth-child(2),
+.data-table.student-table td:nth-child(2) {
   width: 10%;
 } /* 아이디 */
-.data-table th:nth-child(3) {
+.data-table.student-table th:nth-child(3),
+.data-table.student-table td:nth-child(3) {
   width: 10%;
-} /* 반 */
-.data-table th:nth-child(4) {
-  width: 8%;
+} /* 클래스 */
+.data-table.student-table th:nth-child(4),
+.data-table.student-table td:nth-child(4) {
+  width: 10%;
 } /* 포인트 */
-.data-table th:nth-child(5) {
+.data-table.student-table th:nth-child(5),
+.data-table.student-table td:nth-child(5) {
   width: 15%;
-} /* 연락처 (11%→15%) */
-.data-table th:nth-child(6) {
-  width: 8%;
+} /* 연락처 */
+.data-table.student-table th:nth-child(6),
+.data-table.student-table td:nth-child(6) {
+  width: 10%;
 } /* 상태 */
-.data-table th:nth-child(7) {
-  width: 11%;
+.data-table.student-table th:nth-child(7),
+.data-table.student-table td:nth-child(7) {
+  width: 12%;
 } /* 등록일 */
-.data-table th:nth-child(8) {
-  width: 28%;
-} /* 관리 (30%→28%) */
+.data-table.student-table th:nth-child(8),
+.data-table.student-table td:nth-child(8) {
+  width: 21%;
+} /* 액션 */
 
+/* 테이블 헤더/데이터 공통 */
 .data-table th {
   text-align: left;
-  padding: 10px 8px;
+  padding: 12px 10px;
   border-bottom: 2px solid #f0f0f0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #6b7280;
-  text-transform: uppercase;
-  white-space: nowrap;
+  white-space: nowrap; /* 헤더는 줄바꿈 방지 */
 }
 
 .data-table td {
-  padding: 10px 8px;
+  padding: 12px 10px;
   border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
+  font-size: 14px;
   color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap; /* 데이터도 줄바꿈 방지 */
+  vertical-align: middle; /* 세로 정렬 */
+}
+
+/* 연락처 컬럼만 줄바꿈 허용 (필요한 경우) */
+.data-table td.phone-cell {
+  white-space: normal;
+  word-break: break-all;
 }
 
 .data-table tr:hover {
@@ -202,26 +240,25 @@
   color: #991b1b;
 }
 
-/* 액션 버튼 - 개선된 스타일 */
+/* ==================== 액션 버튼 - 공통 스타일 (학생/선생님 모두 사용) ==================== */
 .action-buttons {
   display: flex;
   gap: 4px;
   flex-wrap: nowrap;
+  justify-content: center;
 }
 
-.action-buttons button {
-  white-space: nowrap;
-}
-
-/* 작은 버튼 공통 스타일 */
+/* 작은 버튼 공통 스타일 (기존 학생 관리용) */
 .btn-sm {
-  padding: 5px 10px !important;
+  padding: 5px 8px !important;
   font-size: 11px !important;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;
+  white-space: nowrap;
+  min-width: 40px; /* 최소 너비 설정 */
 }
 
 .btn-edit {
@@ -275,6 +312,79 @@
   color: #ef4444;
 }
 
+/* ==================== 선생님 관리 전용 액션 버튼 스타일 ==================== */
+.teacher-action-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.btn-teacher-action {
+  padding: 5px 10px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+  outline: none;
+}
+
+.btn-teacher-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 선생님 관리 - 수정 버튼 */
+.btn-teacher-edit,
+.btn-action.btn-edit[onclick*='editTeacher'] {
+  color: #3b82f6 !important;
+  background: white !important;
+  border-color: #dbeafe !important;
+}
+
+.btn-teacher-edit:hover,
+.btn-action.btn-edit[onclick*='editTeacher']:hover {
+  background: #eff6ff !important;
+  border-color: #3b82f6 !important;
+  color: #2563eb !important;
+}
+
+/* 선생님 관리 - 비밀번호 버튼 */
+.btn-teacher-password,
+.btn-action.btn-password {
+  color: #10b981 !important;
+  background: white !important;
+  border-color: #bbf7d0 !important;
+}
+
+.btn-teacher-password:hover,
+.btn-action.btn-password:hover {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #059669 !important;
+}
+
+/* 선생님 관리 - 토글 버튼 */
+.btn-teacher-toggle,
+.btn-action.btn-toggle {
+  color: #f59e0b !important;
+  background: white !important;
+  border-color: #fed7aa !important;
+}
+
+.btn-teacher-toggle:hover,
+.btn-action.btn-toggle:hover {
+  background: #fffbeb !important;
+  border-color: #f59e0b !important;
+  color: #d97706 !important;
+}
+
+/* ==================== 기타 공통 요소 ==================== */
+
 /* 추가 버튼 */
 .btn-add {
   display: inline-flex;
@@ -297,39 +407,184 @@
   box-shadow: 0 6px 20px rgba(250, 112, 154, 0.35);
 }
 
+/* 모달 */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 480px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 폼 그룹 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-control:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* 폼 행 (학생 관리용) */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 /* 비밀번호 입력 그룹 */
 .password-input-group {
-  position: relative;
+  display: flex;
+  gap: 8px;
 }
 
 .password-input-group .form-control {
-  padding-right: 90px;
+  flex: 1;
 }
 
-/* 자동생성 버튼 */
 .btn-generate {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 6px 12px;
+  padding: 10px 16px;
   background: #6366f1;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .btn-generate:hover {
   background: #4f46e5;
 }
 
-/* 비활성 행 */
-.inactive-row {
-  opacity: 0.6;
-  background: #f8f9fa;
+/* 모달 버튼 */
+.btn-primary {
+  padding: 10px 20px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #4f46e5;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
 }
 
 /* 빈 상태 */
@@ -348,6 +603,7 @@
 .empty-state-text {
   font-size: 16px;
   margin-bottom: 8px;
+  color: #6b7280;
 }
 
 .empty-state-subtext {
@@ -355,111 +611,42 @@
   color: #d1d5db;
 }
 
-/* 반응형 - 개선 */
-@media (max-width: 1200px) {
-  /* 버튼 텍스트를 아이콘으로 변경 */
-  .btn-sm span {
-    display: none;
-  }
-
-  .btn-sm::before {
-    font-size: 13px;
-  }
-
-  .btn-edit::before {
-    content: '✏️';
-  }
-  .btn-reset::before {
-    content: '🔑';
-  }
-  .btn-status::before {
-    content: '🔄';
-  }
-  .btn-delete-danger::before {
-    content: '🗑️';
-  }
-
-  /* 컬럼 너비 재조정 */
-  .data-table th:nth-child(8) {
-    width: 20%;
-  }
+/* 액션 컬럼 스타일 */
+.data-table th:last-child,
+.data-table td:last-child {
+  text-align: center;
 }
 
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .table-section {
-    padding: 16px;
-    border-radius: 12px;
-  }
-
-  .data-table {
-    font-size: 12px;
-    min-width: 700px;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: 8px 4px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .btn-sm {
-    padding: 4px 6px !important;
-    font-size: 10px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .data-table {
-    min-width: 600px;
-  }
-
-  /* 모바일에서 일부 컬럼 숨김 */
-  .data-table th:nth-child(5),
-  .data-table td:nth-child(5) {
-    display: none; /* 연락처 숨김 */
-  }
-}
-
-/* ========== 드롭다운 관련 스타일 (정리본) ========== */
-
-/* 테이블 래퍼 추가 */
-.table-wrapper {
-  overflow-x: auto;
-  overflow-y: visible;
-  max-width: 100%;
-}
-
-/* 드롭다운 컨테이너 */
-.dropdown {
-  position: relative;
-}
-
-/* 더보기 버튼 */
+/* 드롭다운 버튼 - 더 간결하게 */
 .btn-more {
   background: white;
   color: #6b7280;
   border: 1px solid #e5e7eb;
-  padding: 5px 10px !important;
-  font-size: 16px !important;
-  line-height: 1;
-  min-width: 32px;
+  border-radius: 4px;
+  padding: 4px !important;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 16px !important;
+  line-height: 1;
+}
+
+/* 드롭다운 (학생 관리용) */
+.dropdown {
+  position: relative;
+  display: inline-block;
 }
 
 .btn-more:hover {
   background: #f9fafb;
-  border-color: #d1d5db;
+  border-color: #6366f1;
+  color: #6366f1;
 }
 
-/* 드롭다운 메뉴 - position fixed */
 .dropdown-menu {
   position: fixed !important;
   background: white;
@@ -491,10 +678,6 @@
   background: #f9fafb;
 }
 
-.dropdown-menu a span {
-  font-size: 14px;
-}
-
 .dropdown-menu a.text-danger {
   color: #ef4444;
 }
@@ -507,4 +690,85 @@
   height: 1px;
   background: #e5e7eb;
   margin: 4px 0;
+}
+
+/* 반응형 */
+@media (max-width: 1200px) {
+  .btn-sm span {
+    display: none;
+  }
+
+  .btn-sm::before {
+    font-size: 13px;
+  }
+
+  .btn-edit::before {
+    content: '✏️';
+  }
+  .btn-reset::before {
+    content: '🔑';
+  }
+  .btn-status::before {
+    content: '🔄';
+  }
+  .btn-delete-danger::before {
+    content: '🗑️';
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-section {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .data-table {
+    font-size: 12px;
+    min-width: 700px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 4px;
+  }
+
+  .action-buttons,
+  .teacher-action-buttons {
+    gap: 2px;
+  }
+
+  .btn-sm {
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+  }
+
+  .btn-teacher-action {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table {
+    min-width: 600px;
+  }
+
+  .action-buttons,
+  .teacher-action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .btn-teacher-action {
+    width: 100%;
+  }
 }
