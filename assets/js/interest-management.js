@@ -18,10 +18,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 지급 상태 확인
+// checkPaymentStatus 함수 수정
 async function checkPaymentStatus() {
   try {
+    // API 객체가 준비될 때까지 대기
+    if (typeof api === 'undefined' || !api.getThisMonday) {
+      console.error('API가 아직 로드되지 않음');
+      setTimeout(checkPaymentStatus, 500);
+      return;
+    }
+
     const thisMonday = api.getThisMonday();
-    const nextMonday = api.getNextMonday();
 
     // 이번 주 지급 여부 확인
     const { data } = await supabase
@@ -45,6 +52,11 @@ async function checkPaymentStatus() {
     }
   } catch (error) {
     console.error('상태 확인 실패:', error);
+    const statusElement = document.getElementById('paymentStatus');
+    if (statusElement) {
+      statusElement.innerHTML =
+        '<span class="status-error">⚠️ 확인 실패</span>';
+    }
   }
 }
 
@@ -64,45 +76,70 @@ async function previewInterest() {
   }
 }
 
-// 미리보기 자동 로드
+// loadPreview 함수 수정 (에러 처리 개선)
 async function loadPreview() {
   try {
+    console.log('이자 미리보기 로드 중...');
     const result = await api.previewInterest();
 
     if (result.success && result.summary) {
       // 요약 정보 표시
       document.getElementById('targetCount').textContent =
-        result.summary.totalAccounts;
-      document.getElementById('estimatedTotal').textContent =
-        result.summary.totalAmount.toLocaleString();
-      document.getElementById('averageInterest').textContent =
-        result.summary.averageAmount.toLocaleString();
+        result.summary.totalAccounts || 0;
+      document.getElementById('estimatedTotal').textContent = (
+        result.summary.totalAmount || 0
+      ).toLocaleString();
+      document.getElementById('averageInterest').textContent = (
+        result.summary.averageAmount || 0
+      ).toLocaleString();
+
+      console.log('미리보기 로드 완료:', result.summary);
+    } else {
+      console.error('미리보기 실패:', result.error);
+      // 기본값 표시
+      document.getElementById('targetCount').textContent = '0';
+      document.getElementById('estimatedTotal').textContent = '0';
+      document.getElementById('averageInterest').textContent = '0';
     }
   } catch (error) {
     console.error('초기 미리보기 실패:', error);
+    // 기본값 표시
+    document.getElementById('targetCount').textContent = '0';
+    document.getElementById('estimatedTotal').textContent = '0';
+    document.getElementById('averageInterest').textContent = '0';
   }
 }
 
 // 미리보기 표시
+// displayPreview 함수 수정
 function displayPreview(data, summary) {
   const section = document.getElementById('previewSection');
   const tbody = document.getElementById('previewTableBody');
 
-  // 테이블 내용 생성
-  tbody.innerHTML = data
-    .map(
-      (item) => `
-        <tr>
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 20px;">
+          저축 잔액이 있는 학생이 없습니다.
+        </td>
+      </tr>
+    `;
+  } else {
+    tbody.innerHTML = data
+      .map(
+        (item) => `
+          <tr>
             <td><strong>${item.studentName}</strong></td>
             <td>${getLevelBadge(item.level)}</td>
             <td>${item.balance.toLocaleString()}P</td>
             <td>${item.rate}%</td>
             <td>${item.daysHeld}일</td>
-            <td><strong>${item.estimatedInterest.toLocaleString()}P</strong></td>
-        </tr>
-    `
-    )
-    .join('');
+            <td><strong>${item.amount.toLocaleString()}P</strong></td>
+          </tr>
+        `
+      )
+      .join('');
+  }
 
   // 섹션 표시
   section.style.display = 'block';

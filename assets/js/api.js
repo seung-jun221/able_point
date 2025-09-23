@@ -1456,26 +1456,18 @@ class PointBankAPI {
 
   // ==================== 이자 지급 관련 API ====================
 
-  /**
-   * 이번 주 이자 지급 처리 (메인 함수)
-   */
+  // processWeeklyInterest 함수 수정 (기존 로직 최대한 유지)
   async processWeeklyInterest() {
     try {
-      window.POINTBANK_CONFIG.debugLog(
-        'Starting weekly interest processing...'
-      );
+      window.POINTBANK_CONFIG.debugLog('주간 이자 지급 처리 시작...');
 
-      // 1. 중복 지급 체크
+      // 1. 중복 지급 체크 (기존 로직 유지)
       const thisMonday = this.getThisMonday();
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from('interest_payments')
         .select('payment_id')
         .eq('payment_date', thisMonday)
         .limit(1);
-
-      if (checkError) {
-        window.POINTBANK_CONFIG.debugLog('Check error:', checkError);
-      }
 
       if (existing && existing.length > 0) {
         return {
@@ -1485,42 +1477,74 @@ class PointBankAPI {
         };
       }
 
-      // 2. 활성 저축 계좌 조회
-      const { data: accounts, error } = await supabase
+      // 2. 활성 저축 계좌 조회 - JOIN 시도
+      let accounts = [];
+
+      const { data: joinedAccounts, error: joinError } = await supabase
         .from('savings')
         .select(
           `
-          *,
-          students!inner (
-            student_id,
-            name,
-            level,
-            class_id
-          )
-        `
+        *,
+        student_details!savings_student_id_fkey (
+          student_id,
+          name,
+          level,
+          class_id
+        )
+      `
         )
         .gt('balance', 0);
 
-      if (error) {
-        window.POINTBANK_CONFIG.debugLog('Account fetch error:', error);
-        throw error;
-      }
+      if (!joinError && joinedAccounts) {
+        // JOIN 성공
+        accounts = joinedAccounts.map((account) => ({
+          ...account,
+          students: account.student_details || account.students,
+        }));
+      } else {
+        // JOIN 실패 시 대체 방법
+        console.log('JOIN 실패, 대체 방법 사용:', joinError);
 
-      window.POINTBANK_CONFIG.debugLog(
-        `Found ${accounts?.length || 0} accounts with balance`
-      );
+        const { data: savingsAccounts } = await supabase
+          .from('savings')
+          .select('*')
+          .gt('balance', 0);
+
+        // 각 계좌별로 학생 정보 조회
+        for (const account of savingsAccounts || []) {
+          const { data: studentData } = await supabase
+            .from('student_details')
+            .select('*')
+            .eq('student_id', account.student_id)
+            .single();
+
+          if (studentData) {
+            accounts.push({
+              ...account,
+              students: {
+                student_id: studentData.student_id,
+                name: studentData.name,
+                level: studentData.level || '씨앗',
+                class_id: studentData.class_id,
+              },
+            });
+          }
+        }
+      }
 
       const results = [];
       const errors = [];
 
-      // 3. 각 계좌별 이자 계산 및 지급
-      for (const account of accounts || []) {
+      // 3. 각 계좌별 이자 계산 및 지급 (기존 payInterest 함수 사용)
+      for (const account of accounts) {
         try {
+          if (!account.students) continue;
+
           const interestData = this.calculateAccountInterest(account);
 
           if (interestData.amount > 0) {
-            // 이자 지급
             await this.payInterest(account, interestData);
+
             results.push({
               studentName: account.students.name,
               studentId: account.student_id,
@@ -1532,7 +1556,6 @@ class PointBankAPI {
             });
           }
         } catch (err) {
-          window.POINTBANK_CONFIG.debugLog('Individual payment error:', err);
           errors.push({
             studentId: account.student_id,
             error: err.message,
@@ -1540,9 +1563,7 @@ class PointBankAPI {
         }
       }
 
-      window.POINTBANK_CONFIG.debugLog(
-        `Processed ${results.length} payments successfully`
-      );
+      window.POINTBANK_CONFIG.debugLog(`처리 완료: ${results.length}건 성공`);
 
       return {
         success: true,
@@ -1720,43 +1741,130 @@ class PointBankAPI {
   /**
    * 이자 지급 미리보기
    */
+  // previewInterest 함수만 수정 (기존 calculateAccountInterest 사용)
   async previewInterest() {
     try {
-      // 활성 저축 계좌 조회
+      window.POINTBANK_CONFIG.debugLog('이자 미리보기 시작...');
+
+      // 1. 활성 저축 계좌 조회 - JOIN 방식 변경
       const { data: accounts, error } = await supabase
         .from('savings')
         .select(
           `
-          *,
-          students!inner (
-            student_id,
-            name,
-            level,
-            class_id
-          )
-        `
+        *,
+        student_details!savings_student_id_fkey (
+          student_id,
+          name,
+          level,
+          class_id
+        )
+      `
         )
         .gt('balance', 0);
 
-      if (error) throw error;
+      if (error) {
+        // JOIN 실패 시 대체 방법
+        console.log('JOIN 실패, 대체 방법 시도:', error);
 
-      const preview = [];
-      let totalAmount = 0;
+        const { data: savingsAccounts } = await supabase
+          .from('savings')
+          .select('*')
+          .gt('balance', 0);
 
-      for (const account of accounts || []) {
-        const interestData = this.calculateAccountInterest(account);
+        if (!savingsAccounts || savingsAccounts.length === 0) {
+          return {
+            success: true,
+            data: [],
+            summary: { totalAccounts: 0, totalAmount: 0, averageAmount: 0 },
+          };
+        }
 
-        preview.push({
-          studentName: account.students.name,
-          level: account.students.level,
-          balance: account.balance,
-          rate: interestData.rate,
-          daysHeld: interestData.daysHeld,
-          estimatedInterest: interestData.amount,
-        });
+        // 각 계좌별로 학생 정보 조회
+        const preview = [];
+        for (const account of savingsAccounts) {
+          const { data: studentData } = await supabase
+            .from('student_details')
+            .select('*')
+            .eq('student_id', account.student_id)
+            .single();
 
-        totalAmount += interestData.amount;
+          if (studentData) {
+            // 기존 calculateAccountInterest 함수 사용
+            const accountWithStudent = {
+              ...account,
+              students: {
+                level: studentData.level || '씨앗',
+                name: studentData.name,
+                student_id: studentData.student_id,
+              },
+            };
+
+            const interestData =
+              this.calculateAccountInterest(accountWithStudent);
+
+            preview.push({
+              studentName: studentData.name,
+              studentId: account.student_id,
+              level: studentData.level || '씨앗',
+              balance: account.balance,
+              estimatedInterest: interestData.amount, // estimatedInterest 필드 유지
+              rate: interestData.rate,
+              daysHeld: interestData.daysHeld,
+            });
+          }
+        }
+
+        const totalAmount = preview.reduce(
+          (sum, item) => sum + item.estimatedInterest,
+          0
+        );
+        return {
+          success: true,
+          data: preview,
+          summary: {
+            totalAccounts: preview.length,
+            totalAmount: totalAmount,
+            averageAmount:
+              preview.length > 0 ? Math.floor(totalAmount / preview.length) : 0,
+          },
+        };
       }
+
+      // JOIN 성공 시
+      const preview = [];
+      for (const account of accounts || []) {
+        // student_details 테이블 데이터 확인
+        const studentInfo = account.student_details || account.students;
+
+        if (studentInfo) {
+          const accountWithStudent = {
+            ...account,
+            students: {
+              level: studentInfo.level || '씨앗',
+              name: studentInfo.name,
+              student_id: studentInfo.student_id,
+            },
+          };
+
+          const interestData =
+            this.calculateAccountInterest(accountWithStudent);
+
+          preview.push({
+            studentName: studentInfo.name,
+            studentId: account.student_id,
+            level: studentInfo.level || '씨앗',
+            balance: account.balance,
+            estimatedInterest: interestData.amount,
+            rate: interestData.rate,
+            daysHeld: interestData.daysHeld,
+          });
+        }
+      }
+
+      const totalAmount = preview.reduce(
+        (sum, item) => sum + item.estimatedInterest,
+        0
+      );
 
       return {
         success: true,
@@ -1770,10 +1878,14 @@ class PointBankAPI {
       };
     } catch (error) {
       console.error('미리보기 실패:', error);
-      return { success: false, error: error.message };
+      return {
+        success: false,
+        error: error.message,
+        data: [],
+        summary: { totalAccounts: 0, totalAmount: 0, averageAmount: 0 },
+      };
     }
   }
-
   /**
    * 이자 지급 내역 조회
    */
