@@ -148,19 +148,18 @@ class PointBankAPI {
 
   // ==================== 학생 관련 ====================
 
+  // ==================== getStudents 함수 - 휴원생 필터링 버전 ====================
+
   /**
-   * 학생 목록 조회 (선생님용)
+   * 학생 목록 조회 - 활성 학생만 표시
+   * users 테이블에서 is_active 확인 후 필터링
    */
   async getStudents(classId = null) {
     try {
       window.POINTBANK_CONFIG.debugLog('Getting students', { classId });
 
-      // student_details 뷰 활용
-      let query = supabase
-        .from('student_details')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
+      // 1. student_details에서 전체 학생 조회
+      let query = supabase.from('student_details').select('*').order('name');
 
       if (classId) {
         query = query.eq('class_id', classId);
@@ -173,31 +172,55 @@ class PointBankAPI {
         throw error;
       }
 
-      window.POINTBANK_CONFIG.debugLog('Students loaded', {
-        count: data?.length || 0,
+      // 2. users 테이블에서 is_active 정보 조회
+      const userIds = (data || []).map((s) => s.user_id).filter(Boolean);
+
+      let activeUserIds = new Set();
+
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('user_id, is_active')
+          .in('user_id', userIds)
+          .eq('is_active', true); // ✅ 활성 사용자만 조회
+
+        if (users) {
+          activeUserIds = new Set(users.map((u) => u.user_id));
+        }
+      }
+
+      // 3. 활성 학생만 필터링
+      const activeStudents = (data || []).filter((student) =>
+        activeUserIds.has(student.user_id)
+      );
+
+      window.POINTBANK_CONFIG.debugLog('Active students loaded', {
+        total: data?.length || 0,
+        active: activeStudents.length,
       });
 
-      // ✅ 언더스코어를 카멜케이스로 변환
+      // 4. 카멜케이스 변환 후 반환
       return {
         success: true,
-        data: data
-          ? data.map((student) => ({
-              studentId: student.student_id,
-              userId: student.user_id,
-              name: student.name,
-              classId: student.class_id,
-              level: student.level || '씨앗',
-              totalPoints: student.total_points || 0,
-              currentPoints: student.current_points || 0,
-              savingsPoints: student.savings_points || 0,
-              avatar: student.avatar || '🦁',
-              parentUserId: student.parent_user_id,
-              updatedAt: student.updated_at,
-              loginId: student.login_id,
-              className: student.class_name,
-              grade: student.grade,
-            }))
-          : [],
+        data: activeStudents.map((student) => ({
+          studentId: student.student_id,
+          userId: student.user_id,
+          name: student.name,
+          loginId: student.login_id,
+          classId: student.class_id,
+          className: student.class_name,
+          level: student.level || '씨앗',
+          currentPoints: student.current_points || 0,
+          totalPoints: student.total_points || 0,
+          savingsPoints: student.savings_points || 0,
+          avatar: student.avatar || '🦁',
+          phone: student.phone,
+          parentPhone: student.parent_phone,
+          grade: student.grade,
+          createdAt: student.created_at,
+          isActive: true, // 활성 학생만 있으므로 true
+          status: 'active',
+        })),
       };
     } catch (error) {
       console.error('Get students error:', error);
@@ -1225,18 +1248,19 @@ class PointBankAPI {
 
   // ==================== 랭킹 관련 ====================
 
+  // ==================== getRanking 함수 - 휴원생 제외 ====================
+
   /**
-   * 랭킹 조회
+   * 랭킹 조회 - 활성 학생만 포함
    */
   async getRanking(classId = null) {
     try {
       window.POINTBANK_CONFIG.debugLog('Getting ranking', { classId });
 
-      // student_ranking 뷰 활용
+      // 1. student_ranking에서 전체 랭킹 조회
       let query = supabase
         .from('student_ranking')
         .select('*')
-        .eq('status', 'active') // 추가: 활성 학생만
         .order('rank')
         .limit(50);
 
@@ -1251,14 +1275,55 @@ class PointBankAPI {
         throw error;
       }
 
+      // 2. 학생들의 user_id 가져오기 (students 테이블 조회)
+      const studentIds = (data || []).map((r) => r.student_id).filter(Boolean);
+
+      let activeStudentIds = new Set();
+
+      if (studentIds.length > 0) {
+        // students 테이블에서 user_id 조회
+        const { data: students } = await supabase
+          .from('students')
+          .select('student_id, user_id')
+          .in('student_id', studentIds);
+
+        if (students && students.length > 0) {
+          const userIds = students.map((s) => s.user_id).filter(Boolean);
+
+          // users 테이블에서 활성 사용자 확인
+          const { data: activeUsers } = await supabase
+            .from('users')
+            .select('user_id')
+            .in('user_id', userIds)
+            .eq('is_active', true);
+
+          // 활성 user_id를 가진 student_id 찾기
+          const activeUserIds = new Set(
+            (activeUsers || []).map((u) => u.user_id)
+          );
+          students.forEach((s) => {
+            if (activeUserIds.has(s.user_id)) {
+              activeStudentIds.add(s.student_id);
+            }
+          });
+        }
+      }
+
+      // 3. 활성 학생만 필터링
+      const activeRankings = (data || []).filter((ranking) =>
+        activeStudentIds.has(ranking.student_id)
+      );
+
       window.POINTBANK_CONFIG.debugLog('Ranking loaded', {
-        count: data?.length || 0,
+        total: data?.length || 0,
+        active: activeRankings.length,
       });
 
+      // 4. 순위 재계산 및 카멜케이스 변환
       return {
         success: true,
-        data: data.map((student) => ({
-          rank: student.rank,
+        data: activeRankings.map((student, index) => ({
+          rank: index + 1, // 순위 재계산
           studentId: student.student_id,
           name: student.name,
           currentPoints: student.current_points || 0,
@@ -1389,7 +1454,6 @@ class PointBankAPI {
       const { data: classes, error } = await supabase
         .from('classes')
         .select('class_id, class_name, class_code, grade, student_count')
-        .eq('status', 'active') // 활성 반만
         .order('class_code');
 
       if (error) throw error;
@@ -1497,8 +1561,7 @@ class PointBankAPI {
         savings_points
       `
         )
-        .gt('savings_points', 0)
-        .eq('status', 'active');
+        .gt('savings_points', 0);
 
       if (fetchError) {
         console.error('학생 조회 오류:', fetchError);
@@ -2202,7 +2265,6 @@ class PointBankAPI {
         .from('student_details')
         .select('student_id, name, avatar, login_id')
         .eq('class_id', currentStudent.class_id)
-        .eq('status', 'active') // 추가: 활성 학생만
         .neq('student_id', currentStudent.student_id)
         .order('name');
 
