@@ -185,11 +185,23 @@
           >
             <span>💵</span> 이자 지급 실행
           </button>
+          <!-- 관리자만 보이는 일괄 처리 버튼 -->
+          <button
+            onclick="processAllPending()"
+            class="btn btn-warning"
+            id="bulkProcessBtn"
+            style="display: none"
+          >
+            <span>📅</span> 과거 미지급분 일괄 처리
+          </button>
         </div>
 
         <!-- 미리보기 결과 테이블 -->
         <div id="previewSection" class="result-section" style="display: none">
-          <h3 class="section-title">지급 예정 내역</h3>
+          <h3 class="section-title">
+            지급 예정 내역
+            <!-- JavaScript에서 동적으로 기간 추가 -->
+          </h3>
           <div class="table-container">
             <table class="data-table">
               <thead>
@@ -198,7 +210,8 @@
                   <th>레벨</th>
                   <th>저축 잔액</th>
                   <th>월이율</th>
-                  <th>보유일</th>
+                  <th>정산 기간</th>
+                  <!-- 보유일 → 정산 기간 -->
                   <th>예상 이자</th>
                 </tr>
               </thead>
@@ -223,5 +236,20 @@
 
     <script src="../assets/js/interest-management.js"></script>
     <script src="../assets/js/teacher-common.js"></script>
+
+    <script>
+      // 관리자 권한 체크 후 버튼 표시
+      window.addEventListener('DOMContentLoaded', () => {
+        const userRole = localStorage.getItem('userRole');
+        const loginId = localStorage.getItem('loginId');
+
+        if (userRole === 'principal' || loginId === 'ablemaster') {
+          const bulkBtn = document.getElementById('bulkProcessBtn');
+          if (bulkBtn) {
+            bulkBtn.style.display = 'inline-flex';
+          }
+        }
+      });
+    </script>
   </body>
 </html>

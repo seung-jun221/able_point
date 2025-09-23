@@ -1,10 +1,9 @@
 // interest-management.js - 이자 지급 관리 페이지
 
-// 페이지 초기화
+// 페이지 초기화 (약 4번째 줄)
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('=== 이자 지급 관리 페이지 초기화 ===');
 
-  // 사용자 정보 표시
   const userName = localStorage.getItem('userName');
   const userRole = localStorage.getItem('userRole');
 
@@ -12,13 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userRole').textContent =
     userRole === 'principal' ? '원장' : '선생님';
 
-  // API 로드 대기
   await waitForAPI();
-
-  // 초기 데이터 로드
   await checkPaymentStatus();
-  await loadPreview();
-  await loadPaymentHistory(); // 지급 이력 추가
+  await loadSummaryOnly(); // loadPreview 대신 요약만 로드
+  await loadPaymentHistory();
 });
 
 // API 로드 대기 함수
@@ -82,12 +78,23 @@ async function checkPaymentStatus() {
   }
 }
 
-// 미리보기
+// 미리보기 버튼 클릭 함수 수정
 async function previewInterest() {
   try {
     const result = await api.previewInterest();
 
     if (result.success) {
+      // 상단 카드 업데이트
+      document.getElementById('targetCount').textContent =
+        result.summary.totalAccounts || 0;
+      document.getElementById('estimatedTotal').textContent = (
+        result.summary.totalAmount || 0
+      ).toLocaleString();
+      document.getElementById('averageInterest').textContent = (
+        result.summary.averageAmount || 0
+      ).toLocaleString();
+
+      // 테이블 표시
       displayPreview(result.data, result.summary);
     } else {
       alert('미리보기 실패: ' + result.error);
@@ -150,10 +157,88 @@ async function loadPreview() {
   }
 }
 
-// 미리보기 표시
+// 요약 정보만 로드 (테이블 표시 없이)
+async function loadSummaryOnly() {
+  try {
+    console.log('요약 정보 로드 시작');
+
+    if (!window.api || !window.api.previewInterest) {
+      console.error('API가 준비되지 않았습니다');
+      setTimeout(loadSummaryOnly, 1000);
+      return;
+    }
+
+    const result = await api.previewInterest();
+    console.log('미리보기 결과:', result);
+
+    if (result.success) {
+      // 상단 카드 정보만 업데이트
+      const targetCount = document.getElementById('targetCount');
+      const estimatedTotal = document.getElementById('estimatedTotal');
+      const averageInterest = document.getElementById('averageInterest');
+
+      if (targetCount)
+        targetCount.textContent = result.summary.totalAccounts || 0;
+      if (estimatedTotal)
+        estimatedTotal.textContent = (
+          result.summary.totalAmount || 0
+        ).toLocaleString();
+      if (averageInterest)
+        averageInterest.textContent = (
+          result.summary.averageAmount || 0
+        ).toLocaleString();
+    } else {
+      // 기본값 표시
+      document.getElementById('targetCount').textContent = '0';
+      document.getElementById('estimatedTotal').textContent = '0';
+      document.getElementById('averageInterest').textContent = '0';
+    }
+  } catch (error) {
+    console.error('요약 로드 오류:', error);
+    document.getElementById('targetCount').textContent = '-';
+    document.getElementById('estimatedTotal').textContent = '-';
+    document.getElementById('averageInterest').textContent = '-';
+  }
+}
+
+// 미리보기 표시 - 기간 정보 추가
 function displayPreview(data, summary) {
   const section = document.getElementById('previewSection');
   const tbody = document.getElementById('previewTableBody');
+
+  // 기간 정보 계산
+  let period = { display: '', startStr: '', endStr: '' };
+  if (api && api.getLastWeekPeriod) {
+    period = api.getLastWeekPeriod();
+  } else {
+    // 대체 계산
+    const lastMonday = new Date();
+    const day = lastMonday.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    lastMonday.setDate(lastMonday.getDate() + diff - 7);
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastSunday.getDate() + 6);
+
+    period = {
+      startStr: lastMonday.toISOString().split('T')[0],
+      endStr: lastSunday.toISOString().split('T')[0],
+      display: `${lastMonday.toLocaleDateString(
+        'ko-KR'
+      )} ~ ${lastSunday.toLocaleDateString('ko-KR')}`,
+    };
+  }
+
+  // 섹션 헤더에 기간 정보 추가
+  const titleElement = section.querySelector('.section-title');
+  if (titleElement) {
+    titleElement.innerHTML = `
+      지급 예정 내역
+      <div style="font-size: 14px; color: #6b7280; margin-top: 8px; line-height: 1.5;">
+        📅 정산 기간: ${period.display}<br>
+        💰 지급 예정일: ${new Date().toLocaleDateString('ko-KR')} (오늘)
+      </div>
+    `;
+  }
 
   if (!data || data.length === 0) {
     tbody.innerHTML = `
@@ -172,7 +257,9 @@ function displayPreview(data, summary) {
             <td>${getLevelBadge(item.level)}</td>
             <td>${item.balance.toLocaleString()}P</td>
             <td>${item.rate}%</td>
-            <td>${item.daysHeld}일</td>
+            <td>${period.startStr.slice(5)}~${period.endStr.slice(5)} (${
+          item.daysHeld
+        }일)</td>
             <td><strong>${(
               item.amount ||
               item.estimatedInterest ||
@@ -255,27 +342,17 @@ async function loadPaymentHistoryManual() {
 
 // 지급 이력 UI 표시
 function displayPaymentHistory(history) {
-  // 기존 요약 카드 영역 아래에 추가
   let historySection = document.getElementById('paymentHistorySection');
 
   if (!historySection) {
     historySection = document.createElement('div');
     historySection.id = 'paymentHistorySection';
     historySection.className = 'payment-history-section';
-    historySection.style.cssText = `
-      margin-top: 30px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    `;
 
-    // 액션 버튼 영역 뒤에 삽입
     const actionSection = document.querySelector('.action-section');
     if (actionSection) {
       actionSection.insertAdjacentElement('afterend', historySection);
     } else {
-      // 액션 섹션이 없으면 메인 컨텐츠 끝에 추가
       document.querySelector('.main-content').appendChild(historySection);
     }
   }
@@ -284,37 +361,27 @@ function displayPaymentHistory(history) {
     <h3 class="section-title" style="margin-bottom: 20px; color: #1f2937; font-size: 18px;">
       📅 최근 4주 지급 내역
     </h3>
-    <div class="history-grid" style="
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-    ">
+    <div class="history-grid">
       ${history
         .map(
           (week) => `
-        <div class="history-card" style="
-          padding: 15px;
-          border-radius: 8px;
-          border: 2px solid ${week.isPaid ? '#10b981' : '#f59e0b'};
-          background: ${week.isPaid ? '#f0fdf4' : '#fef3c7'};
-          text-align: center;
-        ">
-          <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">
+        <div class="history-card ${week.isPaid ? 'paid' : 'unpaid'}">
+          <div class="history-date">
             ${week.weekLabel}
           </div>
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">
+          <div class="history-detail">
             ${new Date(week.date).toLocaleDateString('ko-KR')}
           </div>
           <div>
             ${
               week.isPaid
-                ? `<span style="color: #10b981; font-weight: bold;">✅ 지급완료</span>
-                 <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">
-                   ${
-                     week.studentCount
-                   }명 / ${week.totalAmount.toLocaleString()}P
-                 </div>`
-                : '<span style="color: #f59e0b; font-weight: bold;">⏳ 미지급</span>'
+                ? `<span class="status-paid">✅ 지급완료</span>
+                   <div class="history-info">
+                     ${
+                       week.studentCount
+                     }명 / ${week.totalAmount.toLocaleString()}P
+                   </div>`
+                : '<span class="status-unpaid">⏳ 미지급</span>'
             }
           </div>
         </div>
@@ -419,6 +486,40 @@ function displayResult(data, summary) {
   // 섹션 표시
   section.style.display = 'block';
   document.getElementById('previewSection').style.display = 'none';
+}
+
+// 과거 미지급분 일괄 처리
+async function processAllPending() {
+  if (
+    !confirm(
+      '과거 미지급분을 일괄 처리하시겠습니까?\n현재 잔액 기준으로 계산됩니다.'
+    )
+  ) {
+    return;
+  }
+
+  const btn = event.target;
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ 처리 중...';
+
+  try {
+    const result = await api.processAllPendingInterests();
+
+    if (result.success) {
+      alert(`${result.processed}개 주차의 미지급분이 처리되었습니다.`);
+      await loadPaymentHistory();
+      await checkPaymentStatus();
+    } else {
+      alert('처리 실패: ' + result.error);
+    }
+  } catch (error) {
+    console.error('일괄 처리 오류:', error);
+    alert('처리 중 오류가 발생했습니다.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
 }
 
 // 로그아웃
