@@ -166,3 +166,63 @@
   color: #94a3b8;
   font-size: 14px;
 }
+
+.payment-history-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.history-card {
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  text-align: center;
+}
+
+.history-card.paid {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.history-card.unpaid {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.history-date {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.history-detail {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.status-paid {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.status-unpaid {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.history-info {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 5px;
+}
