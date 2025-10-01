@@ -11,11 +11,85 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userRole').textContent =
     userRole === 'principal' ? '원장' : '선생님';
 
+  await checkDataIntegrity();
   await waitForAPI();
   await checkPaymentStatus();
   await loadSummaryOnly(); // loadPreview 대신 요약만 로드
   await loadPaymentHistory();
 });
+
+// ⚠️ 데이터 무결성 체크 함수 추가
+async function checkDataIntegrity() {
+  try {
+    const { data: nullStudents, error } = await supabase
+      .from('students')
+      .select('student_id, name, current_points')
+      .or('current_points.is.null,current_points.lt.0')
+      .gt('savings_points', 0); // 저축이 있는 학생만
+
+    if (error) {
+      console.error('무결성 체크 오류:', error);
+      return;
+    }
+
+    if (nullStudents && nullStudents.length > 0) {
+      console.warn('문제가 있는 학생 데이터:', nullStudents);
+
+      // 경고 메시지 표시
+      const warningDiv = document.createElement('div');
+      warningDiv.className = 'warning-message';
+      warningDiv.innerHTML = `
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <h4 style="color: #dc2626; margin-bottom: 8px;">⚠️ 데이터 오류 감지</h4>
+          <p style="color: #7f1d1d; margin-bottom: 12px;">
+            ${nullStudents.length}명의 학생 포인트 데이터에 문제가 있습니다:
+          </p>
+          <ul style="color: #7f1d1d; margin-left: 20px;">
+            ${nullStudents
+              .slice(0, 5)
+              .map(
+                (s) =>
+                  `<li>${s.name} (${s.student_id}): ${
+                    s.current_points === null
+                      ? 'NULL'
+                      : s.current_points + '포인트'
+                  }</li>`
+              )
+              .join('')}
+            ${
+              nullStudents.length > 5
+                ? `<li>... 외 ${nullStudents.length - 5}명</li>`
+                : ''
+            }
+          </ul>
+          <p style="color: #dc2626; font-weight: bold; margin-top: 12px;">
+            이자 지급 전에 데이터 수정이 필요합니다!
+          </p>
+        </div>
+      `;
+
+      // 페이지 상단에 경고 표시
+      const mainContent = document.querySelector('.main-content');
+      const pageHeader = document.querySelector('.page-header');
+      if (pageHeader) {
+        pageHeader.insertAdjacentElement('afterend', warningDiv);
+      } else if (mainContent) {
+        mainContent.insertBefore(warningDiv, mainContent.firstChild);
+      }
+
+      // 이자 지급 버튼 비활성화
+      const processBtn = document.getElementById('processBtn');
+      if (processBtn) {
+        processBtn.disabled = true;
+        processBtn.innerHTML = '<span>❌</span> 데이터 오류로 지급 불가';
+      }
+    } else {
+      console.log('✅ 모든 학생 데이터 정상');
+    }
+  } catch (error) {
+    console.error('무결성 체크 실패:', error);
+  }
+}
 
 // API 로드 대기 함수
 async function waitForAPI() {
@@ -80,6 +154,20 @@ async function checkPaymentStatus() {
 
 // 미리보기 버튼 클릭 함수 수정
 async function previewInterest() {
+  // ⚠️ 데이터 체크 먼저
+  const { data: problemStudents } = await supabase
+    .from('students')
+    .select('student_id, name')
+    .is('current_points', null)
+    .gt('savings_points', 0);
+
+  if (problemStudents && problemStudents.length > 0) {
+    alert(
+      '일부 학생의 포인트 데이터에 문제가 있습니다.\n먼저 데이터를 수정해주세요.'
+    );
+    return;
+  }
+
   try {
     const result = await api.previewInterest();
 

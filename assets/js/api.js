@@ -1529,6 +1529,7 @@ class PointBankAPI {
   /**
    * 주간 이자 지급 처리 - students.savings_points 기반으로 전면 수정
    */
+  // processWeeklyInterest 함수 수정
   async processWeeklyInterest() {
     try {
       console.log('=== 주간 이자 지급 처리 시작 ===');
@@ -1549,7 +1550,7 @@ class PointBankAPI {
         };
       }
 
-      // students 테이블에서 저축 잔액이 있는 학생 조회
+      // ⚠️ 수정: current_points 필드 추가!
       const { data: studentsWithSavings, error: fetchError } = await supabase
         .from('students')
         .select(
@@ -1558,7 +1559,9 @@ class PointBankAPI {
         name,
         level,
         class_id,
-        savings_points
+        savings_points,
+        current_points,     // ⚠️ 이 줄 반드시 추가!
+        total_points        // ⚠️ 안전을 위해 추가
       `
         )
         .gt('savings_points', 0);
@@ -1583,6 +1586,22 @@ class PointBankAPI {
       // 각 학생별로 이자 처리
       for (const student of studentsWithSavings) {
         try {
+          // ⚠️ 안전장치 추가
+          if (
+            student.current_points === null ||
+            student.current_points === undefined
+          ) {
+            console.warn(
+              `${student.name} 학생의 current_points가 NULL입니다. 건너뜁니다.`
+            );
+            errors.push({
+              studentId: student.student_id,
+              studentName: student.name,
+              error: 'current_points가 NULL',
+            });
+            continue;
+          }
+
           // 이자 계산
           const interestData = this.calculateStudentInterest(student);
 
@@ -1591,35 +1610,32 @@ class PointBankAPI {
             await this.payStudentInterest(student, interestData);
 
             results.push({
-              studentName: student.name,
               studentId: student.student_id,
-              level: student.level || '씨앗',
-              balance: student.savings_points,
+              studentName: student.name,
               amount: interestData.amount,
-              daysHeld: interestData.daysHeld,
-              rate: interestData.rate,
+              balance: student.savings_points,
+              level: student.level,
             });
           }
-        } catch (err) {
-          console.error(`학생 ${student.student_id} 처리 오류:`, err);
+        } catch (error) {
+          console.error(`${student.name} 이자 지급 실패:`, error);
           errors.push({
             studentId: student.student_id,
             studentName: student.name,
-            error: err.message,
+            error: error.message,
           });
         }
       }
 
-      console.log(`=== 처리 완료: ${results.length}건 성공 ===`);
-
+      // 결과 반환
       return {
         success: true,
         data: results,
-        errors: errors,
+        errors: errors.length > 0 ? errors : null,
         summary: {
-          totalAccounts: results.length,
+          totalStudents: results.length,
           totalAmount: results.reduce((sum, r) => sum + r.amount, 0),
-          averageAmount:
+          averageInterest:
             results.length > 0
               ? Math.floor(
                   results.reduce((sum, r) => sum + r.amount, 0) / results.length
@@ -1701,18 +1717,23 @@ class PointBankAPI {
   }
 
   /**
-   * 학생에게 이자 지급 실행 (students 테이블 업데이트)
-   */
+  /**
+ * 학생에게 이자 지급 실행 (students 테이블 업데이트)
+ */
   async payStudentInterest(student, interestData) {
     try {
-      // 1. students 테이블의 current_points만 업데이트 (savings_points는 변경 안함)
-      const newPointBalance = student.current_points + interestData.amount;
+      // 1. ⚠️ 안전장치: NULL 체크 추가
+      const currentBalance = student.current_points || 0;
+      const newPointBalance = currentBalance + interestData.amount;
+
+      console.log(
+        `${student.name}: ${currentBalance} + ${interestData.amount} = ${newPointBalance}`
+      );
 
       const { error: updateError } = await supabase
         .from('students')
         .update({
-          current_points: newPointBalance, // 포인트로 지급
-          // savings_points는 변경하지 않음 - 저축액 그대로 유지
+          current_points: newPointBalance,
           updated_at: new Date().toISOString(),
         })
         .eq('student_id', student.student_id);
@@ -1738,9 +1759,10 @@ class PointBankAPI {
       const { error: paymentError } = await supabase
         .from('interest_payments')
         .insert({
+          payment_id: `INT_${Date.now()}_${student.student_id}`, // ⚠️ payment_id 추가
           student_id: student.student_id,
           payment_date: this.getThisMonday(),
-          balance_amount: interestData.balance,
+          balance_amount: interestData.balance || student.savings_points, // ⚠️ 안전장치
           days_held: interestData.daysHeld,
           interest_rate: interestData.rate,
           interest_amount: interestData.amount,
@@ -1751,7 +1773,7 @@ class PointBankAPI {
         console.error('Payment record error:', paymentError);
       }
 
-      // 4. 포인트 내역에도 기록 (points 테이블)
+      // 4. ⚠️ 기존 코드 유지 - points 테이블에도 기록 (중요!)
       const { error: pointsError } = await supabase.from('points').insert({
         student_id: student.student_id,
         amount: interestData.amount,
