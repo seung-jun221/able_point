@@ -1560,8 +1560,8 @@ class PointBankAPI {
         level,
         class_id,
         savings_points,
-        current_points,     // ⚠️ 이 줄 반드시 추가!
-        total_points        // ⚠️ 안전을 위해 추가
+        current_points, 
+        total_points 
       `
         )
         .gt('savings_points', 0);
