@@ -924,12 +924,6 @@ async function submitPoints() {
       submitBtn.disabled = false;
       submitBtn.textContent = '확인';
     }
-    if (result.success) {
-      // 차트 업데이트
-      if (window.dashboardCharts) {
-        window.dashboardCharts.updateAfterPoint(amount, reason);
-      }
-    }
   }
 }
 
