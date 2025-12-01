@@ -540,14 +540,18 @@ async function quickPoint(studentId, amount, studentName, type = '빠른 지급'
 }
 
 // ==================== 포인트 지급 모달 ====================
+let modalTargetStudents = []; // 모달에서 사용할 대상 학생 목록 저장
+
 function showPointModal() {
   // 선택된 학생이 있으면 해당 학생들만, 없으면 전체
-  const targetStudents =
+  modalTargetStudents =
     selectedStudents.size > 0
       ? Array.from(selectedStudents).map((id) =>
           allStudents.find((s) => s.studentId === id)
         )
       : allStudents;
+
+  const targetStudents = modalTargetStudents;
 
   const modal = document.getElementById('pointModal');
   const studentSelect = document.getElementById('modalStudentSelect');
@@ -814,12 +818,12 @@ async function submitPoints() {
   }
 
   try {
-    // 선택된 학생들 확인
+    // 선택된 학생들 확인 (modalTargetStudents 사용)
     let targetStudents = [];
     if (studentSelect.value === 'all') {
-      targetStudents = allStudents;
+      targetStudents = modalTargetStudents; // 모달에 표시된 학생들만 대상
     } else {
-      const student = allStudents.find(
+      const student = modalTargetStudents.find(
         (s) => s.studentId === studentSelect.value
       );
       if (student) targetStudents = [student];
