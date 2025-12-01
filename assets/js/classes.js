@@ -330,9 +330,9 @@ async function saveClass() {
         return;
       }
 
-      // 새 클래스 생성
+      // 새 클래스 생성 (class_id는 20자 이하로 제한)
       classData.class_id =
-        'CLS' + Date.now() + Math.random().toString(36).substr(2, 5);
+        'C' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
 
       const { data, error } = await supabase
         .from('classes')
