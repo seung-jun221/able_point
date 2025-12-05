@@ -42,6 +42,46 @@ class PointBankAPI {
   // ==================== 인증 관련 ====================
 
   /**
+   * 🔒 서버에서 현재 사용자의 역할 검증
+   * localStorage는 조작 가능하므로 DB에서 직접 확인
+   */
+  async verifyUserRole(requiredRoles = ['teacher', 'principal']) {
+    try {
+      const loginId = localStorage.getItem('loginId');
+      if (!loginId) {
+        return { success: false, error: '로그인이 필요합니다.', role: null };
+      }
+
+      // DB에서 실제 역할 조회
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('user_id, role, is_active')
+        .eq('login_id', loginId)
+        .single();
+
+      if (error || !user) {
+        return { success: false, error: '사용자를 찾을 수 없습니다.', role: null };
+      }
+
+      if (user.is_active === false) {
+        return { success: false, error: '비활성화된 계정입니다.', role: null };
+      }
+
+      const hasPermission = requiredRoles.includes(user.role);
+
+      return {
+        success: hasPermission,
+        error: hasPermission ? null : '권한이 없습니다.',
+        role: user.role,
+        userId: user.user_id
+      };
+    } catch (error) {
+      console.error('역할 검증 오류:', error);
+      return { success: false, error: '권한 확인 중 오류가 발생했습니다.', role: null };
+    }
+  }
+
+  /**
    * 현재 세션 체크
    */
   async checkSession() {
@@ -153,10 +193,18 @@ class PointBankAPI {
   /**
    * 학생 목록 조회 - 활성 학생만 표시
    * users 테이블에서 is_active 확인 후 필터링
+   * 🔒 teacher/principal 권한 필요
    */
   async getStudents(classId = null) {
     try {
       window.POINTBANK_CONFIG.debugLog('Getting students', { classId });
+
+      // 🔒 권한 검증
+      const roleCheck = await this.verifyUserRole(['teacher', 'principal']);
+      if (!roleCheck.success) {
+        console.warn('getStudents 권한 없음:', roleCheck.error);
+        return { success: false, error: roleCheck.error, data: [] };
+      }
 
       // 1. student_details에서 전체 학생 조회
       let query = supabase.from('student_details').select('*').order('name');
@@ -374,6 +422,7 @@ class PointBankAPI {
 
   /**
    * 포인트 지급
+   * 🔒 teacher/principal 권한 필요
    */
   async addPoints(loginId, amount, type, reason) {
     try {
@@ -383,6 +432,13 @@ class PointBankAPI {
         type,
         reason,
       });
+
+      // 🔒 권한 검증 - 포인트 지급은 반드시 teacher/principal만 가능
+      const roleCheck = await this.verifyUserRole(['teacher', 'principal']);
+      if (!roleCheck.success) {
+        console.error('addPoints 권한 없음:', roleCheck.error);
+        return { success: false, error: '포인트 지급 권한이 없습니다.' };
+      }
 
       // student_details 뷰에서 직접 조회 (개선됨)
       const { data: studentDetail } = await supabase
@@ -937,9 +993,17 @@ class PointBankAPI {
 
   /**
    * 모든 구매 내역 조회 (구매 관리용)
+   * 🔒 teacher/principal 권한 필요
    */
   async getAllPurchases() {
     try {
+      // 🔒 권한 검증
+      const roleCheck = await this.verifyUserRole(['teacher', 'principal']);
+      if (!roleCheck.success) {
+        console.warn('getAllPurchases 권한 없음:', roleCheck.error);
+        return { success: false, error: roleCheck.error, data: [] };
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select(
@@ -1013,9 +1077,17 @@ class PointBankAPI {
 
   /**
    * 구매 지급 처리 (delivered로 상태 변경)
+   * 🔒 teacher/principal 권한 필요
    */
   async markAsDelivered(transactionId, teacherId, teacherName, notes = '') {
     try {
+      // 🔒 권한 검증
+      const roleCheck = await this.verifyUserRole(['teacher', 'principal']);
+      if (!roleCheck.success) {
+        console.error('markAsDelivered 권한 없음:', roleCheck.error);
+        return { success: false, error: '지급 처리 권한이 없습니다.' };
+      }
+
       console.log('지급처리 시도:', { transactionId, teacherId, teacherName }); // 디버깅용
 
       const { data, error } = await supabase
@@ -1162,9 +1234,17 @@ class PointBankAPI {
 
   /**
    * 모든 학생 정보 조회 (구매 관리용)
+   * 🔒 teacher/principal 권한 필요
    */
   async getAllStudents() {
     try {
+      // 🔒 권한 검증
+      const roleCheck = await this.verifyUserRole(['teacher', 'principal']);
+      if (!roleCheck.success) {
+        console.warn('getAllStudents 권한 없음:', roleCheck.error);
+        return { success: false, error: roleCheck.error, data: [] };
+      }
+
       // student_details 뷰 사용 (이미 모든 정보가 조인되어 있음)
       const { data, error } = await supabase
         .from('student_details')
