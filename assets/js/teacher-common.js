@@ -1,20 +1,74 @@
 // teacher-common.js - 선생님 페이지 공통 기능
 
+// 🔒 서버에서 역할 검증 (보안 강화)
+async function verifyTeacherAccess() {
+  try {
+    const loginId = localStorage.getItem('loginId');
+
+    if (!loginId) {
+      return { success: false, error: '로그인이 필요합니다.' };
+    }
+
+    // DB에서 실제 역할 조회
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('user_id, role, name, is_active')
+      .eq('login_id', loginId)
+      .single();
+
+    if (error || !user) {
+      return { success: false, error: '사용자를 찾을 수 없습니다.' };
+    }
+
+    if (!user.is_active) {
+      return { success: false, error: '비활성화된 계정입니다.' };
+    }
+
+    // teacher 또는 principal만 접근 허용
+    if (!['teacher', 'principal'].includes(user.role)) {
+      return { success: false, error: '접근 권한이 없습니다.', role: user.role };
+    }
+
+    return {
+      success: true,
+      role: user.role,
+      name: user.name,
+      userId: user.user_id
+    };
+  } catch (error) {
+    console.error('권한 검증 오류:', error);
+    return { success: false, error: '권한 확인 중 오류가 발생했습니다.' };
+  }
+}
+
 // 페이지 초기화
 document.addEventListener('DOMContentLoaded', async () => {
-  // 로그인 체크
-  const userId = localStorage.getItem('userId');
-  const userRole = localStorage.getItem('userRole');
-  const userName = localStorage.getItem('userName');
-  const loginId = localStorage.getItem('loginId'); // 추가
+  // 🔒 서버에서 역할 검증 (가장 먼저 실행)
+  const accessCheck = await verifyTeacherAccess();
 
-  console.log('권한 체크:', { userId, userRole, loginId }); // 디버깅용
+  if (!accessCheck.success) {
+    console.error('접근 거부:', accessCheck.error);
+    alert(accessCheck.error || '이 페이지에 접근할 권한이 없습니다.');
 
-  if (!userId && !loginId) {
-    alert('로그인이 필요합니다.');
-    window.location.href = '../login.html';
+    // 학생이면 학생 페이지로, 아니면 로그인 페이지로
+    if (accessCheck.role === 'student') {
+      window.location.href = '../student/index.html';
+    } else if (accessCheck.role === 'parent') {
+      window.location.href = '../parent/index.html';
+    } else {
+      localStorage.clear();
+      window.location.href = '../login.html';
+    }
     return;
   }
+
+  console.log('✅ 접근 허용:', accessCheck.role, accessCheck.name);
+
+  // 로그인 체크
+  const userId = localStorage.getItem('userId');
+  const userRole = accessCheck.role; // 서버에서 받은 역할 사용
+  const userName = accessCheck.name || localStorage.getItem('userName');
+  const loginId = localStorage.getItem('loginId');
 
   // 사용자 정보 표시
   if (document.getElementById('teacherName')) {
@@ -25,15 +79,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       userRole === 'principal' ? '원장' : '선생님';
   }
 
-  // 원장 권한 체크 - 조건 수정
+  // 원장 권한 체크 - 서버에서 받은 역할로 확인
   const adminSection = document.getElementById('adminSection');
   if (adminSection) {
-    // loginId가 ablemaster이거나 userRole이 principal인 경우
-    if (loginId === 'ablemaster' || userRole === 'principal') {
-      console.log('관리자 메뉴 표시'); // 디버깅용
+    if (userRole === 'principal') {
+      console.log('관리자 메뉴 표시');
       adminSection.style.display = 'block';
     } else {
-      console.log('관리자 메뉴 숨김'); // 디버깅용
+      console.log('관리자 메뉴 숨김');
       adminSection.style.display = 'none';
     }
   }

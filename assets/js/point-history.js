@@ -12,18 +12,51 @@ let duplicateChecks = [];
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('포인트 지급 관리 페이지 초기화');
 
-  // 사용자 정보 확인
-  const userRole = localStorage.getItem('userRole');
-  const userName = localStorage.getItem('userName');
+  // 🔒 서버에서 역할 검증 (가장 먼저 실행)
   const loginId = localStorage.getItem('loginId');
+
+  if (!loginId) {
+    alert('로그인이 필요합니다.');
+    window.location.href = '../login.html';
+    return;
+  }
+
+  // DB에서 실제 역할 확인
+  const { data: userCheck, error: userError } = await supabase
+    .from('users')
+    .select('role, name, is_active')
+    .eq('login_id', loginId)
+    .single();
+
+  if (userError || !userCheck) {
+    alert('사용자 정보를 확인할 수 없습니다.');
+    localStorage.clear();
+    window.location.href = '../login.html';
+    return;
+  }
+
+  if (!['teacher', 'principal'].includes(userCheck.role)) {
+    alert('이 페이지에 접근할 권한이 없습니다.');
+    if (userCheck.role === 'student') {
+      window.location.href = '../student/index.html';
+    } else {
+      window.location.href = '../login.html';
+    }
+    return;
+  }
+
+  console.log('✅ point-history.js 접근 허용:', userCheck.role);
+
+  const userRole = userCheck.role;
+  const userName = userCheck.name || localStorage.getItem('userName');
 
   // 사용자 정보 표시
   document.getElementById('teacherName').textContent = userName || '선생님';
   document.getElementById('userRole').textContent =
     userRole === 'principal' ? '원장' : '선생님';
 
-  // 관리자 메뉴 표시
-  if (loginId === 'ablemaster' || userRole === 'principal') {
+  // 관리자 메뉴 표시 (서버에서 받은 역할로 확인)
+  if (userRole === 'principal') {
     document.getElementById('adminSection').style.display = 'block';
   }
 
