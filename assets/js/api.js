@@ -206,8 +206,11 @@ class PointBankAPI {
         return { success: false, error: roleCheck.error, data: [] };
       }
 
-      // 1. student_details에서 전체 학생 조회
-      let query = supabase.from('student_details').select('*').order('name');
+      // 1. student_details에서 전체 학생 조회 (classes 테이블 조인하여 class_name 가져오기)
+      let query = supabase
+        .from('student_details')
+        .select('*, classes(class_name, class_code)')
+        .order('name');
 
       if (classId) {
         query = query.eq('class_id', classId);
@@ -256,7 +259,8 @@ class PointBankAPI {
           name: student.name,
           loginId: student.login_id,
           classId: student.class_id,
-          className: student.class_name,
+          // class_name을 조인된 classes 테이블 또는 기존 필드에서 가져오기
+          className: student.classes?.class_name || student.class_name || '-',
           level: student.level || '씨앗',
           currentPoints: student.current_points || 0,
           totalPoints: student.total_points || 0,

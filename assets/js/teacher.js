@@ -330,7 +330,7 @@ function displayStudents(students) {
               <span>${student.name}</span>
             </div>
           </td>
-          <td>${student.classId || '-'}</td>
+          <td>${student.className || '-'}</td>
           <td><span class="level-tag">${student.level || '씨앗'}</span></td>
           <td><strong>${student.currentPoints.toLocaleString()}P</strong></td>
           <td>${student.savingsPoints.toLocaleString()}P</td>
@@ -597,7 +597,7 @@ function showPointModal() {
     ${targetStudents
       .map(
         (s) => `
-      <option value="${s.studentId}">${s.name} (${s.classId})</option>
+      <option value="${s.studentId}">${s.name} (${s.className || '-'})</option>
     `
       )
       .join('')}
@@ -772,7 +772,7 @@ function updateStudentSelect() {
   allStudents.forEach((student) => {
     select.innerHTML += `
       <option value="${student.studentId}">
-        ${student.name} (${student.classId})
+        ${student.name} (${student.className || '-'})
       </option>
     `;
   });
