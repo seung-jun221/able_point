@@ -63,7 +63,7 @@ class PointBankAPI {
         return { success: false, error: '사용자를 찾을 수 없습니다.', role: null };
       }
 
-      if (!user.is_active) {
+      if (user.is_active === false) {
         return { success: false, error: '비활성화된 계정입니다.', role: null };
       }
 
