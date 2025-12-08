@@ -19,12 +19,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ⚠️ 데이터 무결성 체크 함수 추가
+// 참고: 보유 포인트(current_points)가 음수인 경우는 정상 (벌점 차감으로 인한 음수)
+// 이자는 저축액(savings_points) 기준으로 지급되므로, 보유 포인트 음수는 문제 없음
 async function checkDataIntegrity() {
   try {
+    // NULL 값만 체크 (음수는 정상적인 케이스이므로 제외)
     const { data: nullStudents, error } = await supabase
       .from('students')
-      .select('student_id, name, current_points')
-      .or('current_points.is.null,current_points.lt.0')
+      .select('student_id, name, current_points, savings_points')
+      .is('current_points', null)
       .gt('savings_points', 0); // 저축이 있는 학생만
 
     if (error) {
@@ -42,18 +45,14 @@ async function checkDataIntegrity() {
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
           <h4 style="color: #dc2626; margin-bottom: 8px;">⚠️ 데이터 오류 감지</h4>
           <p style="color: #7f1d1d; margin-bottom: 12px;">
-            ${nullStudents.length}명의 학생 포인트 데이터에 문제가 있습니다:
+            ${nullStudents.length}명의 학생 포인트 데이터에 NULL 값이 있습니다:
           </p>
           <ul style="color: #7f1d1d; margin-left: 20px;">
             ${nullStudents
               .slice(0, 5)
               .map(
                 (s) =>
-                  `<li>${s.name} (${s.student_id}): ${
-                    s.current_points === null
-                      ? 'NULL'
-                      : s.current_points + '포인트'
-                  }</li>`
+                  `<li>${s.name} (${s.student_id}): current_points가 NULL</li>`
               )
               .join('')}
             ${
