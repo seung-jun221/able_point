@@ -47,7 +47,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       setTimeout(() => {
         if (result.data.role === 'student') {
           window.location.href = 'student/index.html';
-        } else if (result.data.role === 'teacher') {
+        } else if (result.data.role === 'teacher' || result.data.role === 'principal') {
+          // principal도 teacher 대시보드로 이동 (관리자 메뉴는 자동으로 표시됨)
           window.location.href = 'teacher/index.html';
         } else if (result.data.role === 'parent') {
           window.location.href = 'parent/index.html';
