@@ -8,23 +8,27 @@ if (!window.POINTBANK_CONFIG) {
   throw new Error('Configuration required');
 }
 
-// Supabase 클라이언트 초기화
-const supabase = window.supabase.createClient(
-  window.POINTBANK_CONFIG.supabase.url,
-  window.POINTBANK_CONFIG.supabase.anonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: {
-        'x-application-name': 'PointBank',
+// Supabase 클라이언트 초기화 (중복 선언 방지)
+var supabase;
+if (!window.supabaseClient) {
+  window.supabaseClient = window.supabase.createClient(
+    window.POINTBANK_CONFIG.supabase.url,
+    window.POINTBANK_CONFIG.supabase.anonKey,
+    {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
       },
-    },
-  }
-);
+      global: {
+        headers: {
+          'x-application-name': 'PointBank',
+        },
+      },
+    }
+  );
+}
+supabase = window.supabaseClient;
 
 // ✅ debugLog는 이미 config.js에서 전역으로 선언되어 있으므로 직접 사용
 // const debugLog = window.POINTBANK_CONFIG.debugLog;  // 삭제됨!
