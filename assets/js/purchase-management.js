@@ -517,49 +517,43 @@ function cancelSelection() {
 }
 
 // ==================== 일괄 처리 ====================
-function bulkDeliver() {
-  if (selectedPurchases.size === 0) return;
+async function bulkDeliver() {
+  const ids = Array.from(selectedPurchases);
+  if (ids.length === 0) return;
 
-  const modal = document.getElementById('bulkDeliveryModal');
-  document.getElementById('bulkCount').textContent = selectedPurchases.size;
+  if (!confirm(`선택한 ${ids.length}개 상품을 지급 처리하시겠습니까?`)) {
+    return;
+  }
 
-  // 선택된 항목 목록 표시
-  const selectedItems = Array.from(selectedPurchases)
-    .map((id) => {
-      const purchase = filteredPurchases.find((p) => p.transaction_id === id);
-      return `
-      <div class="selected-item">
-        ${purchase.studentName} - ${
-        purchase.item_name
-      } (${purchase.amount.toLocaleString()}P)
-      </div>
-    `;
-    })
-    .join('');
-
-  document.getElementById('selectedItemsList').innerHTML = selectedItems;
-  modal.classList.add('active');
-}
-
-function closeBulkDeliveryModal() {
-  document.getElementById('bulkDeliveryModal').classList.remove('active');
-}
-
-async function confirmBulkDelivery() {
-  const notes = document.getElementById('bulkDeliveryNotes').value.trim();
   const teacherId = localStorage.getItem('loginId');
   const teacherName = localStorage.getItem('userName');
 
-  // 실제 API 호출 구현 필요
-  console.log(`${selectedPurchases.size}개 항목 일괄 지급 처리`, notes);
+  try {
+    // 선택된 각 항목을 실제로 지급 처리
+    const results = await Promise.all(
+      ids.map((id) => api.markAsDelivered(id, teacherId, teacherName, ''))
+    );
 
-  // 성공 메시지
-  toastr.success(`${selectedPurchases.size}개 상품이 지급 처리되었습니다.`);
+    const failed = results.filter((r) => !r || !r.success);
+    const successCount = results.length - failed.length;
 
-  // 초기화
-  closeBulkDeliveryModal();
-  cancelSelection();
-  await loadPurchases();
+    if (failed.length === 0) {
+      alert(`${successCount}개 상품이 지급 처리되었습니다.`);
+    } else {
+      console.error('일괄 지급 실패 항목:', failed);
+      alert(
+        `${successCount}개 처리 완료, ${failed.length}개 실패했습니다.\n` +
+          '실패한 항목은 목록에 그대로 남아있습니다.'
+      );
+    }
+
+    // 초기화
+    cancelSelection();
+    await loadPurchases();
+  } catch (error) {
+    console.error('일괄 지급 처리 오류:', error);
+    alert('일괄 지급 처리 중 오류가 발생했습니다.');
+  }
 }
 
 // ==================== 페이지네이션 ====================
@@ -917,6 +911,6 @@ function logout() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeDeliveryModal();
-    closeBulkDeliveryModal();
+    closeDetailModal();
   }
 });
