@@ -288,8 +288,8 @@ function showAddStudentModal() {
 
 // saveStudent 함수도 수정 필요 (update 처리 추가)
 async function saveStudent() {
-  const name = document.getElementById('studentName').value;
-  const loginId = document.getElementById('studentLoginId').value;
+  const name = document.getElementById('studentName').value.trim();
+  const loginId = document.getElementById('studentLoginId').value.trim();
   const password = document.getElementById('studentPassword').value;
   const classId = document.getElementById('studentClass').value;
   const phone = document.getElementById('studentPhone').value;

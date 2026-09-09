@@ -118,13 +118,17 @@ class PointBankAPI {
    */
   async login(loginId, password) {
     try {
-      window.POINTBANK_CONFIG.debugLog('Login attempt', { loginId });
+      // 입력값 앞뒤 공백/탭/개행 제거 (계정 조회 실패 방지)
+      const cleanLoginId = (loginId || '').trim();
+      window.POINTBANK_CONFIG.debugLog('Login attempt', {
+        loginId: cleanLoginId,
+      });
 
       // users 테이블에서 사용자 조회
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
-        .eq('login_id', loginId)
+        .eq('login_id', cleanLoginId)
         .eq('password', password) // 실제로는 해시 비교 필요
         .single();
 
@@ -400,13 +404,24 @@ class PointBankAPI {
    */
   async checkAccountStatus(loginId) {
     try {
+      // 입력값 앞뒤 공백/탭/개행 제거 (계정 조회 실패 방지)
+      const cleanLoginId = (loginId || '').trim();
+
       const { data, error } = await supabase
         .from('users')
         .select('is_active, status')
-        .eq('login_id', loginId)
-        .single();
+        .eq('login_id', cleanLoginId)
+        .maybeSingle();
 
       if (error) throw error;
+
+      // 일치하는 계정이 없는 경우
+      if (!data) {
+        return {
+          success: false,
+          message: '등록되지 않은 아이디입니다.',
+        };
+      }
 
       // is_active가 false면 로그인 차단
       if (!data.is_active) {
@@ -422,7 +437,12 @@ class PointBankAPI {
 
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error('계정 상태 확인 오류:', error);
+      // catch 블록도 message로 반환 (login.html이 message를 표시)
+      return {
+        success: false,
+        message: '계정 확인 중 오류가 발생했습니다. 관리자에게 문의하세요.',
+      };
     }
   }
 
